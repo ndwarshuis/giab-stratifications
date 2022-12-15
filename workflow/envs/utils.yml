@@ -1,0 +1,9 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - curl=7.83.1
+  - libarchive=3.5.2
+  - samtools=1.14
+  - gzip=1.12
+  - sed=4.8
