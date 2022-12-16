@@ -13,6 +13,10 @@ results_dir = Path(conf_paths["results"])
 # log_dir = results_dir / "log"
 scripts_root = Path("workflow/scripts")
 
+log_dir = results_dir / "log"
+intermediate_dir = results_dir / "intermediates"
+final_dir = results_dir / "final"
+
 
 def build_abs_path(relpath, basename):
     return str(relpath.resolve() / basename)
@@ -24,6 +28,7 @@ envs_path = partial(build_abs_path, Path("workflow/envs"))
 # Targets
 
 
+include: "rules/repseq.smk"
 include: "rules/low_complexity.smk"
 
 
