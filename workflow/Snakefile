@@ -16,6 +16,8 @@ scripts_root = Path("workflow/scripts")
 log_dir = results_dir / "log"
 intermediate_dir = results_dir / "intermediates"
 final_dir = results_dir / "final"
+# TODO in the future make this ref-specific
+ref_dir = results_dir / "ref"
 
 
 def build_abs_path(relpath, basename):
@@ -34,4 +36,4 @@ include: "rules/low_complexity.smk"
 
 rule all:
     input:
-        rules.find_homopolymers.output,
+        rules.all_low_complexity.input,
