@@ -87,8 +87,6 @@ uniform_repeats = {
 }
 
 
-# TODO I don't need to use repseq every time, can just parse the smallest
-# repeat size and use awk to filter
 rule find_perfect_uniform_repeats:
     input:
         ref=rules.filter_sort_ref.output,
@@ -106,29 +104,35 @@ rule find_perfect_uniform_repeats:
         """
 
 
-def unit_name_to_len(path, wildcards):
-    return expand(
-        path,
-        allow_missing=True,
-        unit_len=uniform_repeats[wildcards.unit_name].unit_len,
-    )
+# bundle all these together in a dummy rule so I can access them later
+rule all_perfect_uniform_repeats:
+    input:
+        **{
+            f"R{u.unit_len}_T{t}": expand(
+                rules.find_perfect_uniform_repeats.output,
+                unit_len=u.unit_len,
+                total_len=t,
+            )
+            for u in uniform_repeats.values()
+            for t in u.total_lens
+        },
+
+
+def lookup_perfect_uniform_repeat(unit_name, total_len):
+    ul = uniform_repeats[unit_name].unit_len
+    return rules.all_perfect_uniform_repeats.input[f"R{ul}_T{total_len}"]
 
 
 def repeat_range_inputs(wildcards):
-    p = unit_name_to_len(rules.find_perfect_uniform_repeats.output, wildcards)
     return {
-        k: expand(p, total_len=x)
-        for k, x in zip(
+        k: lookup_perfect_uniform_repeat(wildcards.unit_name, t)
+        for k, t in zip(
             "ab",
-            [
-                wildcards.total_lenA,
-                wildcards.total_lenB,
-            ],
+            [wildcards.total_lenA, wildcards.total_lenB],
         )
     }
 
 
-# TODO can't I just use awk for this?
 rule subtract_uniform_repeats:
     input:
         unpack(repeat_range_inputs),
@@ -146,9 +150,9 @@ def get_offset(unit_name):
 
 rule slop_uniform_repeats:
     input:
-        bed=lambda wildcards: expand(
-            unit_name_to_len(rules.find_perfect_uniform_repeats.output, wildcards),
-            total_len=int(wildcards.total_len) + 1 - get_offset(wildcards.unit_name),
+        bed=lambda wildcards: lookup_perfect_uniform_repeat(
+            wildcards.unit_name,
+            int(wildcards.total_len) + 1 - get_offset(wildcards.unit_name),
         ),
         genome=rules.get_genome.output,
     output:
@@ -181,11 +185,7 @@ use rule slop_uniform_repeats as slop_uniform_repeat_ranges with:
 
 rule merge_perfect_uniform_repeats:
     input:
-        expand(
-            rules.find_perfect_uniform_repeats.output,
-            unit_len=1,
-            total_len=4,
-        ),
+        rules.all_perfect_uniform_repeats.input.R1_T4,
     output:
         lc_inter_dir / "repeats_imp_hp_L{merged_len}_B{base}.bed",
     conda:
@@ -222,7 +222,7 @@ rule merge_imperfect_uniform_repeats:
 
 rule all_uniform_repeats:
     input:
-        # Perfect
+        # Perfect (greater than X)
         **{
             f"perfect_{k}_gt{x - 1}": expand(
                 rules.slop_uniform_repeats.output,
@@ -232,6 +232,7 @@ rule all_uniform_repeats:
             for k, v in uniform_repeats.items()
             for x in v.total_lens[v.range_indices - 1 :]
         },
+        # Perfect (between X and Y)
         **{
             f"perfect_{k}_{a}to{b}": expand(
                 rules.slop_uniform_repeat_ranges.output,
@@ -245,7 +246,7 @@ rule all_uniform_repeats:
                 map(lambda x: x - 1, v.total_lens[1 : v.range_indices]),
             )
         },
-        # Imperfect
+        # Imperfect (greater than X)
         **{
             f"imperfect_gt{x}": expand(
                 rules.merge_imperfect_uniform_repeats.output, merged_len=x
@@ -383,14 +384,14 @@ rule invert_satellites:
         "complementBed -i {input.bed} -g {input.genome} | bgzip -c > {output}"
 
 
+################################################################################
+## Tandem Repeats
+
+
 rule merge_all_uniform_repeats:
     input:
         rules.all_uniform_repeats.input.imperfect_gt10,
-        perfect=expand(
-            rules.find_perfect_uniform_repeats.output,
-            unit_len=1,
-            total_len=7,
-        ),
+        perfect=rules.all_perfect_uniform_repeats.input.R1_T7,
         genome=rules.get_genome.output,
     output:
         lc_final_dir / "GRCh38_AllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz",
@@ -424,13 +425,9 @@ rule merge_repeats:
         beds=rules.all_rmsk_classes.input
         + rules.merge_trf.output
         + [
-            expand(
-                rules.find_perfect_uniform_repeats.output,
-                unit_len=v.unit_len,
-                total_len=min(v.total_lens),
-            )
-            for k, v in uniform_repeats.items()
-            if k != "homopolymer"
+            rules.all_perfect_uniform_repeats.input.R2_T10,
+            rules.all_perfect_uniform_repeats.input.R3_T14,
+            rules.all_perfect_uniform_repeats.input.R4_T19,
         ],
         genome=rules.get_genome.output,
     output:
@@ -508,6 +505,10 @@ rule invert_TRs:
         envs_path("bedtools.yml")
     shell:
         "complementBed -i {input.beds} -g {input.genome} | bgzip -c > {output}"
+
+
+################################################################################
+## Combine all the beds to make a Pink Floyd album cover
 
 
 rule merge_HPs_and_TRs:
