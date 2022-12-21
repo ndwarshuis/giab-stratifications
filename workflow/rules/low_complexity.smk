@@ -81,9 +81,9 @@ URep = namedtuple("URep", ["unit_len", "range_indices", "total_lens"])
 
 uniform_repeats = {
     "homopolymer": URep(1, 3, [4, 7, 12, 21]),
-    "diTR": URep(2, 3, [11, 51, 201]),
-    "triTR": URep(3, 3, [15, 51, 201]),
-    "quadTR": URep(4, 3, [20, 51, 201]),
+    "diTR": URep(2, 3, [10, 50, 200]),
+    "triTR": URep(3, 3, [14, 50, 200]),
+    "quadTR": URep(4, 3, [19, 50, 200]),
 }
 
 
@@ -116,14 +116,13 @@ def unit_name_to_len(path, wildcards):
 
 def repeat_range_inputs(wildcards):
     p = unit_name_to_len(rules.find_perfect_uniform_repeats.output, wildcards)
-    offsetA, offsetB = (0, 1) if wildcards.unit_name == "homopolymer" else (-1, 0)
     return {
         k: expand(p, total_len=x)
         for k, x in zip(
             "ab",
             [
-                int(wildcards.total_lenA) + offsetA,
-                int(wildcards.total_lenB) + offsetB,
+                wildcards.total_lenA,
+                wildcards.total_lenB,
             ],
         )
     }
@@ -141,9 +140,16 @@ rule subtract_uniform_repeats:
         "subtractBed -a {input.a} -b {input.b} > {output}"
 
 
+def get_offset(unit_name):
+    return 0 if unit_name == "homopolymer" else 1
+
+
 rule slop_uniform_repeats:
     input:
-        bed=partial(unit_name_to_len, rules.find_perfect_uniform_repeats.output),
+        bed=lambda wildcards: expand(
+            unit_name_to_len(rules.find_perfect_uniform_repeats.output, wildcards),
+            total_len=int(wildcards.total_len) + 1 - get_offset(wildcards.unit_name),
+        ),
         genome=rules.get_genome.output,
     output:
         lc_final_dir / "GRCh38_SimpleRepeat_{unit_name}_gt{total_len}_slop5.bed.gz",
@@ -160,7 +166,13 @@ rule slop_uniform_repeats:
 
 use rule slop_uniform_repeats as slop_uniform_repeat_ranges with:
     input:
-        bed=partial(unit_name_to_len, rules.subtract_uniform_repeats.output),
+        bed=lambda wildcards: expand(
+            rules.subtract_uniform_repeats.output,
+            unit_name=wildcards.unit_name,
+            total_lenA=int(wildcards.total_lenA)
+            - (offset := get_offset(wildcards.unit_name)),
+            total_lenB=int(wildcards.total_lenB) - offset + 1,
+        ),
         genome=rules.get_genome.output,
     output:
         lc_final_dir
@@ -208,12 +220,13 @@ rule merge_imperfect_uniform_repeats:
         """
 
 
-# TODO the homopolymer gt entries have the wrong name
 rule all_uniform_repeats:
     input:
         **{
-            f"{k}_gt{x-(offset := 0 if k == 'homopolymer' else 1)}": expand(
-                rules.slop_uniform_repeats.output, unit_name=k, total_len=x - offset
+            f"{k}_gt{x - 1}": expand(
+                rules.slop_uniform_repeats.output,
+                unit_name=k,
+                total_len=x - 1 + (offset := get_offset(k)),
             )
             for k, v in uniform_repeats.items()
             for x in v.total_lens[v.range_indices - 1 :]
@@ -222,8 +235,8 @@ rule all_uniform_repeats:
             f"{k}_{a}to{b}": expand(
                 rules.slop_uniform_repeat_ranges.output,
                 unit_name=k,
-                total_lenA=a,
-                total_lenB=b,
+                total_lenA=a + (offset := get_offset(k)),
+                total_lenB=b + offset,
             )
             for k, v in uniform_repeats.items()
             for a, b in zip(
