@@ -480,7 +480,7 @@ rule merge_filtered_TRs:
     input:
         beds=expand(rules.filter_TRs.output, tr_bound=tr_bounds),
     output:
-        lc_final_dir / "GRCh38_allTandemRepeats.bed.gz",
+        lc_inter_dir / "GRCh38_AllTandemRepeats.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -506,11 +506,12 @@ rule invert_TRs:
 rule merge_HPs_and_TRs:
     input:
         rules.merge_filtered_TRs.input,
-        rules.merge_all_uniform_repeats.input.imperfect,
+        rules.merge_all_uniform_repeats.output,
     output:
         lc_final_dir / "GRCh38_AllTandemRepeatsandHomopolymers_slop5.bed.gz",
     conda:
         envs_path("bedtools.yml")
+    threads: 2
     shell:
         """
         multiIntersectBed -i {input} | \
@@ -539,7 +540,6 @@ rule all_low_complexity:
         rules.invert_satellites.output,
         # # Everything
         expand(rules.filter_TRs.output, tr_bound=full_tr_bounds),
-        # rules.merge_filtered_TRs.output,
-        # rules.merge_HPs_and_TRs.output,
+        rules.merge_HPs_and_TRs.output,
         # rules.invert_HPs_and_TRs.output,
         # rules.invert_TRs.output,
