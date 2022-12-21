@@ -401,11 +401,11 @@ rule merge_all_uniform_repeats:
 
 rule invert_all_uniform_repeats:
     input:
-        rules.merge_all_uniform_repeats.output,
+        bed=rules.merge_all_uniform_repeats.output,
         genome=rules.get_genome.output,
     output:
         lc_final_dir
-        / "GRCh38_notinAllHomopolymers_gt6bp_imperfectgt{merged_len}bp_slop5.bed.g",
+        / "GRCh38_notinAllHomopolymers_gt6bp_imperfectgt{merged_len}bp_slop5.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -480,7 +480,7 @@ rule merge_filtered_TRs:
     input:
         beds=expand(rules.filter_TRs.output, tr_bound=tr_bounds),
     output:
-        lc_inter_dir / "GRCh38_AllTandemRepeats.bed.gz",
+        lc_final_dir / "GRCh38_AllTandemRepeats.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -520,12 +520,13 @@ rule merge_HPs_and_TRs:
         """
 
 
+# NOTE chrM in the original
 rule invert_HPs_and_TRs:
     input:
         beds=rules.merge_HPs_and_TRs.output,
         genome=rules.get_genome.output,
     output:
-        lc_final_dir / "GRCh38_AllTandemRepeatsandHomopolymers_slop5.bed.gz",
+        lc_final_dir / "GRCh38_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -541,5 +542,6 @@ rule all_low_complexity:
         # # Everything
         expand(rules.filter_TRs.output, tr_bound=full_tr_bounds),
         rules.merge_HPs_and_TRs.output,
-        # rules.invert_HPs_and_TRs.output,
-        # rules.invert_TRs.output,
+        rules.invert_HPs_and_TRs.output,
+        rules.invert_TRs.output,
+        expand(rules.invert_all_uniform_repeats.output, merged_len=10),
