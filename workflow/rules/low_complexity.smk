@@ -343,9 +343,20 @@ rule merge_rmsk_class:
         """
 
 
+rule all_rmsk_classes:
+    input:
+        **{
+            c: expand(
+                rules.merge_rmsk_class.output,
+                rmsk_class=c,
+            )
+            for c in ["Low_complexity", "Simple_repeat", "Satellite"]
+        },
+
+
 rule merge_satellites:
     input:
-        bed=expand(rules.merge_rmsk_class.output, rmsk_class="Satellite"),
+        bed=rules.all_rmsk_classes.input.Satellite,
         genome=rules.get_genome.output,
     output:
         lc_final_dir / "GRCh38_satellites_slop5.bed.gz",
@@ -374,14 +385,11 @@ rule invert_satellites:
 
 rule merge_all_uniform_repeats:
     input:
+        rules.all_uniform_repeats.input.imperfect_gt10,
         perfect=expand(
             rules.find_perfect_uniform_repeats.output,
             unit_len=1,
             total_len=7,
-        ),
-        imperfect=expand(
-            rules.merge_imperfect_uniform_repeats.output,
-            merged_len=10,
         ),
         genome=rules.get_genome.output,
     output:
@@ -404,8 +412,7 @@ rule invert_all_uniform_repeats:
         bed=rules.merge_all_uniform_repeats.output,
         genome=rules.get_genome.output,
     output:
-        lc_final_dir
-        / "GRCh38_notinAllHomopolymers_gt6bp_imperfectgt{merged_len}bp_slop5.bed.gz",
+        lc_final_dir / "GRCh38_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -414,14 +421,8 @@ rule invert_all_uniform_repeats:
 
 rule merge_repeats:
     input:
-        beds=expand(
-            rules.merge_rmsk_class.output,
-            rmsk_class=[
-                "Low_complexity",
-                "Simple_repeat",
-                "Satellite",
-            ],
-        )
+        beds=rules.all_rmsk_classes.input
+        + rules.merge_trf.output
         + [
             expand(
                 rules.find_perfect_uniform_repeats.output,
@@ -429,9 +430,8 @@ rule merge_repeats:
                 total_len=min(v.total_lens),
             )
             for k, v in uniform_repeats.items()
-        if k != "homopolymer"
-        ]
-        + rules.merge_trf.output,
+            if k != "homopolymer"
+        ],
         genome=rules.get_genome.output,
     output:
         lc_inter_dir / "AllTandemRepeats_intermediate.bed",
@@ -452,9 +452,8 @@ tr_bounds = {
     "51to200": {"lower": 60, "upper": 211},
     "201to10000": {"lower": 210, "upper": 10011},
     "gt10000": {"lower": 10010, "upper": 1e10},
+    "gt100": {"lower": 110, "upper": 1e10},
 }
-
-full_tr_bounds = {**tr_bounds, "gt100": {"lower": 110, "upper": 1e10}}
 
 
 rule filter_TRs:
@@ -464,8 +463,8 @@ rule filter_TRs:
     output:
         lc_final_dir / "GRCh38_AllTandemRepeats_{tr_bound}bp_slop5.bed.gz",
     params:
-        lower=lambda wildcards: full_tr_bounds[wildcards.tr_bound]["lower"],
-        upper=lambda wildcards: full_tr_bounds[wildcards.tr_bound]["upper"],
+        lower=lambda wildcards: tr_bounds[wildcards.tr_bound]["lower"],
+        upper=lambda wildcards: tr_bounds[wildcards.tr_bound]["upper"],
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -476,9 +475,17 @@ rule filter_TRs:
         """
 
 
+rule all_TRs:
+    input:
+        **{f"_{k}": expand(rules.filter_TRs.output, tr_bound=k) for k in tr_bounds},
+
+
 rule merge_filtered_TRs:
     input:
-        beds=expand(rules.filter_TRs.output, tr_bound=tr_bounds),
+        rules.all_TRs.input._lt51,
+        rules.all_TRs.input._51to200,
+        rules.all_TRs.input._201to10000,
+        rules.all_TRs.input._gt10000,
     output:
         lc_final_dir / "GRCh38_AllTandemRepeats.bed.gz",
     conda:
@@ -535,13 +542,16 @@ rule invert_HPs_and_TRs:
 
 rule all_low_complexity:
     input:
+        # Uniform repeats
         rules.all_uniform_repeats.input,
         # Satellites
         rules.merge_satellites.output,
         rules.invert_satellites.output,
-        # # Everything
-        expand(rules.filter_TRs.output, tr_bound=full_tr_bounds),
+        # Tandem Repeats
+        rules.all_TRs.input,
+        rules.merge_filtered_TRs.output,
+        rules.invert_TRs.output,
+        # "Everything" (in theory)
         rules.merge_HPs_and_TRs.output,
         rules.invert_HPs_and_TRs.output,
-        rules.invert_TRs.output,
-        expand(rules.invert_all_uniform_repeats.output, merged_len=10),
+        rules.invert_all_uniform_repeats.output,
