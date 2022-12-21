@@ -222,8 +222,9 @@ rule merge_imperfect_uniform_repeats:
 
 rule all_uniform_repeats:
     input:
+        # Perfect
         **{
-            f"{k}_gt{x - 1}": expand(
+            f"perfect_{k}_gt{x - 1}": expand(
                 rules.slop_uniform_repeats.output,
                 unit_name=k,
                 total_len=x - 1 + (offset := get_offset(k)),
@@ -232,7 +233,7 @@ rule all_uniform_repeats:
             for x in v.total_lens[v.range_indices - 1 :]
         },
         **{
-            f"{k}_{a}to{b}": expand(
+            f"perfect_{k}_{a}to{b}": expand(
                 rules.slop_uniform_repeat_ranges.output,
                 unit_name=k,
                 total_lenA=a + (offset := get_offset(k)),
@@ -244,9 +245,13 @@ rule all_uniform_repeats:
                 map(lambda x: x - 1, v.total_lens[1 : v.range_indices]),
             )
         },
-
-
-[print((k, v)) for k, v in rules.all_uniform_repeats.input.items()]
+        # Imperfect
+        **{
+            f"imperfect_gt{x}": expand(
+                rules.merge_imperfect_uniform_repeats.output, merged_len=x
+            )
+            for x in [10, 20]
+        },
 
 
 ################################################################################
