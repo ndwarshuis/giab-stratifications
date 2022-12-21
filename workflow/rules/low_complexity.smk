@@ -359,6 +359,7 @@ rule merge_satellites:
         """
 
 
+# TODO the previous version of this had chrM in it? (seems like a mistake)
 rule invert_satellites:
     input:
         bed=rules.merge_satellites.output,
@@ -376,7 +377,7 @@ rule merge_all_uniform_repeats:
         perfect=expand(
             rules.find_perfect_uniform_repeats.output,
             unit_len=1,
-            total_len=5,
+            total_len=7,
         ),
         imperfect=expand(
             rules.merge_imperfect_uniform_repeats.output,
@@ -387,6 +388,7 @@ rule merge_all_uniform_repeats:
         lc_final_dir / "GRCh38_AllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz",
     conda:
         envs_path("bedtools.yml")
+    threads: 4
     shell:
         """
         slopBed -i {input.perfect} -b 5 -g {input.genome} | \
@@ -412,7 +414,7 @@ rule invert_all_uniform_repeats:
 
 rule merge_repeats:
     input:
-        hp=expand(
+        beds=expand(
             rules.merge_rmsk_class.output,
             rmsk_class=[
                 "Low_complexity",
@@ -420,29 +422,25 @@ rule merge_repeats:
                 "Satellite",
             ],
         )
-        + expand(
-            rules.find_perfect_uniform_repeats.output,
-            zip,
-            **dict(
-                zip(
-                    ["unit_len", "total_len"],
-                    unzip(
-                        (v.unit_len, min(v.total_lens))
-                        for k, v in uniform_repeats.items()
-        if k != "homopolymers"
-                    ),
-                )
+        + [
+            expand(
+                rules.find_perfect_uniform_repeats.output,
+                unit_len=v.unit_len,
+                total_len=min(v.total_lens),
             )
-        )
+            for k, v in uniform_repeats.items()
+        if k != "homopolymer"
+        ]
         + rules.merge_trf.output,
         genome=rules.get_genome.output,
     output:
         lc_inter_dir / "AllTandemRepeats_intermediate.bed",
     conda:
         envs_path("bedtools.yml")
+    threads: 3
     shell:
         """
-        multiIntersectBed -i {input.hp} | \
+        multiIntersectBed -i {input.beds} | \
         slopBed -i stdin -b 5 -g {input.genome} | \
         mergeBed -i stdin > {output}
         """
@@ -453,18 +451,18 @@ tr_bounds = {
     "lt51": {"lower": 0, "upper": 61},
     "51to200": {"lower": 60, "upper": 211},
     "201to10000": {"lower": 210, "upper": 10011},
-    "gt10000": {"lower": 10010, "upper": 1000000},
+    "gt10000": {"lower": 10010, "upper": 1e10},
 }
 
-full_tr_bounds = {**tr_bounds, "gt100": {"lower": 110, "upper": 1000000}}
+full_tr_bounds = {**tr_bounds, "gt100": {"lower": 110, "upper": 1e10}}
 
 
 rule filter_TRs:
     input:
         tr=rules.merge_repeats.output,
-        hp=rules.merge_all_uniform_repeats.input.imperfect,
+        hp=rules.merge_all_uniform_repeats.output,
     output:
-        lc_final_dir / "GRCh38_AllTandemRepeats_{tr_bound}_slop5.bed.gz",
+        lc_final_dir / "GRCh38_AllTandemRepeats_{tr_bound}bp_slop5.bed.gz",
     params:
         lower=lambda wildcards: full_tr_bounds[wildcards.tr_bound]["lower"],
         upper=lambda wildcards: full_tr_bounds[wildcards.tr_bound]["upper"],
@@ -535,15 +533,12 @@ rule invert_HPs_and_TRs:
 
 rule all_low_complexity:
     input:
-        # Perfect Homopolymers
         rules.all_uniform_repeats.input,
-        # Imperfect Homopolymers
-        # expand(rules.merge_imperfect_uniform_repeats.output, merged_len=[10, 20]),
         # Satellites
-        # rules.merge_satellites.output,
-        # rules.invert_satellites.output,
+        rules.merge_satellites.output,
+        rules.invert_satellites.output,
         # # Everything
-        # expand(rules.filter_TRs.output, tr_bound=full_tr_bounds),
+        expand(rules.filter_TRs.output, tr_bound=full_tr_bounds),
         # rules.merge_filtered_TRs.output,
         # rules.merge_HPs_and_TRs.output,
         # rules.invert_HPs_and_TRs.output,
