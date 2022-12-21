@@ -211,6 +211,7 @@ rule merge_imperfect_uniform_repeats:
         lc_final_dir / "GRCh38_SimpleRepeat_imperfecthomopolgt{merged_len}_slop5.bed.gz",
     conda:
         envs_path("bedtools.yml")
+    threads: 3
     shell:
         """
         multiIntersectBed -i {input.beds} | \
@@ -363,6 +364,7 @@ rule merge_satellites:
         lc_final_dir / "GRCh38_satellites_slop5.bed.gz",
     conda:
         envs_path("bedtools.yml")
+    threads: 2
     shell:
         """
         slopBed -i {input.bed} -b 5 -g {input.genome} | \
@@ -390,7 +392,7 @@ rule invert_satellites:
 
 rule merge_all_uniform_repeats:
     input:
-        rules.all_uniform_repeats.input.imperfect_gt10,
+        imperfect=rules.all_uniform_repeats.input.imperfect_gt10,
         perfect=rules.all_perfect_uniform_repeats.input.R1_T7,
         genome=rules.get_genome.output,
     output:
@@ -408,16 +410,12 @@ rule merge_all_uniform_repeats:
         """
 
 
-rule invert_all_uniform_repeats:
+use rule invert_satellites as invert_all_uniform_repeats with:
     input:
         bed=rules.merge_all_uniform_repeats.output,
         genome=rules.get_genome.output,
     output:
         lc_final_dir / "GRCh38_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz",
-    conda:
-        envs_path("bedtools.yml")
-    shell:
-        "complementBed -i {input.bed} -g {input.genome} | bgzip -c > {output}"
 
 
 rule merge_repeats:
@@ -487,38 +485,6 @@ rule merge_filtered_TRs:
         lc_final_dir / "GRCh38_AllTandemRepeats.bed.gz",
     conda:
         envs_path("bedtools.yml")
-    shell:
-        """
-        multiIntersectBed -i {input.beds} | \
-        mergeBed -i stdin | \
-        bgzip -c > {output}
-        """
-
-
-rule invert_TRs:
-    input:
-        beds=rules.merge_filtered_TRs.output,
-        genome=rules.get_genome.output,
-    output:
-        lc_final_dir / "GRCh38_notinallTandemRepeats.bed.gz",
-    conda:
-        envs_path("bedtools.yml")
-    shell:
-        "complementBed -i {input.beds} -g {input.genome} | bgzip -c > {output}"
-
-
-################################################################################
-## Combine all the beds to make a Pink Floyd album cover
-
-
-rule merge_HPs_and_TRs:
-    input:
-        rules.merge_filtered_TRs.input,
-        rules.merge_all_uniform_repeats.output,
-    output:
-        lc_final_dir / "GRCh38_AllTandemRepeatsandHomopolymers_slop5.bed.gz",
-    conda:
-        envs_path("bedtools.yml")
     threads: 2
     shell:
         """
@@ -528,17 +494,33 @@ rule merge_HPs_and_TRs:
         """
 
 
-# NOTE chrM in the original
-rule invert_HPs_and_TRs:
+use rule invert_satellites as invert_TRs with:
     input:
-        beds=rules.merge_HPs_and_TRs.output,
+        bed=rules.merge_filtered_TRs.output,
+        genome=rules.get_genome.output,
+    output:
+        lc_final_dir / "GRCh38_notinallTandemRepeats.bed.gz",
+
+
+################################################################################
+## Combine all the beds to make a Pink Floyd album cover
+
+
+use rule merge_filtered_TRs as merge_HPs_and_TRs with:
+    input:
+        rules.merge_filtered_TRs.input,
+        rules.merge_all_uniform_repeats.output,
+    output:
+        lc_final_dir / "GRCh38_AllTandemRepeatsandHomopolymers_slop5.bed.gz",
+
+
+# NOTE chrM in the original
+use rule invert_satellites as invert_HPs_and_TRs with:
+    input:
+        bed=rules.merge_HPs_and_TRs.output,
         genome=rules.get_genome.output,
     output:
         lc_final_dir / "GRCh38_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz",
-    conda:
-        envs_path("bedtools.yml")
-    shell:
-        "complementBed -i {input.beds} -g {input.genome} | bgzip -c > {output}"
 
 
 rule all_low_complexity:
