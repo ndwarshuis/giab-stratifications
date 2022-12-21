@@ -116,7 +116,7 @@ def unit_name_to_len(path, wildcards):
 
 def repeat_range_inputs(wildcards):
     p = unit_name_to_len(rules.find_perfect_uniform_repeats.output, wildcards)
-    offsetA, offsetB = (0, 1) if wildcards.unit_name == "homopolymers" else (-1, 0)
+    offsetA, offsetB = (0, 1) if wildcards.unit_name == "homopolymer" else (-1, 0)
     return {
         k: expand(p, total_len=x)
         for k, x in zip(
@@ -153,7 +153,7 @@ rule slop_uniform_repeats:
         """
         slopBed -i {input.bed} -b 5 -g {input.genome} | \
         cut -f1-3 | \
-        gzip -c \
+        bgzip -c \
         > {output}
         """
 
@@ -204,8 +204,36 @@ rule merge_imperfect_uniform_repeats:
         multiIntersectBed -i {input.beds} | \
         slopBed -i stdin -b 5 -g {input.genome} | \
         mergeBed -i stdin | \
-        gzip -c > {output}
+        bgzip -c > {output}
         """
+
+
+# TODO the homopolymer gt entries have the wrong name
+rule all_uniform_repeats:
+    input:
+        **{
+            f"{k}_gt{x-(offset := 0 if k == 'homopolymer' else 1)}": expand(
+                rules.slop_uniform_repeats.output, unit_name=k, total_len=x - offset
+            )
+            for k, v in uniform_repeats.items()
+            for x in v.total_lens[v.range_indices - 1 :]
+        },
+        **{
+            f"{k}_{a}to{b}": expand(
+                rules.slop_uniform_repeat_ranges.output,
+                unit_name=k,
+                total_lenA=a,
+                total_lenB=b,
+            )
+            for k, v in uniform_repeats.items()
+            for a, b in zip(
+                v.total_lens[0 : v.range_indices - 1],
+                map(lambda x: x - 1, v.total_lens[1 : v.range_indices]),
+            )
+        },
+
+
+[print((k, v)) for k, v in rules.all_uniform_repeats.input.items()]
 
 
 ################################################################################
@@ -233,7 +261,7 @@ rule filter_sort_trf:
         cut -f 2,3,4 | \
         grep -Pv '^\S+_|^\S+EBV\s|^\S+M\s' | \
         bedtools sort -i stdin -g {input.genome} | \
-        gzip -c > {output}
+        bgzip -c > {output}
         """
 
 
@@ -248,7 +276,7 @@ rule merge_trf:
         """
         gunzip -c {input} | \
         mergeBed -i stdin |  \
-        gzip -c > {output}
+        bgzip -c > {output}
         """
 
 
@@ -277,7 +305,7 @@ rule filter_sort_rmsk:
         cut -f 6,7,8,12 | \
         grep -Pv '^\S+_|^\S+EBV\s|^\S+M\s' | \
         bedtools sort -i stdin -g {input.genome} | \
-        gzip -c > {output}
+        bgzip -c > {output}
         """
 
 
@@ -293,7 +321,7 @@ rule merge_rmsk_class:
         """
         zgrep {wildcards.rmsk_class} {input.rmsk} | \
         mergeBed -i stdin | \
-        gzip -c > {output}
+        bgzip -c > {output}
         """
 
 
@@ -309,7 +337,7 @@ rule merge_satellites:
         """
         slopBed -i {input.bed} -b 5 -g {input.genome} | \
         mergeBed -i stdin | \
-        gzip -c > {output}
+        bgzip -c > {output}
         """
 
 
@@ -322,7 +350,7 @@ rule invert_satellites:
     conda:
         envs_path("bedtools.yml")
     shell:
-        "complementBed -i {input.bed} -g {input.genome} | gzip -c > {output}"
+        "complementBed -i {input.bed} -g {input.genome} | bgzip -c > {output}"
 
 
 rule merge_all_uniform_repeats:
@@ -347,7 +375,7 @@ rule merge_all_uniform_repeats:
         mergeBed -i stdin | \
         multiIntersectBed -i stdin {input.imperfect} | \
         mergeBed -i stdin | \
-        gzip -c > {output}
+        bgzip -c > {output}
         """
 
 
@@ -361,7 +389,7 @@ rule invert_all_uniform_repeats:
     conda:
         envs_path("bedtools.yml")
     shell:
-        "complementBed -i {input.bed} -g {input.genome} | gzip -c > {output}"
+        "complementBed -i {input.bed} -g {input.genome} | bgzip -c > {output}"
 
 
 rule merge_repeats:
@@ -428,7 +456,7 @@ rule filter_TRs:
         """
         awk '$3-$2>{params.lower} && $3-$2<{params.upper}' {input.tr} | \
         subtractBed -a stdin -b {input.hp} | \
-        gzip -c > {output}
+        bgzip -c > {output}
         """
 
 
@@ -443,7 +471,7 @@ rule merge_filtered_TRs:
         """
         multiIntersectBed -i {input.beds} | \
         mergeBed -i stdin | \
-        gzip -c > {output}
+        bgzip -c > {output}
         """
 
 
@@ -456,7 +484,7 @@ rule invert_TRs:
     conda:
         envs_path("bedtools.yml")
     shell:
-        "complementBed -i {input.beds} -g {input.genome} | gzip -c > {output}"
+        "complementBed -i {input.beds} -g {input.genome} | bgzip -c > {output}"
 
 
 rule merge_HPs_and_TRs:
@@ -471,7 +499,7 @@ rule merge_HPs_and_TRs:
         """
         multiIntersectBed -i {input} | \
         mergeBed -i stdin | \
-        gzip -c > {output}
+        bgzip -c > {output}
         """
 
 
@@ -484,43 +512,13 @@ rule invert_HPs_and_TRs:
     conda:
         envs_path("bedtools.yml")
     shell:
-        "complementBed -i {input.beds} -g {input.genome} | gzip -c > {output}"
+        "complementBed -i {input.beds} -g {input.genome} | bgzip -c > {output}"
 
 
 rule all_low_complexity:
     input:
         # Perfect Homopolymers
-        expand(
-            rules.slop_uniform_repeats.output,
-            zip,
-            **dict(
-                zip(
-                    ["unit_name", "total_len"],
-                    unzip(
-                        (k, x - 1)
-                        for k, v in uniform_repeats.items()
-                        for x in v.total_lens[v.range_indices - 1 :]
-                    ),
-                )
-            )
-        ),
-        expand(
-            rules.slop_uniform_repeat_ranges.output,
-            zip,
-            **dict(
-                zip(
-                    ["unit_name", "total_lenA", "total_lenB"],
-                    unzip(
-                        (k, a, b)
-                        for k, v in uniform_repeats.items()
-                        for a, b in zip(
-                            v.total_lens[0 : v.range_indices - 1],
-                            map(lambda x: x - 1, v.total_lens[1 : v.range_indices]),
-                        )
-                    ),
-                )
-            )
-        ),
+        rules.all_uniform_repeats.input,
         # Imperfect Homopolymers
         # expand(rules.merge_imperfect_uniform_repeats.output, merged_len=[10, 20]),
         # Satellites
