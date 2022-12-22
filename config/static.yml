@@ -12,6 +12,10 @@ XY:
   Y_features: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
   X_PAR: https://raw.githubusercontent.com/lh3/dipcall/master/data/hs38.PAR.bed
 
+segdups:
+  self_chain: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/chainSelf.txt.gz
+  self_chain_link: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/chainSelfLink.txt.gz
+
 tools:
   repseq: https://github.com/ndwarshuis/repseq/archive/refs/tags/v1.0.0.tar.gz
 
