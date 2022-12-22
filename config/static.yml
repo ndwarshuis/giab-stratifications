@@ -18,4 +18,5 @@ segdups:
 
 tools:
   repseq: https://github.com/ndwarshuis/repseq/archive/refs/tags/v1.0.0.tar.gz
+  gemlib: https://sourceforge.net/projects/gemlibrary/files/gem-library/Binary%20pre-release%203/GEM-binaries-Linux-x86_64-core_i3-20130406-045632.tbz2/download
 

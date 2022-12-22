@@ -33,9 +33,11 @@ include: "rules/repseq.smk"
 include: "rules/ref.smk"
 include: "rules/low_complexity.smk"
 include: "rules/xy.smk"
+include: "rules/mappability.smk"
 
 
 rule all:
     input:
         rules.all_low_complexity.input,
         rules.all_xy.input,
+        rules.all_map.input,
