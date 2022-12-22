@@ -17,7 +17,6 @@ log_dir = results_dir / "log"
 intermediate_dir = results_dir / "intermediates"
 final_dir = results_dir / "final"
 # TODO in the future make this ref-specific
-ref_dir = results_dir / "ref"
 
 
 def build_abs_path(relpath, basename):
@@ -31,9 +30,12 @@ envs_path = partial(build_abs_path, Path("workflow/envs"))
 
 
 include: "rules/repseq.smk"
+include: "rules/ref.smk"
 include: "rules/low_complexity.smk"
+include: "rules/xy.smk"
 
 
 rule all:
     input:
         rules.all_low_complexity.input,
+        rules.all_xy.input,
