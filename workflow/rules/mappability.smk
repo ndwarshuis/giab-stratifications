@@ -157,7 +157,7 @@ rule invert_unique:
 
 rule all_nonunique:
     input:
-        expand(rules.invert_unique.output, zip, l=[100, 200], m=[2, 0], e=[1, 0]),
+        expand(rules.invert_unique.output, zip, l=[100, 250], m=[2, 0], e=[1, 0]),
 
 
 rule merge_nonunique:
