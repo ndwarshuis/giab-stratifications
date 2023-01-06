@@ -6,7 +6,7 @@ rule download_self_chain:
     output:
         segdup_res_dir / "selfChain.txt.gz",
     params:
-        url=config["segdups"]["sefl_chain"],
+        url=partial(lookup_strat, ["segdups", "sefl_chain"]),
     conda:
         envs_path("utils.yml")
     shell:
@@ -17,7 +17,7 @@ rule download_self_chain_link:
     output:
         segdup_res_dir / "selfChain_link.txt.gz",
     params:
-        url=config["segdups"]["sefl_chain"],
+        url=partial(lookup_strat, ["segdups", "sefl_chain"]),
     conda:
         envs_path("utils.yml")
     shell:

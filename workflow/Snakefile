@@ -10,13 +10,11 @@ configfile: "config/static.yml"
 conf_paths = config["paths"]
 resources_dir = Path(conf_paths["resources"])
 results_dir = Path(conf_paths["results"])
-# log_dir = results_dir / "log"
 scripts_root = Path("workflow/scripts")
 
-log_dir = results_dir / "log"
-intermediate_dir = results_dir / "intermediates"
-final_dir = results_dir / "final"
-# TODO in the future make this ref-specific
+log_dir = results_dir / "log" / "{ref_key}"
+intermediate_dir = results_dir / "intermediates" / "{ref_key}"
+final_dir = results_dir / "final" / "{ref_key}"
 
 
 def build_abs_path(relpath, basename):
@@ -24,6 +22,17 @@ def build_abs_path(relpath, basename):
 
 
 envs_path = partial(build_abs_path, Path("workflow/envs"))
+
+################################################################################
+# Config (put this in a better spot later)
+
+
+def lookup_strat(args, wildcards):
+    def more(d, *args):
+        return d if len(args) == 0 else more(d[args[0]], args[1:])
+
+    return more(config["stratifications"][wildcards.ref_key], args)
+
 
 ################################################################################
 # Targets
@@ -38,6 +47,8 @@ include: "rules/mappability.smk"
 
 rule all:
     input:
-        rules.all_low_complexity.input,
-        rules.all_xy.input,
-        rules.all_map.input,
+        expand(
+            rules.all_low_complexity.input + rules.all_xy.input + rules.all_map.input,
+            allow_missing=True,
+            ref_key=config["stratifications"],
+        ),

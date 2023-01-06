@@ -44,6 +44,7 @@ rule all_perfect_uniform_repeats:
         **{
             f"R{u.unit_len}_T{t}": expand(
                 rules.find_perfect_uniform_repeats.output,
+                allow_missing=True,
                 unit_len=u.unit_len,
                 total_len=t,
             )
@@ -161,6 +162,7 @@ rule all_uniform_repeats:
         **{
             f"perfect_{k}_gt{x - 1}": expand(
                 rules.slop_uniform_repeats.output,
+                allow_missing=True,
                 unit_name=k,
                 total_len=x - 1 + (offset := get_offset(k)),
             )
@@ -171,6 +173,7 @@ rule all_uniform_repeats:
         **{
             f"perfect_{k}_{a}to{b}": expand(
                 rules.slop_uniform_repeat_ranges.output,
+                allow_missing=True,
                 unit_name=k,
                 total_lenA=a + (offset := get_offset(k)),
                 total_lenB=b + offset,
@@ -184,7 +187,9 @@ rule all_uniform_repeats:
         # Imperfect (greater than X)
         **{
             f"imperfect_gt{x}": expand(
-                rules.merge_imperfect_uniform_repeats.output, merged_len=x
+                rules.merge_imperfect_uniform_repeats.output,
+                allow_missing=True,
+                merged_len=x,
             )
             for x in [10, 20]
         },
@@ -198,7 +203,7 @@ use rule download_ref as download_trf with:
     output:
         resources_dir / "trf_simreps.txt.gz",
     params:
-        url=config["simreps_url"],
+        url=partial(lookup_strat, ["low_complexity", "simreps_url"]),
 
 
 rule filter_sort_trf:
@@ -242,7 +247,7 @@ use rule download_ref as download_rmsk with:
     output:
         resources_dir / "rmsk.txt.gz",
     params:
-        url=config["rmsk_url"],
+        url=partial(lookup_strat, ["low_complexity", "rmsk_url"]),
 
 
 rule filter_sort_rmsk:
@@ -284,6 +289,7 @@ rule all_rmsk_classes:
         **{
             c: expand(
                 rules.merge_rmsk_class.output,
+                allow_missing=True,
                 rmsk_class=c,
             )
             for c in ["Low_complexity", "Simple_repeat", "Satellite"]
@@ -406,7 +412,14 @@ rule filter_TRs:
 
 rule all_TRs:
     input:
-        **{f"_{k}": expand(rules.filter_TRs.output, tr_bound=k) for k in tr_bounds},
+        **{
+            f"_{k}": expand(
+                rules.filter_TRs.output,
+                allow_missing=True,
+                tr_bound=k,
+            )
+            for k in tr_bounds
+        },
 
 
 rule merge_filtered_TRs:

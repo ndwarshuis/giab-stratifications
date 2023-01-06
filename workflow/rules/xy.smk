@@ -6,7 +6,9 @@ rule download_genome_features_bed:
     output:
         xy_resources_dir / "genome_features_{chr}.bed",
     params:
-        url=lambda wildcards: config["XY"][f"{wildcards.chr}_features"],
+        url=lambda wildcards: lookup_strat(
+            ["XY", f"{wildcards.chr}_features"], wildcards
+        ),
     conda:
         envs_path("utils.yml")
     shell:
@@ -17,7 +19,7 @@ use rule download_genome_features_bed as download_X_PAR with:
     output:
         xy_final_dir / "GRCh38_chrX_PAR.bed",
     params:
-        url=lambda wildcards: config["XY"]["X_PAR"],
+        url=partial(lookup_strat, ["XY", "X_PAR"]),
 
 
 # TODO not sure where the actual PAR is, but this will do for now
@@ -82,10 +84,11 @@ rule all_xy:
     input:
         expand(
             rules.filter_xy_features.output,
+            allow_missing=True,
             chr=["X", "Y"],
             region=["XTR", "ampliconic"],
         ),
         rules.download_X_PAR.output,
         rules.write_Y_PAR.output,
-        expand(rules.invert_PAR.output, chr=["X", "Y"]),
+        expand(rules.invert_PAR.output, allow_missing=True, chr=["X", "Y"]),
         rules.filter_autosomes.output,

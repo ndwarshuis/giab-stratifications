@@ -1,11 +1,11 @@
-ref_dir = results_dir / "ref"
+ref_dir = results_dir / "ref" / "{ref_key}"
 
 
 rule download_ref:
     output:
-        resources_dir / "ref.fna.gz",
+        resources_dir / "{ref_key}" / "ref.fna.gz",
     params:
-        url=config["ref_url"],
+        url=partial(lookup_strat, ["ref_url"]),
     conda:
         envs_path("utils.yml")
     shell:
@@ -16,7 +16,7 @@ rule unzip_ref:
     input:
         rules.download_ref.output,
     output:
-        resources_dir / "ref.fna",
+        ref_dir / "ref.fna",
     conda:
         envs_path("utils.yml")
     shell:
@@ -52,6 +52,7 @@ rule get_genome:
         "cut -f 1,2 {input} > {output}"
 
 
+# TODO filter a subset of this for testing
 rule filter_sort_ref:
     input:
         fa=rules.unzip_ref.output,
