@@ -202,7 +202,7 @@ rule all_uniform_repeats:
 
 use rule download_ref as download_trf with:
     output:
-        resources_dir / "{ref_key}" / "trf_simreps.txt.gz",
+        ref_src_dir / "trf_simreps.txt.gz",
     params:
         url=partial(lookup_strat, ["low_complexity", "simreps_url"]),
 
@@ -246,8 +246,7 @@ rule merge_trf:
 
 use rule download_ref as download_rmsk with:
     output:
-        # TODO not dry
-        resources_dir / "{ref_key}" / "rmsk.txt.gz",
+        ref_src_dir / "rmsk.txt.gz",
     params:
         url=partial(lookup_strat, ["low_complexity", "rmsk_url"]),
 

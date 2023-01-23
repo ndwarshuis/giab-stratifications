@@ -1,9 +1,10 @@
+ref_src_dir = resources_dir / "{ref_key}"
 ref_dir = results_dir / "ref" / "{ref_key}"
 
 
 rule download_ref:
     output:
-        resources_dir / "{ref_key}" / "ref.fna.gz",
+        ref_src_dir / "ref.fna.gz",
     params:
         url=partial(lookup_strat, ["ref_url"]),
     conda:
