@@ -49,7 +49,7 @@ rule all:
     input:
         # rules.all_low_complexity.input + rules.all_xy.input + rules.all_map.input,
         expand(
-            rules.all_low_complexity.input,
+            rules.all_low_complexity.input + rules.all_xy.input,
             allow_missing=True,
             ref_key=config["stratifications"],
         ),

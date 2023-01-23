@@ -1,10 +1,10 @@
-xy_resources_dir = resources_dir / "XY"
+xy_src_dir = ref_src_dir / "XY"
 xy_final_dir = final_dir / "XY"
 
 
 rule download_genome_features_bed:
     output:
-        xy_resources_dir / "genome_features_{chr}.bed",
+        xy_src_dir / "genome_features_{chr}.bed",
     params:
         url=lambda wildcards: lookup_strat(
             ["XY", f"{wildcards.chr}_features"], wildcards

@@ -3,6 +3,7 @@ from collections import namedtuple
 from functools import partial
 
 
+lc_src_dir = ref_src_dir / "low_complexity"
 lc_inter_dir = intermediate_dir / "LowComplexity"
 lc_final_dir = final_dir / "LowComplexity"
 lc_log_dir = log_dir / "LowComplexity"
@@ -202,7 +203,7 @@ rule all_uniform_repeats:
 
 use rule download_ref as download_trf with:
     output:
-        ref_src_dir / "trf_simreps.txt.gz",
+        lc_src_dir / "trf_simreps.txt.gz",
     params:
         url=partial(lookup_strat, ["low_complexity", "simreps_url"]),
 
@@ -246,7 +247,7 @@ rule merge_trf:
 
 use rule download_ref as download_rmsk with:
     output:
-        ref_src_dir / "rmsk.txt.gz",
+        lc_src_dir / "rmsk.txt.gz",
     params:
         url=partial(lookup_strat, ["low_complexity", "rmsk_url"]),
 
