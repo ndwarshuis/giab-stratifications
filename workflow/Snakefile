@@ -28,7 +28,7 @@ envs_path = partial(build_abs_path, Path("workflow/envs"))
 
 
 def lookup_strat(args, wildcards):
-    def more(d, *args):
+    def more(d, args):
         return d if len(args) == 0 else more(d[args[0]], args[1:])
 
     return more(config["stratifications"][wildcards.ref_key], args)
@@ -47,8 +47,9 @@ include: "rules/mappability.smk"
 
 rule all:
     input:
+        # rules.all_low_complexity.input + rules.all_xy.input + rules.all_map.input,
         expand(
-            rules.all_low_complexity.input + rules.all_xy.input + rules.all_map.input,
+            rules.all_low_complexity.input,
             allow_missing=True,
             ref_key=config["stratifications"],
         ),

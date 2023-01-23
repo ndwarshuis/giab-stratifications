@@ -107,6 +107,7 @@ use rule slop_uniform_repeats as slop_uniform_repeat_ranges with:
     input:
         bed=lambda wildcards: expand(
             rules.subtract_uniform_repeats.output,
+            allow_missing=True,
             unit_name=wildcards.unit_name,
             total_lenA=int(wildcards.total_lenA)
             - (offset := get_offset(wildcards.unit_name)),
@@ -201,7 +202,7 @@ rule all_uniform_repeats:
 
 use rule download_ref as download_trf with:
     output:
-        resources_dir / "trf_simreps.txt.gz",
+        resources_dir / "{ref_key}" / "trf_simreps.txt.gz",
     params:
         url=partial(lookup_strat, ["low_complexity", "simreps_url"]),
 
@@ -245,7 +246,8 @@ rule merge_trf:
 
 use rule download_ref as download_rmsk with:
     output:
-        resources_dir / "rmsk.txt.gz",
+        # TODO not dry
+        resources_dir / "{ref_key}" / "rmsk.txt.gz",
     params:
         url=partial(lookup_strat, ["low_complexity", "rmsk_url"]),
 
@@ -333,6 +335,7 @@ rule invert_satellites:
 rule merge_all_uniform_repeats:
     input:
         imperfect=rules.all_uniform_repeats.input.imperfect_gt10,
+        # imperfect=all_uniform_repeats["imperfect_gt10"],
         perfect=rules.all_perfect_uniform_repeats.input.R1_T7,
         genome=rules.get_genome.output,
     output:
