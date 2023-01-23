@@ -12,9 +12,11 @@ resources_dir = Path(conf_paths["resources"])
 results_dir = Path(conf_paths["results"])
 scripts_root = Path("workflow/scripts")
 
-log_dir = results_dir / "log" / "{ref_key}"
-intermediate_dir = results_dir / "intermediates" / "{ref_key}"
-final_dir = results_dir / "final" / "{ref_key}"
+# TODO need to restrict wildcards for refkey and build key so underscors don't
+# get mangled
+log_dir = results_dir / "log" / "{ref_key}_{build_key}"
+intermediate_dir = results_dir / "intermediates" / "{ref_key}_{build_key}"
+final_dir = results_dir / "final" / "{ref_key}_{build_key}"
 
 
 def build_abs_path(relpath, basename):
@@ -34,6 +36,15 @@ def lookup_strat(args, wildcards):
     return more(config["stratifications"][wildcards.ref_key], args)
 
 
+def lookup_build(args, wildcards):
+    return lookup_strat(["builds", wildcards.build_key, *args], wildcards)
+
+
+# TODO could simplify alot by automatically taking out mito/ebv/alt seqs
+def lookup_filter(wildcards):
+    return "\\|".join(lookup_build(["chr_filter"], wildcards))
+
+
 ################################################################################
 # Targets
 
@@ -48,8 +59,13 @@ include: "rules/mappability.smk"
 rule all:
     input:
         # rules.all_low_complexity.input + rules.all_xy.input + rules.all_map.input,
-        expand(
-            rules.all_low_complexity.input + rules.all_xy.input,
-            allow_missing=True,
-            ref_key=config["stratifications"],
-        ),
+        [
+            expand(
+                rules.all_low_complexity.input + rules.all_xy.input,
+                allow_missing=True,
+                ref_key=rk,
+                build_key=bk,
+            )
+            for rk, r in config["stratifications"].items()
+            for bk in r["builds"]
+        ],

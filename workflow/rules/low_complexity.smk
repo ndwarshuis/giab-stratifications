@@ -213,13 +213,16 @@ rule filter_sort_trf:
         bed=rules.download_trf.output,
         genome=rules.get_genome.output,
     output:
-        ref_dir / "trf.txt.gz",
+        lc_inter_dir / "trf.txt.gz",
     conda:
         envs_path("bedtools.yml")
+    params:
+        filt=lookup_filter,
     shell:
         """
         gunzip -c {input.bed} | \
         cut -f 2,3,4 | \
+        sed -n '/^\(#\|{params.filt}\)/p' | \
         grep -Pv '^\S+_|^\S+EBV\s|^\S+M\s' | \
         bedtools sort -i stdin -g {input.genome} | \
         bgzip -c > {output}
@@ -257,13 +260,16 @@ rule filter_sort_rmsk:
         bed=rules.download_rmsk.output,
         genome=rules.get_genome.output,
     output:
-        ref_dir / "rmsk.txt.gz",
+        lc_inter_dir / "rmsk.txt.gz",
     conda:
         envs_path("bedtools.yml")
+    params:
+        filt=lookup_filter,
     shell:
         """
         gunzip -c {input.bed} | \
         cut -f 6,7,8,12 | \
+        sed -n '/^\(#\|{params.filt}\)/p' | \
         grep -Pv '^\S+_|^\S+EBV\s|^\S+M\s' | \
         bedtools sort -i stdin -g {input.genome} | \
         bgzip -c > {output}

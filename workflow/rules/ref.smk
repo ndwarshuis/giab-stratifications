@@ -1,5 +1,6 @@
 ref_src_dir = resources_dir / "{ref_key}"
-ref_dir = results_dir / "ref" / "{ref_key}"
+ref_master_dir = results_dir / "ref" / "{ref_key}"
+ref_inter_dir = intermediate_dir / "ref"
 
 
 rule download_ref:
@@ -17,7 +18,7 @@ rule unzip_ref:
     input:
         rules.download_ref.output,
     output:
-        ref_dir / "ref.fna",
+        ref_master_dir / "ref.fna",
     conda:
         envs_path("utils.yml")
     shell:
@@ -28,7 +29,7 @@ rule index_ref:
     input:
         rules.download_ref.output,
     output:
-        ref_dir / "ref.fna.fai",
+        ref_master_dir / "ref.fna.fai",
     conda:
         envs_path("utils.yml")
     shell:
@@ -48,9 +49,15 @@ rule get_genome:
     input:
         rules.index_ref.output,
     output:
-        ref_dir / "genome.txt",
+        ref_inter_dir / "genome.txt",
+    params:
+        filt=lookup_filter,
     shell:
-        "cut -f 1,2 {input} > {output}"
+        """
+        cut -f 1,2 {input} | \
+        sed -n '/^\(#\|{params.filt}\)/p' \
+        > {output}
+        """
 
 
 # TODO filter a subset of this for testing
@@ -59,7 +66,7 @@ rule filter_sort_ref:
         fa=rules.unzip_ref.output,
         genome=rules.get_genome.output,
     output:
-        ref_dir / "ref_filtered.fa",
+        ref_inter_dir / "ref_filtered.fa",
     conda:
         envs_path("utils.yml")
     shell:

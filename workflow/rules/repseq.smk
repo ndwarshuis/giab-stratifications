@@ -13,7 +13,7 @@ rule unpack_repseq:
     input:
         rules.download_repseq.output,
     output:
-        directory(results_dir / "build" / "repseq"),
+        directory(results_dir / "tools" / "make" / "repseq"),
     shell:
         """
         mkdir {output} && \
@@ -26,7 +26,7 @@ rule build_repseq:
     input:
         rules.unpack_repseq.output,
     output:
-        results_dir / "bin" / "repseq",
+        results_dir / "tools" / "bin" / "repseq",
     conda:
         envs_path("build.yml")
     shell:

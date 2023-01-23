@@ -5,18 +5,6 @@ map_inter_dir = intermediate_dir / "mappability"
 map_final_dir = final_dir / "mappability"
 
 
-# for testing
-rule filter_chr21:
-    input:
-        rules.unzip_ref.output,
-    output:
-        ref_dir / "ref_filtered_chr21.fa",
-    conda:
-        envs_path("utils.yml")
-    shell:
-        "samtools faidx {input} chr21 > {output}"
-
-
 rule download_gem:
     output:
         resources_dir / "tools" / "gemlib.tbz2",
@@ -61,7 +49,7 @@ rule unpack_gem:
 
 rule gem_index:
     input:
-        fa=rules.filter_chr21.output,
+        fa=rules.filter_sort_ref.output,
         bin=rules.unpack_gem.output.indexer,
     output:
         map_inter_dir / "index.gem",
