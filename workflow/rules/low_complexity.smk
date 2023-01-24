@@ -205,7 +205,7 @@ use rule download_ref as download_trf with:
     output:
         lc_src_dir / "trf_simreps.txt.gz",
     params:
-        url=partial(lookup_strat, ["low_complexity", "simreps_url"]),
+        url=partial(lookup_ref_wc, ["low_complexity", "simreps_url"]),
 
 
 rule filter_sort_trf:
@@ -217,13 +217,12 @@ rule filter_sort_trf:
     conda:
         envs_path("bedtools.yml")
     params:
-        filt=lookup_filter,
+        filt=lookup_filter_wc,
     shell:
         """
         gunzip -c {input.bed} | \
         cut -f 2,3,4 | \
-        sed -n '/^\(#\|{params.filt}\)/p' | \
-        grep -Pv '^\S+_|^\S+EBV\s|^\S+M\s' | \
+        sed -n '/^\(#\|{params.filt}\)\t/p' | \
         bedtools sort -i stdin -g {input.genome} | \
         bgzip -c > {output}
         """
@@ -252,7 +251,7 @@ use rule download_ref as download_rmsk with:
     output:
         lc_src_dir / "rmsk.txt.gz",
     params:
-        url=partial(lookup_strat, ["low_complexity", "rmsk_url"]),
+        url=partial(lookup_ref_wc, ["low_complexity", "rmsk_url"]),
 
 
 rule filter_sort_rmsk:
@@ -264,13 +263,12 @@ rule filter_sort_rmsk:
     conda:
         envs_path("bedtools.yml")
     params:
-        filt=lookup_filter,
+        filt=lookup_filter_wc,
     shell:
         """
         gunzip -c {input.bed} | \
         cut -f 6,7,8,12 | \
-        sed -n '/^\(#\|{params.filt}\)/p' | \
-        grep -Pv '^\S+_|^\S+EBV\s|^\S+M\s' | \
+        sed -n '/^\(#\|{params.filt}\)\t/p' | \
         bedtools sort -i stdin -g {input.genome} | \
         bgzip -c > {output}
         """

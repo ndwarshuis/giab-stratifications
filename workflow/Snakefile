@@ -14,9 +14,10 @@ scripts_root = Path("workflow/scripts")
 
 # TODO need to restrict wildcards for refkey and build key so underscors don't
 # get mangled
-log_dir = results_dir / "log" / "{ref_key}_{build_key}"
-intermediate_dir = results_dir / "intermediates" / "{ref_key}_{build_key}"
-final_dir = results_dir / "final" / "{ref_key}_{build_key}"
+builds_dir = results_dir / "builds"
+log_dir = builds_dir / "log" / "{ref_key}@{build_key}"
+intermediate_dir = builds_dir / "intermediates" / "{ref_key}@{build_key}"
+final_dir = builds_dir / "final" / "{ref_key}@{build_key}"
 
 
 def build_abs_path(relpath, basename):
@@ -29,20 +30,51 @@ envs_path = partial(build_abs_path, Path("workflow/envs"))
 # Config (put this in a better spot later)
 
 
-def lookup_strat(args, wildcards):
+def lookup_ref(args, ref_key):
     def more(d, args):
         return d if len(args) == 0 else more(d[args[0]], args[1:])
 
-    return more(config["stratifications"][wildcards.ref_key], args)
+    return more(config["stratifications"][ref_key], args)
 
 
-def lookup_build(args, wildcards):
-    return lookup_strat(["builds", wildcards.build_key, *args], wildcards)
+def lookup_build(args, ref_key, build_key):
+    return lookup_ref(["builds", build_key, *args], ref_key)
 
 
-# TODO could simplify alot by automatically taking out mito/ebv/alt seqs
-def lookup_filter(wildcards):
-    return "\\|".join(lookup_build(["chr_filter"], wildcards))
+valid_chr_indices = set([*range(1, 23), "X", "Y"])
+
+
+def lookup_chr_indices(ref_key, build_key):
+    f = lookup_build(["chr_filter"], ref_key, build_key)
+    if len(f) == 0:
+        return valid_chr_indices
+    else:
+        # TODO this could be moved to a more general validation step
+        invalid = set(f) - valid_chr_indices
+        msg = "Invalid chr indices for ref %s build %s: %s"
+        assert len(invalid) == 0, msg % (
+            ref_key,
+            build_key,
+            ", ".join(invalid),
+        )
+        return f
+
+
+def lookup_chrs(ref_key, build_key):
+    p = lookup_ref(["chr_prefix"], ref_key)
+    return [f"{p}{f}" for f in lookup_chr_indices(ref_key, build_key)]
+
+
+def lookup_ref_wc(args, wildcards):
+    return lookup_ref(args, wildcards.ref_key)
+
+
+def lookup_build_wc(args, wildcards):
+    return lookup_build(args, wildcards.ref_key, wildcards.build_key)
+
+
+def lookup_filter_wc(wildcards):
+    return "\\|".join(lookup_chrs(wildcards.ref_key, wildcards.build_key))
 
 
 ################################################################################
@@ -56,16 +88,47 @@ include: "rules/xy.smk"
 include: "rules/mappability.smk"
 
 
+def expand_targets():
+    all_builds = [
+        (ref_key, build_key, b["include"])
+        for ref_key, r in config["stratifications"].items()
+        for build_key, b in r["builds"].items()
+    ]
+
+    def expand_target(target, f):
+        return [
+            expand(
+                target,
+                allow_missing=True,
+                ref_key=ref_key,
+                build_key=build_key,
+            )
+            for ref_key, build_key, include in all_builds
+            if f(include, ref_key, build_key)
+        ]
+
+    # XY is special since we should not include the XY strats if we don't also
+    # have X and Y in the filter. Likewise we should not include an autosomes
+    # if they are not in the filter
+
+    def include_xy(include, ref_key, build_key):
+        chr_indices = lookup_chr_indices(ref_key, build_key)
+        return "X" in chr_indices and "Y" in chr_indices and include["xy"]
+
+    def include_auto(include, ref_key, build_key):
+        chr_indices = lookup_chr_indices(ref_key, build_key)
+        return len(set(chr_indices) - set(["X", "Y"])) > 0
+
+    return (
+        expand_target(
+            rules.all_low_complexity.input, lambda inc, *_: inc["low_complexity"]
+        )
+        + expand_target(rules.all_xy.input, include_xy)
+        + expand_target(rules.all_auto.input, include_auto)
+        + expand_target(rules.all_map.input, lambda inc, *_: inc["map"])
+    )
+
+
 rule all:
     input:
-        # rules.all_low_complexity.input + rules.all_xy.input + rules.all_map.input,
-        [
-            expand(
-                rules.all_low_complexity.input + rules.all_xy.input,
-                allow_missing=True,
-                ref_key=rk,
-                build_key=bk,
-            )
-            for rk, r in config["stratifications"].items()
-            for bk in r["builds"]
-        ],
+        expand_targets(),

@@ -6,7 +6,7 @@ rule download_genome_features_bed:
     output:
         xy_src_dir / "genome_features_{chr}.bed",
     params:
-        url=lambda wildcards: lookup_strat(
+        url=lambda wildcards: lookup_ref_wc(
             ["XY", f"{wildcards.chr}_features"], wildcards
         ),
     conda:
@@ -19,10 +19,11 @@ use rule download_genome_features_bed as download_X_PAR with:
     output:
         xy_final_dir / "GRCh38_chrX_PAR.bed",
     params:
-        url=partial(lookup_strat, ["XY", "X_PAR"]),
+        url=partial(lookup_ref_wc, ["XY", "X_PAR"]),
 
 
 # TODO not sure where the actual PAR is, but this will do for now
+# TODO the "chr" in front isn't constant across all refs
 rule write_Y_PAR:
     output:
         xy_final_dir / "GRCh38_chrY_PAR.bed",
@@ -91,4 +92,8 @@ rule all_xy:
         rules.download_X_PAR.output,
         rules.write_Y_PAR.output,
         expand(rules.invert_PAR.output, allow_missing=True, chr=["X", "Y"]),
+
+
+rule all_auto:
+    input:
         rules.filter_autosomes.output,

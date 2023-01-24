@@ -1,6 +1,7 @@
 stratifications:
   GRCh38:
     ref_url: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.15_GRCh38/seqs_for_alignment_pipelines.ucsc_ids/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.gz
+    chr_prefix: chr
     low_complexity:
       rmsk_url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
       simreps_url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
@@ -13,5 +14,15 @@ stratifications:
       self_chain: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/chainSelf.txt.gz
       self_chain_link: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/chainSelfLink.txt.gz
     builds:
-      test:
-        chr_filter: [chr21, chrX, chrY]
+      test_autosome:
+        chr_filter: [21]
+        include:
+          low_complexity: true
+          xy: false
+          map: false
+      test_xy:
+        chr_filter: [X, Y]
+        include:
+          low_complexity: false
+          xy: true
+          map: false

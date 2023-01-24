@@ -7,7 +7,7 @@ rule download_ref:
     output:
         ref_src_dir / "ref.fna.gz",
     params:
-        url=partial(lookup_strat, ["ref_url"]),
+        url=partial(lookup_ref_wc, ["ref_url"]),
     conda:
         envs_path("utils.yml")
     shell:
@@ -51,11 +51,11 @@ rule get_genome:
     output:
         ref_inter_dir / "genome.txt",
     params:
-        filt=lookup_filter,
+        filt=lookup_filter_wc,
     shell:
         """
         cut -f 1,2 {input} | \
-        sed -n '/^\(#\|{params.filt}\)/p' \
+        sed -n '/^\(#\|{params.filt}\)\t/p' \
         > {output}
         """
 
