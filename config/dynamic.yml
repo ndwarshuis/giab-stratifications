@@ -1,6 +1,7 @@
 stratifications:
   GRCh38:
     ref_url: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.15_GRCh38/seqs_for_alignment_pipelines.ucsc_ids/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.gz
+    gap_url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
     chr_prefix: chr
     low_complexity:
       rmsk_url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz

@@ -25,6 +25,7 @@ def build_abs_path(relpath, basename):
 
 
 envs_path = partial(build_abs_path, Path("workflow/envs"))
+scripts_path = partial(build_abs_path, Path("workflow/scripts"))
 
 ################################################################################
 # Config (put this in a better spot later)
@@ -137,7 +138,11 @@ include: "rules/postprocess.smk"
 rule all:
     input:
         [
-            expand(rules.generate_md5sums.output, ref_key=rk, build_key=bk)
+            expand(
+                rules.validate_strats.output + rules.generate_md5sums.output,
+                ref_key=rk,
+                build_key=bk,
+            )
             for rk, r in config["stratifications"].items()
             for bk in r["builds"]
         ],

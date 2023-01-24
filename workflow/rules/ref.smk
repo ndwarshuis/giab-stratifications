@@ -74,3 +74,33 @@ rule filter_sort_ref:
         samtools faidx {input.fa} $(cut -f1 {input.genome} | tr '\n' ' ') > \
         {output}
         """
+
+
+use rule download_ref as download_gaps with:
+    output:
+        ref_src_dir / "gap.bed.gz",
+    params:
+        url=partial(lookup_ref_wc, ["gap_url"]),
+    conda:
+        envs_path("utils.yml")
+
+
+rule merge_gaps:
+    input:
+        gaps=rules.download_gaps.output,
+        genome=rules.get_genome.output,
+    output:
+        ref_inter_dir / "gaps_merged.bed",
+    conda:
+        envs_path("bedtools.yml")
+    params:
+        filt=lookup_filter_wc,
+    shell:
+        """
+        gunzip -c {input.gaps} | \
+        cut -f2-4 | \
+        sed -n '/^\(#\|{params.filt}\)\t/p' | \
+        bedtools sort -t stdin -g {input.genome} | \
+        bedtools merge -i stdin -d 100 \
+        > {output}
+        """

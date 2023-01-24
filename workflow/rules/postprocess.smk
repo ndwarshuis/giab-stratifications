@@ -1,6 +1,35 @@
 from os.path import dirname
 from itertools import chain
 
+
+rule remove_genome_gaps:
+    input:
+        gaps=rules.merge_gaps.output,
+        genome=rules.get_genome.output,
+    output:
+        ref_inter_dir / "genome_noN.bed",
+    conda:
+        envs_path("bedtools.yml")
+    shell:
+        """
+        bedtools complement -i {input.gaps} -g {input.genome} > {output}
+        """
+
+
+rule remove_gaps_PAR_Y:
+    input:
+        gaps=rules.remove_genome_gaps.output,
+        par=rules.write_Y_PAR.output,
+    output:
+        ref_inter_dir / "genome_noN_noPARY.bed",
+    conda:
+        envs_path("bedtools.yml")
+    shell:
+        """
+        bedtools subtract -a {input.gaps} -b {input.par} > {output}
+        """
+
+
 # TODO need to get a bed file that has all Ns from the reference (so they can be subtracte
 
 # TODO merge outputs? (this is something done in postprocessing but seems like
@@ -45,10 +74,14 @@ def expand_strat_targets(ref_key, build_key):
     )
 
 
+def expand_strat_targets_wc(wildcards):
+    return expand_strat_targets(wildcards.ref_key, wildcards.build_key)
+
+
 # TODO don't hardcode version
 rule generate_md5sums:
     input:
-        lambda wildcards: expand_strat_targets(wildcards.ref_key, wildcards.build_key),
+        expand_strat_targets_wc,
     output:
         final_dir / "v3.1-genome-stratifications-{ref_key}-md5s.txt",
     params:
@@ -58,3 +91,15 @@ rule generate_md5sums:
         sed 's|{params.root}|{wildcards.ref_key}|' \
         > {output}
         """
+
+
+rule validate_strats:
+    input:
+        strats=expand_strat_targets_wc,
+        gaps=rules.remove_gaps_PAR_Y.output,
+    output:
+        final_dir / "validation.html",
+    conda:
+        envs_path("rmarkdown.yml")
+    script:
+        scripts_path("rmarkdown/validate.Rmd")
