@@ -76,7 +76,9 @@ rule filter_autosomes:
     output:
         xy_final_dir / "GRCh38_AllAutosomes.bed",
     shell:
-        "awk -v OFS='\t' {{'print $1,\"0\",$2'}} {input} | grep -v \"X\|Y\" > {output}"
+        """awk -v OFS='\t' {{'print $1,\"0\",$2'}} {input} | \
+        grep -v \"X\|Y\" > {output}
+        """
 
 
 # NOTE the XTR X region is different relative to old strats because it was
@@ -92,6 +94,10 @@ rule all_xy:
         rules.download_X_PAR.output,
         rules.write_Y_PAR.output,
         expand(rules.invert_PAR.output, allow_missing=True, chr=["X", "Y"]),
+
+
+# TODO the post processing scripts for these have merge steps; I probably don't
+# need them (at least for hg38) but they were likely added for a reason
 
 
 rule all_auto:

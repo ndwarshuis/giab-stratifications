@@ -73,6 +73,10 @@ def lookup_build_wc(args, wildcards):
     return lookup_build(args, wildcards.ref_key, wildcards.build_key)
 
 
+def lookup_chr_indices_wc(wildcards):
+    return lookup_chr_indices(args, wildcards.ref_key, wildcards.build_key)
+
+
 def lookup_filter_wc(wildcards):
     return "\\|".join(lookup_chrs(wildcards.ref_key, wildcards.build_key))
 
@@ -86,49 +90,54 @@ include: "rules/ref.smk"
 include: "rules/low_complexity.smk"
 include: "rules/xy.smk"
 include: "rules/mappability.smk"
+include: "rules/postprocess.smk"
 
 
-def expand_targets():
-    all_builds = [
-        (ref_key, build_key, b["include"])
-        for ref_key, r in config["stratifications"].items()
-        for build_key, b in r["builds"].items()
-    ]
+# def expand_targets():
+#     all_builds = [
+#         (ref_key, build_key, b["include"])
+#         for ref_key, r in config["stratifications"].items()
+#         for build_key, b in r["builds"].items()
+#     ]
 
-    def expand_target(target, f):
-        return [
-            expand(
-                target,
-                allow_missing=True,
-                ref_key=ref_key,
-                build_key=build_key,
-            )
-            for ref_key, build_key, include in all_builds
-            if f(include, ref_key, build_key)
-        ]
+#     def expand_target(target, f):
+#         return [
+#             expand(
+#                 target,
+#                 allow_missing=True,
+#                 ref_key=ref_key,
+#                 build_key=build_key,
+#             )
+#             for ref_key, build_key, include in all_builds
+#             if f(include, ref_key, build_key)
+#         ]
 
-    # XY is special since we should not include the XY strats if we don't also
-    # have X and Y in the filter. Likewise we should not include an autosomes
-    # if they are not in the filter
+#     # XY is special since we should not include the XY strats if we don't also
+#     # have X and Y in the filter. Likewise we should not include an autosomes
+#     # if they are not in the filter
 
-    def include_xy(include, ref_key, build_key):
-        chr_indices = lookup_chr_indices(ref_key, build_key)
-        return "X" in chr_indices and "Y" in chr_indices and include["xy"]
+#     def include_xy(include, ref_key, build_key):
+#         chr_indices = lookup_chr_indices(ref_key, build_key)
+#         return "X" in chr_indices and "Y" in chr_indices and include["xy"]
 
-    def include_auto(include, ref_key, build_key):
-        chr_indices = lookup_chr_indices(ref_key, build_key)
-        return len(set(chr_indices) - set(["X", "Y"])) > 0
+#     def include_auto(include, ref_key, build_key):
+#         chr_indices = lookup_chr_indices(ref_key, build_key)
+#         return len(set(chr_indices) - set(["X", "Y"])) > 0
 
-    return (
-        expand_target(
-            rules.all_low_complexity.input, lambda inc, *_: inc["low_complexity"]
-        )
-        + expand_target(rules.all_xy.input, include_xy)
-        + expand_target(rules.all_auto.input, include_auto)
-        + expand_target(rules.all_map.input, lambda inc, *_: inc["map"])
-    )
+#     return (
+#         expand_target(
+#             rules.all_low_complexity.input, lambda inc, *_: inc["low_complexity"]
+#         )
+#         + expand_target(rules.all_xy.input, include_xy)
+#         + expand_target(rules.all_auto.input, include_auto)
+#         + expand_target(rules.all_map.input, lambda inc, *_: inc["map"])
+#     )
 
 
 rule all:
     input:
-        expand_targets(),
+        [
+            expand(rules.generate_md5sums.output, ref_key=rk, build_key=bk)
+            for rk, r in config["stratifications"].items()
+            for bk in r["builds"]
+        ],

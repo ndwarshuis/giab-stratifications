@@ -353,7 +353,8 @@ rule merge_all_uniform_repeats:
         mergeBed -i stdin | \
         multiIntersectBed -i stdin {input.imperfect} | \
         mergeBed -i stdin | \
-        bgzip -c > {output}
+        bgzip -c \
+        > {output}
         """
 
 
