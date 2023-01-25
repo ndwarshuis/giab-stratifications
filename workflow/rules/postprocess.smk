@@ -2,31 +2,21 @@ from os.path import dirname
 from itertools import chain
 
 
-rule remove_genome_gaps:
+rule remove_gaps:
     input:
+        genome=rules.genome_to_bed.output,
         gaps=rules.merge_gaps.output,
-        genome=rules.get_genome.output,
+        parY=rules.write_Y_PAR.output,
     output:
-        ref_inter_dir / "genome_noN.bed",
+        ref_inter_dir / "genome_gapless.bed",
     conda:
         envs_path("bedtools.yml")
     shell:
         """
-        bedtools complement -i {input.gaps} -g {input.genome} > {output}
-        """
-
-
-rule remove_gaps_PAR_Y:
-    input:
-        gaps=rules.remove_genome_gaps.output,
-        par=rules.write_Y_PAR.output,
-    output:
-        ref_inter_dir / "genome_noN_noPARY.bed",
-    conda:
-        envs_path("bedtools.yml")
-    shell:
-        """
-        bedtools subtract -a {input.gaps} -b {input.par} > {output}
+        cat {input.genome} | \
+        bedtools subtract -a stdin -b {input.gaps} | \
+        bedtools subtract -a stdin -b {input.parY} \
+        > {output}
         """
 
 
@@ -96,7 +86,9 @@ rule generate_md5sums:
 rule validate_strats:
     input:
         strats=expand_strat_targets_wc,
-        gaps=rules.remove_gaps_PAR_Y.output,
+        nonN=lambda wildcards: rules.genome_to_bed.output
+        if lookup_ref_wc(["gap_url"], wildcards) is None
+        else rules.remove_gaps.output,
     output:
         final_dir / "validation.html",
     conda:

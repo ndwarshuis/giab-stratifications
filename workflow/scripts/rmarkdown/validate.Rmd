@@ -28,9 +28,9 @@ coverage_plot <- function(df, type) {
   if (nrow(.df) == 0) {
     cat("None\n\n")
   } else {
-    ggplot(.df, aes(coverage, chrom)) +
+    ggplot(.df, aes(strat_level, coverage)) +
       geom_col() +
-      facet_wrap(scales = "free_y", strat_level ~ .) +
+      facet_wrap(scales = "free_y", chrom ~ .) +
       theme(legend.position = "top",
             text = element_text(size=30),
             axis.text.x = element_text(angle=90),
@@ -43,7 +43,7 @@ knitr::opts_chunk$set(fig.width=25, fig.height=12, fig_caption=TRUE)
 
 bed_cols <- c("chrom", "start", "end")
 
-df_chr_sizes <- snakemake@input$gaps %>%
+df_chr_sizes <- snakemake@input$nonN %>%
   read_tsv(col_names = bed_cols, col_types = "cii") %>%
   mutate(region_size = end - start) %>%
   group_by(chrom) %>%

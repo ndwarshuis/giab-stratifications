@@ -60,6 +60,17 @@ rule get_genome:
         """
 
 
+rule genome_to_bed:
+    input:
+        rules.get_genome.output,
+    output:
+        ref_inter_dir / "genome.bed",
+    params:
+        filt=lookup_filter_wc,
+    shell:
+        "awk 'BEGIN {{ FS = OFS = \"\t\"}} {{ print $1, 0, $2 }}' {input} > {output}"
+
+
 # TODO filter a subset of this for testing
 rule filter_sort_ref:
     input:
