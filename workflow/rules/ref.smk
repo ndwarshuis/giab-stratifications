@@ -100,7 +100,7 @@ rule merge_gaps:
         gunzip -c {input.gaps} | \
         cut -f2-4 | \
         sed -n '/^\(#\|{params.filt}\)\t/p' | \
-        bedtools sort -t stdin -g {input.genome} | \
+        bedtools sort -i stdin -g {input.genome} | \
         bedtools merge -i stdin -d 100 \
         > {output}
         """

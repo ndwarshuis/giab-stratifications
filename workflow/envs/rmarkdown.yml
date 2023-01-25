@@ -1,4 +1,4 @@
 channels:
   - conda-forge
-depdendencies:
+dependencies:
   - r-tidyverse=1.3.2

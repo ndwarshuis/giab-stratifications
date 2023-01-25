@@ -238,7 +238,7 @@ rule merge_trf:
     shell:
         """
         gunzip -c {input} | \
-        mergeBed -i stdin |  \
+        mergeBed -i stdin | \
         bgzip -c > {output}
         """
 

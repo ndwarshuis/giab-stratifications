@@ -1,0 +1,220 @@
+---
+title: "v3.1-stratifications Validation"
+output:
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    df_print: paged
+author: Jenny McDaniel
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+---
+
+<!-- # Purpose -->
+
+<!-- This markdown will be used to validate stratification BED files for the -->
+<!-- v3.1-stratification release. Validation includes: -->
+
+<!-- 1. Perform sanity checks for each stratification file. -->
+<!-- 2. Confirm expected chromosomes are covered and coverage of individual -->
+<!--    chromosomes is as expected. -->
+    
+```{r, include=FALSE}
+library(tidyverse)
+
+coverage_plot <- function(df, type) {
+  .df <- df %>% filter(strat_type == type)
+  if (nrow(.df) == 0) {
+    cat("None\n\n")
+  } else {
+    ggplot(.df, aes(coverage, chrom)) +
+      geom_col() +
+      facet_wrap(scales = "free_y", strat_level ~ .) +
+      theme(legend.position = "top",
+            text = element_text(size=30),
+            axis.text.x = element_text(angle=90),
+            strip.text.y = element_text(angle = 0),
+            panel.spacing.y = unit(2, "lines"))
+  }
+}
+
+knitr::opts_chunk$set(fig.width=25, fig.height=12, fig_caption=TRUE)
+
+bed_cols <- c("chrom", "start", "end")
+
+df_chr_sizes <- snakemake@input$gaps %>%
+  read_tsv(col_names = bed_cols, col_types = "cii") %>%
+  mutate(region_size = end - start) %>%
+  group_by(chrom) %>%
+  summarise(nonN_ref_len = sum(region_size))
+
+df_coverage <- snakemake@input$strats %>%
+  set_names() %>%
+  map(read_tsv, comment = "#", col_types = "cdd", col_names = bed_cols) %>%
+  list_rbind(names_to = "path") %>%
+  mutate(region_size = end - start) %>%
+  group_by(path, chrom) %>%
+  summarise(total_region = sum(region_size)) %>%
+  # right join since we assume size df will have all desired chromosomes
+  right_join(df_chr_sizes, by = "chrom") %>%
+  mutate(strat_type = basename(dirname(path)),
+         strat_filename = basename(path),
+         genome = str_extract(strat_filename, "^[^_]+_(HG[0-9]+)_.bed.gz", 1),
+         ## reference = str_extract(strat_filename, "^([^_])_.*.bed.gz", 1),
+         strat_level = str_extract(strat_filename, 
+                                   if_else(is.na(genome),
+                                           "^[^_]+_(.*).bed.gz",
+                                           "^[^_]+_HG[0-9]+_(.*).bed.gz"),
+                                   1),
+         coverage = total_region / nonN_ref_len) %>%
+  select(-path)
+
+included_chroms <- unique(df_coverage$chrom)
+expected_chroms <- snakemake@params$expected_chroms
+
+```
+
+# Overview
+
+```{r, echo = FALSE, results = "asis"}
+
+cat(sprintf("Reference: %s\n\n", snakemake@wildcards$ref_key))
+
+cat(sprintf("Build: %s\n\n", snakemake@wildcards$build_key))
+
+cat(sprintf("Included chromosomes: %s\n\n", str_c(expected_chroms, collapse = ",")))
+
+# TODO can also print out other build information here if we feel like it
+
+```
+
+<!-- TODO add "unit tests" for overlapping regions and sorting -->
+
+# Unit Tests
+
+Sanity checks for each stratification bed file
+
+## Check for missing/extra chromosomes
+
+```{r, echo = FALSE, results = "asis"}
+
+cat_chromosomes <- function(chroms, which) {
+  s <- if (length(chroms) == 0) {
+    sprintf("No %s chromosomes", which)
+  } else {
+    chr_s <- str_c(chroms, collapse = ", ")
+    sprintf("Chromosomes are %s: %s", which, chr_s)
+  }
+  cat(sprintf("%s\n\n", s))
+}
+
+cat_chromosomes(setdiff(expected_chroms, included_chroms), "missing")
+cat_chromosomes(setdiff(included_chroms, expected_chroms), "extra")
+
+```
+
+# Coverage Plots
+
+<!-- TODO these little panels can be grouped by "genome specific" and "everything" -->
+<!-- else, and each can be generated in its own code block to keep the rmd DRY -->
+
+## Low Complexity
+
+Regions with different types and sizes of low complexity sequence (e.g.,
+homopolymers, STRs, VNTRs, other locally repetitive sequences).
+
+```{r, echo = FALSE, results = "asis"}
+coverage_plot(df_coverage, "LowComplexity")
+```
+
+## Functional Technically Difficult
+
+Different functional, or potentially functional, regions that are also likely to
+be technically difficult to sequence.
+
+```{r, echo = FALSE, results = "asis"}
+coverage_plot(df_coverage, "FunctionalTechnicallyDifficult")
+```
+
+## Functional Regions
+
+Regions to stratify variants inside and outside of coding regions.
+
+```{r, echo = FALSE, results = "asis"}
+coverage_plot(df_coverage, "FunctionalRegions")
+```
+
+## GC Content
+
+Regions with different ranges(%) of GC content.
+
+```{r, echo = FALSE, results = "asis"}
+coverage_plot(df_coverage, "GCcontent")
+```
+
+## Mappability
+
+Regions where short read mappability can be challenging.
+
+```{r, echo = FALSE, results = "asis"}
+coverage_plot(df_coverage, "mappability")
+```
+
+## Other Difficult
+
+Highly variable regions like the VDJ and MHC, near gaps in the reference, or
+errors in the reference.
+
+```{r, echo = FALSE, results = "asis"}
+coverage_plot(df_coverage, "OtherDifficult")
+```
+
+## Segmental Duplications
+
+Regions with segmental duplications or regions with non-trivial self-chain
+alignments.
+
+```{r, echo = FALSE, results = "asis"}
+coverage_plot(df_coverage, "SegmentalDuplications")
+```
+
+## Union
+
+Regions with different general types of difficult regions or any type of
+difficult region or complex variant. For example, performance can be measured in
+just the "easy" regions of the genome.
+
+```{r, echo = FALSE, results = "asis"}
+coverage_plot(df_coverage, "Union")
+```
+
+## Ancestry
+
+Regions with inferred patterns of local ancestry in GRCh38.
+
+```{r, echo = FALSE, results = "asis"}
+coverage_plot(df_coverage, "ancestry")
+```
+
+## XY
+
+Regions in chromosomes X and Y
+
+```{r, echo = FALSE, results = "asis"}
+coverage_plot(df_coverage, "XY")
+```
+
+## Genome Specific (benchmark v4.2.1)
+
+Difficult regions due to potentially difficult variation in the NIST/GIAB
+sample, including:
+
+1. regions containing putative compound heterozygous variants
+2. regions containing multiple variants within 50 bp of each other
+3. regions with potential structural variation and copy number variation
+
+```{r, echo = FALSE, results = "asis"}
+# TODO this will need to be broken out by specific genomes in the plot
+coverage_plot(df_coverage, "GenomeSpecific")
+```

@@ -78,6 +78,10 @@ def lookup_chr_indices_wc(wildcards):
     return lookup_chr_indices(args, wildcards.ref_key, wildcards.build_key)
 
 
+def lookup_chrs_wc(wildcards):
+    return lookup_chrs(wildcards.ref_key, wildcards.build_key)
+
+
 def lookup_filter_wc(wildcards):
     return "\\|".join(lookup_chrs(wildcards.ref_key, wildcards.build_key))
 

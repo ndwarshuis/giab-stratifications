@@ -101,5 +101,7 @@ rule validate_strats:
         final_dir / "validation.html",
     conda:
         envs_path("rmarkdown.yml")
+    params:
+        expected_chroms=lookup_chrs_wc,
     script:
         scripts_path("rmarkdown/validate.Rmd")

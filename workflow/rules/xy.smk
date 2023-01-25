@@ -17,20 +17,33 @@ rule download_genome_features_bed:
 
 use rule download_genome_features_bed as download_X_PAR with:
     output:
-        xy_final_dir / "GRCh38_chrX_PAR.bed",
+        xy_src_dir / "GRCh38_chrX_PAR.bed",
     params:
         url=partial(lookup_ref_wc, ["XY", "X_PAR"]),
+
+
+rule compress_X_PAR:
+    input:
+        rules.download_X_PAR.output,
+    output:
+        xy_final_dir / "GRCh38_chrX_PAR.bed.gz",
+    conda:
+        envs_path("bedtools.yml")
+    shell:
+        "cat {input} | bgzip -c > {output}"
 
 
 # TODO not sure where the actual PAR is, but this will do for now
 # TODO the "chr" in front isn't constant across all refs
 rule write_Y_PAR:
     output:
-        xy_final_dir / "GRCh38_chrY_PAR.bed",
+        xy_final_dir / "GRCh38_chrY_PAR.bed.gz",
+    conda:
+        envs_path("bedtools.yml")
     shell:
         """
-        echo "chrY\t10000\t2781479" >> {output}
-        echo "chrY\t56887902\t57217415" >> {output}
+        echo "chrY\t10000\t2781479\nchrY\t56887902\t57217415" | \
+        bgzip -c > {output}
         """
 
 
@@ -38,17 +51,19 @@ rule filter_xy_features:
     input:
         rules.download_genome_features_bed.output,
     output:
-        xy_final_dir / "GRCh38_chr{chr}_{region,XTR|ampliconic}.bed",
+        xy_final_dir / "GRCh38_chr{chr}_{region,XTR|ampliconic}.bed.gz",
     params:
         filt=lambda wildcards: "Ampliconic"
         if wildcards.region == "ampliconic"
         else wildcards.region,
+    conda:
+        envs_path("bedtools.yml")
     shell:
         """
         grep {params.filt} {input} | \
         cut -f 1-3 | \
-        sort -k2,2n -k3,3n > \
-        {output}
+        sort -k2,2n -k3,3n | \
+        bgzip -c > {output}
         """
 
 
@@ -59,14 +74,14 @@ rule invert_PAR:
         else rules.write_Y_PAR.output,
         genome=rules.get_genome.output,
     output:
-        xy_final_dir / "GRCh38_chr{chr}_nonPAR.bed",
+        xy_final_dir / "GRCh38_chr{chr}_nonPAR.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
         """
         complementBed -i {input.bed} -g {input.genome} | \
-        grep {wildcards.chr} > \
-        {output}
+        grep {wildcards.chr} | \
+        bgzip -c > {output}
         """
 
 
@@ -74,10 +89,14 @@ rule filter_autosomes:
     input:
         rules.get_genome.output,
     output:
-        xy_final_dir / "GRCh38_AllAutosomes.bed",
+        xy_final_dir / "GRCh38_AllAutosomes.bed.gz",
+    conda:
+        envs_path("bedtools.yml")
     shell:
-        """awk -v OFS='\t' {{'print $1,\"0\",$2'}} {input} | \
-        grep -v \"X\|Y\" > {output}
+        """
+        awk -v OFS='\t' {{'print $1,\"0\",$2'}} {input} | \
+        grep -v \"X\|Y\" | \
+        bgzip -c > {output}
         """
 
 
@@ -91,7 +110,7 @@ rule all_xy:
             chr=["X", "Y"],
             region=["XTR", "ampliconic"],
         ),
-        rules.download_X_PAR.output,
+        rules.compress_X_PAR.output,
         rules.write_Y_PAR.output,
         expand(rules.invert_PAR.output, allow_missing=True, chr=["X", "Y"]),
 
