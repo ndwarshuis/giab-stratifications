@@ -1,5 +1,5 @@
 from os.path import dirname
-from itertools import chain
+from scripts.python.config import StratOutputs
 
 
 rule remove_gaps:
@@ -38,34 +38,41 @@ rule remove_gaps:
 # TODO also somehow need to generate the hap.py tables (the tsvs in the root)
 
 
-def expand_strat_targets(ref_key, build_key):
-    inc = lookup_build(["include"], ref_key, build_key)
-    chr_indices = lookup_chr_indices(ref_key, build_key)
+# def expand_strat_targets(ref_key, build_key):
+#     inc = lookup_build(["include"], ref_key, build_key)
+#     chr_indices = lookup_chr_indices(ref_key, build_key)
 
-    # XY is special since we should not include the XY strats if we don't also
-    # have X and Y in the filter. Likewise we should not include an autosomes
-    # if they are not in the filter
-    want_xy = "X" in chr_indices and "Y" in chr_indices and inc["xy"]
-    want_autosomes = len(set(chr_indices) - set(["X", "Y"])) > 0
+#     # XY is special since we should not include the XY strats if we don't also
+#     # have X and Y in the filter. Likewise we should not include an autosomes
+#     # if they are not in the filter
+#     want_xy = "X" in chr_indices and "Y" in chr_indices and inc["xy"]
+#     want_autosomes = len(set(chr_indices) - set(["X", "Y"])) > 0
 
-    all_targets = [
-        (rules.all_low_complexity.input, inc["low_complexity"]),
-        (rules.all_xy.input, want_xy),
-        (rules.all_auto.input, want_autosomes),
-        (rules.all_map.input, inc["map"]),
-    ]
+#     all_targets = [
+#         (rules.all_low_complexity.input, inc["low_complexity"]),
+#         (rules.all_xy.input, want_xy),
+#         (rules.all_auto.input, want_autosomes),
+#         (rules.all_map.input, inc["map"]),
+#     ]
 
-    return chain(
-        *[
-            expand(target, allow_missing=True, ref_key=ref_key, build_key=build_key)
-            for target, wants in all_targets
-            if wants
-        ]
-    )
+#     return chain(
+#         *[
+#             expand(target, allow_missing=True, ref_key=ref_key, build_key=build_key)
+#             for target, wants in all_targets
+#             if wants
+#         ]
+#     )
 
 
 def expand_strat_targets_wc(wildcards):
-    return expand_strat_targets(wildcards.ref_key, wildcards.build_key)
+    s = StratOutputs(
+        low_complexity=rules.all_low_complexity.input,
+        xy_sex=rules.all_xy.input,
+        xy_auto=rules.all_auto.input,
+        map=rules.all_map.input,
+    )
+    print(config.strat_targets(wildcards.ref_key, wildcards.build_key, s))
+    return config.strat_targets(wildcards.ref_key, wildcards.build_key, s)
 
 
 # TODO don't hardcode version
@@ -87,13 +94,15 @@ rule validate_strats:
     input:
         strats=expand_strat_targets_wc,
         nonN=lambda wildcards: rules.genome_to_bed.output
-        if lookup_ref_wc(["gap_url"], wildcards) is None
+        if config.refkey_to_gap_url(wildcards.ref_key) is None
         else rules.remove_gaps.output,
     output:
         final_dir / "validation.html",
     conda:
         envs_path("rmarkdown.yml")
     params:
-        expected_chroms=lookup_chrs_wc,
+        expected_chroms=lambda wildcards: config.buildkey_to_chr_names(
+            wildcards.ref_key, wildcards.build_key
+        ),
     script:
         scripts_path("rmarkdown/validate.Rmd")

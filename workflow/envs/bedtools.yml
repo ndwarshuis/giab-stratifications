@@ -1,6 +1,14 @@
+name: giab-strats-bedtools
 channels:
   - conda-forge
   - bioconda
 dependencies:
+  - python=3.10.2
   - bedtools=2.30.0
   - samtools=1.14
+  - pydantic=1.10.5
+  # dev
+  - black
+  - flake8
+  - mypy
+  - snakefmt

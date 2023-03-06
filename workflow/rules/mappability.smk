@@ -9,7 +9,7 @@ rule download_gem:
     output:
         resources_dir / "tools" / "gemlib.tbz2",
     params:
-        url=config["tools"]["gemlib"],
+        url=config.tools.gemlib,
     conda:
         envs_path("utils.yml")
     shell:

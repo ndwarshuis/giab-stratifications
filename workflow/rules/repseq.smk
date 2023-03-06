@@ -2,7 +2,7 @@ rule download_repseq:
     output:
         resources_dir / "tools" / "repseq.tar.gz",
     params:
-        url=config["tools"]["repseq"],
+        url=config.tools.repseq,
     conda:
         envs_path("utils.yml")
     shell:

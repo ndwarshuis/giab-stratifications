@@ -6,9 +6,11 @@ rule download_genome_features_bed:
     output:
         xy_src_dir / "genome_features_{chr}.bed",
     params:
-        url=lambda wildcards: lookup_ref_wc(
-            ["XY", f"{wildcards.chr}_features"], wildcards
-        ),
+        url=lambda wildcards: (
+            config.refkey_to_y_features_url
+            if wildcards.chr == "Y"
+            else config.refkey_to_x_features_url
+        )(wildcards.ref_key),
     conda:
         envs_path("utils.yml")
     shell:
@@ -19,7 +21,7 @@ use rule download_genome_features_bed as download_X_PAR with:
     output:
         xy_src_dir / "GRCh38_chrX_PAR.bed",
     params:
-        url=partial(lookup_ref_wc, ["XY", "X_PAR"]),
+        url=lambda wildcards: config.refkey_to_x_par_url(wildcards.ref_key),
 
 
 rule compress_X_PAR:
@@ -47,15 +49,13 @@ rule write_Y_PAR:
         """
 
 
-rule filter_xy_features:
+rule filter_XTR_features:
     input:
         rules.download_genome_features_bed.output,
     output:
-        xy_final_dir / "GRCh38_chr{chr}_{region,XTR|ampliconic}.bed.gz",
+        xy_final_dir / "GRCh38_chr{chr}_XTR.bed.gz",
     params:
-        filt=lambda wildcards: "Ampliconic"
-        if wildcards.region == "ampliconic"
-        else wildcards.region,
+        filt="XTR",
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -65,6 +65,35 @@ rule filter_xy_features:
         sort -k2,2n -k3,3n | \
         bgzip -c > {output}
         """
+
+
+use rule filter_XTR_features as filter_ampliconic_features with:
+    input:
+        rules.download_genome_features_bed.output,
+    output:
+        xy_final_dir / "GRCh38_chr{chr}_ampliconic.bed.gz",
+    params:
+        filt="Ampliconic",
+
+
+# rule filter_xy_features:
+#     input:
+#         rules.download_genome_features_bed.output,
+#     output:
+#         xy_final_dir / "GRCh38_chr{chr}_{region,XTR|ampliconic}.bed.gz",
+#     params:
+#         filt=lambda wildcards: "Ampliconic"
+#         if wildcards.region == "ampliconic"
+#         else wildcards.region,
+#     conda:
+#         envs_path("bedtools.yml")
+#     shell:
+#         """
+#         grep {params.filt} {input} | \
+#         cut -f 1-3 | \
+#         sort -k2,2n -k3,3n | \
+#         bgzip -c > {output}
+#         """
 
 
 rule invert_PAR:
@@ -105,14 +134,16 @@ rule filter_autosomes:
 rule all_xy:
     input:
         expand(
-            rules.filter_xy_features.output,
+            [
+                *rules.filter_XTR_features.output,
+                *rules.filter_ampliconic_features.output,
+                *rules.invert_PAR.output,
+            ],
             allow_missing=True,
             chr=["X", "Y"],
-            region=["XTR", "ampliconic"],
         ),
         rules.compress_X_PAR.output,
         rules.write_Y_PAR.output,
-        expand(rules.invert_PAR.output, allow_missing=True, chr=["X", "Y"]),
 
 
 # TODO the post processing scripts for these have merge steps; I probably don't

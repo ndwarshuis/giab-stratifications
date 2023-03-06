@@ -7,7 +7,7 @@ rule download_ref:
     output:
         ref_src_dir / "ref.fna.gz",
     params:
-        url=partial(lookup_ref_wc, ["ref_url"]),
+        url=lambda wildcards: config.refkey_to_ref_url(wildcards.ref_key),
     conda:
         envs_path("utils.yml")
     shell:
@@ -51,7 +51,9 @@ rule get_genome:
     output:
         ref_inter_dir / "genome.txt",
     params:
-        filt=lookup_filter_wc,
+        filt=lambda wildcards: config.buildkey_to_chr_pattern(
+            wildcards.ref_key, wildcards.build_key
+        ),
     shell:
         """
         cut -f 1,2 {input} | \
@@ -65,13 +67,10 @@ rule genome_to_bed:
         rules.get_genome.output,
     output:
         ref_inter_dir / "genome.bed",
-    params:
-        filt=lookup_filter_wc,
     shell:
         "awk 'BEGIN {{ FS = OFS = \"\t\"}} {{ print $1, 0, $2 }}' {input} > {output}"
 
 
-# TODO filter a subset of this for testing
 rule filter_sort_ref:
     input:
         fa=rules.unzip_ref.output,
@@ -91,7 +90,7 @@ use rule download_ref as download_gaps with:
     output:
         ref_src_dir / "gap.bed.gz",
     params:
-        url=partial(lookup_ref_wc, ["gap_url"]),
+        url=lambda wildcards: config.refkey_to_gap_url(wildcards.ref_key),
     conda:
         envs_path("utils.yml")
 
@@ -105,7 +104,9 @@ rule merge_gaps:
     conda:
         envs_path("bedtools.yml")
     params:
-        filt=lookup_filter_wc,
+        filt=lambda wildcards: config.buildkey_to_chr_pattern(
+            wildcards.ref_key, wildcards.build_key
+        ),
     shell:
         """
         gunzip -c {input.gaps} | \

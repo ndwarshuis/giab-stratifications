@@ -6,7 +6,7 @@ rule download_self_chain:
     output:
         segdup_res_dir / "selfChain.txt.gz",
     params:
-        url=partial(lookup_strat, ["segdups", "sefl_chain"]),
+        url=lambda wildcards: config.refkey_to_self_chain_url(wildcards.ref_key),
     conda:
         envs_path("utils.yml")
     shell:
@@ -17,7 +17,7 @@ rule download_self_chain_link:
     output:
         segdup_res_dir / "selfChain_link.txt.gz",
     params:
-        url=partial(lookup_strat, ["segdups", "sefl_chain"]),
+        url=lambda wildcards: config.refkey_to_self_chain_link_url(wildcards.ref_key),
     conda:
         envs_path("utils.yml")
     shell:

@@ -205,7 +205,7 @@ use rule download_ref as download_trf with:
     output:
         lc_src_dir / "trf_simreps.txt.gz",
     params:
-        url=partial(lookup_ref_wc, ["low_complexity", "simreps_url"]),
+        url=lambda wildcards: config.refkey_to_simreps_url(wildcards.ref_key),
 
 
 rule filter_sort_trf:
@@ -217,7 +217,9 @@ rule filter_sort_trf:
     conda:
         envs_path("bedtools.yml")
     params:
-        filt=lookup_filter_wc,
+        filt=lambda wildcards: config.buildkey_to_chr_pattern(
+            wildcards.ref_key, wildcards.build_key
+        ),
     shell:
         """
         gunzip -c {input.bed} | \
@@ -251,7 +253,7 @@ use rule download_ref as download_rmsk with:
     output:
         lc_src_dir / "rmsk.txt.gz",
     params:
-        url=partial(lookup_ref_wc, ["low_complexity", "rmsk_url"]),
+        url=lambda wildcards: config.refkey_to_rmsk_url(wildcards.ref_key),
 
 
 rule filter_sort_rmsk:
@@ -263,7 +265,9 @@ rule filter_sort_rmsk:
     conda:
         envs_path("bedtools.yml")
     params:
-        filt=lookup_filter_wc,
+        filt=lambda wildcards: config.buildkey_to_chr_pattern(
+            wildcards.ref_key, wildcards.build_key
+        ),
     shell:
         """
         gunzip -c {input.bed} | \

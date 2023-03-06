@@ -1,16 +1,16 @@
 stratifications:
   GRCh38:
-    ref_url: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.15_GRCh38/seqs_for_alignment_pipelines.ucsc_ids/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.gz
-    gap_url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
+    ref: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.15_GRCh38/seqs_for_alignment_pipelines.ucsc_ids/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.gz
+    gap: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
     chr_prefix: chr
     low_complexity:
       rmsk_url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
       simreps_url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
-    XY:
-      X_features: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed
-      Y_features: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
+    xy:
+      x_features: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed
+      y_features: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
       # TODO lock the commit for these instead of downloading straight from master
-      X_PAR: https://raw.githubusercontent.com/lh3/dipcall/master/data/hs38.PAR.bed
+      x_par: https://raw.githubusercontent.com/lh3/dipcall/master/data/hs38.PAR.bed
     segdups:
       self_chain: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/chainSelf.txt.gz
       self_chain_link: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/chainSelfLink.txt.gz
@@ -22,7 +22,7 @@ stratifications:
           xy: false
           map: false
       test_xy:
-        chr_filter: [X, Y]
+        chr_filter: [23, 24]
         include:
           low_complexity: false
           xy: true
