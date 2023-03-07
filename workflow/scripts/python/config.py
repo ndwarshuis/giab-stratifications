@@ -1,7 +1,7 @@
 from pathlib import Path
 from pydantic import BaseModel as BaseModel_
 from pydantic import HttpUrl
-from enum import Enum, auto
+from enum import Enum, unique
 from typing import NewType, NamedTuple, Any
 from snakemake.io import expand, InputFiles  # type: ignore
 
@@ -9,39 +9,17 @@ BuildKey = NewType("BuildKey", str)
 RefKey = NewType("RefKey", str)
 
 
+@unique
 class ChrIndex(Enum):
-    CHR1 = auto()
-    CHR2 = auto()
-    CHR3 = auto()
-    CHR4 = auto()
-    CHR5 = auto()
-    CHR6 = auto()
-    CHR7 = auto()
-    CHR8 = auto()
-    CHR9 = auto()
-    CHR10 = auto()
-    CHR11 = auto()
-    CHR12 = auto()
-    CHR13 = auto()
-    CHR14 = auto()
-    CHR15 = auto()
-    CHR16 = auto()
-    CHR17 = auto()
-    CHR18 = auto()
-    CHR19 = auto()
-    CHR20 = auto()
-    CHR21 = auto()
-    CHR22 = auto()
-    CHRX = auto()
-    CHRY = auto()
+    _ignore_ = "ChrIndex i"
+    ChrIndex = vars()
+    for i in range(23):
+        ChrIndex[f"CHR{i}"] = i
+    CHRX = 23
+    CHRY = 24
 
-    @property
-    def chr_name(self) -> str:
-        if self.value == self.CHRY:
-            return "Y"
-        elif self.value == self.CHRX:
-            return "X"
-        return str(self.value)
+    def __init__(self, i: int) -> None:
+        self.chr_name = "X" if i == 23 else ("Y" if i == 24 else str(i))
 
     def chr_name_full(self, prefix: str) -> str:
         return f"{prefix}{self.chr_name}"
