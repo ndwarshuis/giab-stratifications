@@ -71,7 +71,6 @@ def expand_strat_targets_wc(wildcards):
         xy_auto=rules.all_auto.input,
         map=rules.all_map.input,
     )
-    print(config.strat_targets(wildcards.ref_key, wildcards.build_key, s))
     return config.strat_targets(wildcards.ref_key, wildcards.build_key, s)
 
 
