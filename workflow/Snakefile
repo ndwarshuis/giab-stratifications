@@ -1,4 +1,7 @@
 from pathlib import Path
+from snakemake.utils import min_version
+
+min_version("7.20")
 
 
 configfile: "config/static.yml"
@@ -6,7 +9,7 @@ configfile: "config/static.yml"
 
 # required to get a snakemake to properly depickle a pydantic model
 sys.path.extend(["./workflow/scripts/python"])
-from config import GiabStrats
+from common.config import GiabStrats
 
 config = GiabStrats.parse_obj(config)
 

@@ -27,7 +27,7 @@ class ZipFmt(Enum):
 class ChrIndex(Enum):
     _ignore_ = "ChrIndex i"
     ChrIndex = vars()
-    for i in range(1, 23):
+    for i in range(23):
         ChrIndex[f"CHR{i}"] = i
     CHRX = 23
     CHRY = 24

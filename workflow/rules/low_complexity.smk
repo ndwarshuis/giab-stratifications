@@ -259,23 +259,27 @@ use rule download_ref as download_rmsk with:
 rule filter_sort_rmsk:
     input:
         bed=rules.download_rmsk.output,
-        genome=rules.get_genome.output,
+        # genome=rules.get_genome.output,
     output:
         lc_inter_dir / "rmsk.txt.gz",
     conda:
         envs_path("bedtools.yml")
-    params:
-        filt=lambda wildcards: config.buildkey_to_chr_pattern(
-            wildcards.ref_key, wildcards.build_key
-        ),
-    shell:
-        """
-        gunzip -c {input.bed} | \
-        cut -f 6,7,8,12 | \
-        sed -n '/^\(#\|{params.filt}\)\t/p' | \
-        bedtools sort -i stdin -g {input.genome} | \
-        bgzip -c > {output}
-        """
+    script:
+        scripts_path("python/low_complexity/filter_sort_rmsk.py")
+
+
+# params:
+#     filt=lambda wildcards: config.buildkey_to_chr_pattern(
+#         wildcards.ref_key, wildcards.build_key
+#     ),
+# shell:
+#     """
+#     gunzip -c {input.bed} | \
+#     cut -f 6,7,8,12 | \
+#     sed -n '/^\(#\|{params.filt}\)\t/p' | \
+#     bedtools sort -i stdin -g {input.genome} | \
+#     bgzip -c > {output}
+#     """
 
 
 rule merge_rmsk_class:

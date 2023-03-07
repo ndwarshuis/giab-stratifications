@@ -1,5 +1,5 @@
 from os.path import dirname
-from scripts.python.config import StratOutputs
+from scripts.python.common.config import StratOutputs
 
 
 rule remove_gaps:
