@@ -1,4 +1,35 @@
 stratifications:
+  CHM13:
+    ref:
+      url: https://s3-us-west-2.amazonaws.com/human-pangenomics/index.html?prefix=T2T/CHM13/assemblies/analysis_set/chm13v2.0.fa.gz
+      chr_prefix: chr
+    low_complexity:
+      rmsk:
+        url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/annotation/chm13v2.0_RepeatMasker_4.1.2p1.bed
+      simreps:
+        # download manually from here: https://app.globus.org/file-manager?origin_id=9db1f0a6-a05a-11ea-8f06-0a21f750d19b&origin_path=%2Fteam-segdups%2FAssembly_analysis%2FMasked%2F/T2T_CHM13v2_trf.bed
+        url: null
+    xy:
+      x_features:
+        url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed
+      y_features:
+        url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
+      # TODO lock the commit for these instead of downloading straight from master
+      x_par:
+        url: https://raw.githubusercontent.com/lh3/dipcall/master/data/hs38.PAR.bed
+    segdups:
+      self_chain:
+        url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/chainSelf.txt.gz
+      self_chain_link:
+        url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/chainSelfLink.txt.gz
+    builds:
+      test_autosome:
+        chr_filter: [21]
+        include:
+          low_complexity: true
+          xy: false
+          map: false
+    
   GRCh38:
     ref:
       url: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.15_GRCh38/seqs_for_alignment_pipelines.ucsc_ids/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.gz
