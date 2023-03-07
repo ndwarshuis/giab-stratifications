@@ -33,7 +33,9 @@ class StratOutputs(NamedTuple):
 
 
 class BaseModel(BaseModel_):
-    pass
+    class Config:
+        frozen = True
+        extra = "forbid"
 
 
 class Paths(BaseModel):
