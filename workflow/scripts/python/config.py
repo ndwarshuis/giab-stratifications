@@ -2,8 +2,16 @@ from pathlib import Path
 from pydantic import BaseModel as BaseModel_
 from pydantic import HttpUrl
 from enum import Enum, unique
-from typing import NewType, NamedTuple, Any
+from typing import NewType, NamedTuple, Any, Callable, TypeVar
 from snakemake.io import expand, InputFiles  # type: ignore
+
+X = TypeVar("X")
+Y = TypeVar("Y")
+
+
+def fmap_maybe(f: Callable[[X], Y], x: X | None) -> None | Y:
+    pass
+
 
 BuildKey = NewType("BuildKey", str)
 RefKey = NewType("RefKey", str)
@@ -19,7 +27,7 @@ class ChrIndex(Enum):
     CHRY = 24
 
     def __init__(self, i: int) -> None:
-        self.chr_name = "X" if i == 23 else ("Y" if i == 24 else str(i))
+        self.chr_name: str = "X" if i == 23 else ("Y" if i == 24 else str(i))
 
     def chr_name_full(self, prefix: str) -> str:
         return f"{prefix}{self.chr_name}"
@@ -48,20 +56,25 @@ class Tools(BaseModel):
     gemlib: HttpUrl
 
 
+class BedFile(BaseModel):
+    url: HttpUrl
+    chr_prefix: str = "chr"
+
+
 class LowComplexity(BaseModel):
-    rmsk_url: HttpUrl
-    simreps_url: HttpUrl
+    rmsk: BedFile
+    simreps: BedFile
 
 
 class XY(BaseModel):
-    x_features: HttpUrl
-    y_features: HttpUrl
-    x_par: HttpUrl
+    x_features: BedFile
+    y_features: BedFile
+    x_par: BedFile
 
 
 class SegDups(BaseModel):
-    self_chain: HttpUrl
-    self_chain_link: HttpUrl
+    self_chain: BedFile
+    self_chain_link: BedFile
 
 
 class Include(BaseModel):
@@ -75,13 +88,17 @@ class Build(BaseModel):
     include: Include
 
 
-class Stratification(BaseModel):
-    ref: HttpUrl
-    gap: HttpUrl | None
+class RefFile(BaseModel):
+    url: HttpUrl
     chr_prefix: str
-    low_complexity: LowComplexity
-    xy: XY
-    segdups: SegDups
+
+
+class Stratification(BaseModel):
+    ref: RefFile
+    gap: BedFile | None
+    low_complexity: LowComplexity | None
+    xy: XY | None
+    segdups: SegDups | None
     builds: dict[BuildKey, Build]
 
 
@@ -99,31 +116,35 @@ class GiabStrats(BaseModel):
         return self.stratifications[k]
 
     def refkey_to_ref_url(self, k: RefKey) -> str:
-        return self.stratifications[k].ref
+        return self.stratifications[k].ref.url
 
     def refkey_to_gap_url(self, k: RefKey) -> str | None:
-        return self.stratifications[k].gap
+        return fmap_maybe(lambda x: x.url, self.stratifications[k].gap)
 
-    def refkey_to_x_features_url(self, k: RefKey) -> str:
-        return self.stratifications[k].xy.x_features
+    def refkey_to_x_features_url(self, k: RefKey) -> str | None:
+        return fmap_maybe(lambda x: x.x_features.url, self.stratifications[k].xy)
 
-    def refkey_to_y_features_url(self, k: RefKey) -> str:
-        return self.stratifications[k].xy.y_features
+    def refkey_to_y_features_url(self, k: RefKey) -> str | None:
+        return fmap_maybe(lambda x: x.y_features.url, self.stratifications[k].xy)
 
-    def refkey_to_x_par_url(self, k: RefKey) -> str:
-        return self.stratifications[k].xy.x_par
+    def refkey_to_x_par_url(self, k: RefKey) -> str | None:
+        return fmap_maybe(lambda x: x.x_par.url, self.stratifications[k].xy)
 
-    def refkey_to_simreps_url(self, k: RefKey) -> str:
-        return self.stratifications[k].low_complexity.simreps_url
+    def refkey_to_simreps_url(self, k: RefKey) -> str | None:
+        return fmap_maybe(
+            lambda x: x.simreps.url, self.stratifications[k].low_complexity
+        )
 
-    def refkey_to_rmsk_url(self, k: RefKey) -> str:
-        return self.stratifications[k].low_complexity.rmsk_url
+    def refkey_to_rmsk_url(self, k: RefKey) -> str | None:
+        return fmap_maybe(lambda x: x.rmsk.url, self.stratifications[k].low_complexity)
 
-    def refkey_to_self_chain_url(self, k: RefKey) -> str:
-        return self.stratifications[k].segdups.self_chain
+    def refkey_to_self_chain_url(self, k: RefKey) -> str | None:
+        return fmap_maybe(lambda x: x.self_chain.url, self.stratifications[k].segdups)
 
-    def refkey_to_self_chain_link_url(self, k: RefKey) -> str:
-        return self.stratifications[k].segdups.self_chain_link
+    def refkey_to_self_chain_link_url(self, k: RefKey) -> str | None:
+        return fmap_maybe(
+            lambda x: x.self_chain_link.url, self.stratifications[k].segdups
+        )
 
     def buildkey_to_build(self, rk: RefKey, bk: BuildKey) -> Build:
         return self.stratifications[rk].builds[bk]
