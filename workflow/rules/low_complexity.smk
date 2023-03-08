@@ -285,36 +285,6 @@ rule all_rmsk_classes:
         },
 
 
-rule merge_satellites:
-    input:
-        bed=rules.all_rmsk_classes.input.Satellite,
-        genome=rules.get_genome.output,
-    output:
-        lc_final_dir / "GRCh38_satellites_slop5.bed.gz",
-    conda:
-        envs_path("bedtools.yml")
-    threads: 2
-    shell:
-        """
-        slopBed -i {input.bed} -b 5 -g {input.genome} | \
-        mergeBed -i stdin | \
-        bgzip -c > {output}
-        """
-
-
-# TODO the previous version of this had chrM in it? (seems like a mistake)
-rule invert_satellites:
-    input:
-        bed=rules.merge_satellites.output,
-        genome=rules.get_genome.output,
-    output:
-        lc_final_dir / "GRCh38_notinsatellites_slop5.bed.gz",
-    conda:
-        envs_path("bedtools.yml")
-    shell:
-        "complementBed -i {input.bed} -g {input.genome} | bgzip -c > {output}"
-
-
 ################################################################################
 ## Satellites (censat, alternative to RMSK as in above)
 
@@ -337,8 +307,7 @@ rule filter_sort_censat:
         scripts_path("python/low_complexity/filter_sort_censat.py")
 
 
-# TODO these also need to be inverted
-rule merge_censat:
+rule merge_censat_satellites:
     input:
         bed=rules.filter_sort_censat.output,
         genome=rules.get_genome.output,
@@ -354,6 +323,47 @@ rule merge_censat:
         mergeBed -i stdin | \
         bgzip -c > {output}
         """
+
+
+rule merge_rmsk_satellites:
+    input:
+        bed=rules.all_rmsk_classes.input.Satellite,
+        genome=rules.get_genome.output,
+    output:
+        lc_final_dir / "GRCh38_satellites_slop5.bed.gz",
+    conda:
+        envs_path("bedtools.yml")
+    threads: 2
+    shell:
+        """
+        slopBed -i {input.bed} -b 5 -g {input.genome} | \
+        mergeBed -i stdin | \
+        bgzip -c > {output}
+        """
+
+
+sat_tgts = SatelliteTargets(
+    rmsk=rules.merge_rmsk_satellites.output,
+    censat=merge_censat_satellites.output,
+)
+
+
+rule merge_satellites:
+    input:
+        lambda wildcards: config.satellite_targets(wildcards.ref_key, sat_tgts),
+
+
+# TODO the previous version of this had chrM in it? (seems like a mistake)
+rule invert_satellites:
+    input:
+        bed=rules.merge_satellites.output,
+        genome=rules.get_genome.output,
+    output:
+        lc_final_dir / "GRCh38_notinsatellites_slop5.bed.gz",
+    conda:
+        envs_path("bedtools.yml")
+    shell:
+        "complementBed -i {input.bed} -g {input.genome} | bgzip -c > {output}"
 
 
 ################################################################################
@@ -399,7 +409,8 @@ rule merge_repeats:
             rules.all_perfect_uniform_repeats.input.R2_T10,
             rules.all_perfect_uniform_repeats.input.R3_T14,
             rules.all_perfect_uniform_repeats.input.R4_T19,
-        ],
+        ]
+        + rules.merge_satellites.output,
         genome=rules.get_genome.output,
     output:
         lc_inter_dir / "AllTandemRepeats_intermediate.bed",
