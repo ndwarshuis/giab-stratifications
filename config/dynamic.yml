@@ -42,18 +42,21 @@ stratifications:
     low_complexity:
       rmsk:
         url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
-        chr_col: 5
-        start_col: 6
-        end_col: 7
+        bed_cols:
+          chr: 5
+          start: 6
+          end: 7
         class_col: 11
       satellites: null
       simreps:
         url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
     xy:
-      x_features:
-        url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed
-      y_features:
-        url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
+      features: 
+        x_src:
+          url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed
+        y_src:
+          url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
+        regions: [XTR, Ampliconic]
       # TODO lock the commit for these instead of downloading straight from master
       x_par:
         url: https://raw.githubusercontent.com/lh3/dipcall/master/data/hs38.PAR.bed

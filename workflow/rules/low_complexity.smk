@@ -159,6 +159,7 @@ rule merge_imperfect_uniform_repeats:
         """
 
 
+# TODO move this to a pure python module
 rule all_uniform_repeats:
     input:
         # Perfect (greater than X)

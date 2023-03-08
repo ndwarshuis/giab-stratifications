@@ -1,6 +1,6 @@
 from pathlib import Path
 from pydantic import BaseModel as BaseModel_
-from pydantic import HttpUrl
+from pydantic import HttpUrl, FilePath
 from enum import Enum, unique
 from typing import NewType, NamedTuple, Any, Callable, TypeVar
 from snakemake.io import expand, InputFiles  # type: ignore
@@ -36,6 +36,11 @@ class ZipFmt(Enum):
     NOZIP = "nozip"
     GZIP = "gzip"
     BGZIP = "bgzip"
+
+
+class XYFeature(Enum):
+    XTR = "XTR"
+    Ampliconic = "Ampliconic"
 
 
 @unique
@@ -87,16 +92,29 @@ class Tools(BaseModel):
     gemlib: HttpUrl
 
 
-class BedFile(BaseModel):
+# TODO non-negative ints which cannot equal each other
+class BedColumns(BaseModel):
+    chr: int = 1
+    start: int = 2
+    end: int = 3
+
+
+class FileSrc(BaseModel):
+    filepath: FilePath
+
+
+class HttpSrc(BaseModel):
     url: HttpUrl
-    chr_prefix: str = "chr"
     zipfmt: ZipFmt = ZipFmt.BGZIP
 
 
+class BedFile(BaseModel):
+    src: FileSrc | HttpSrc
+    chr_prefix: str = "chr"
+    bed_cols: BedColumns = BedColumns()
+
+
 class RMSKFile(BedFile):
-    chr_col: int
-    start_col: int
-    end_col: int
     class_col: int
 
 
@@ -109,6 +127,7 @@ class LowComplexity(BaseModel):
 class XY(BaseModel):
     x_features: BedFile
     y_features: BedFile
+    features: set[XYFeature]
     x_par: BedFile
 
 
@@ -158,33 +177,33 @@ class GiabStrats(BaseModel):
     def refkey_to_ref_url(self, k: RefKey) -> str:
         return self.stratifications[k].ref.url
 
-    def refkey_to_gap_url(self, k: RefKey) -> str | None:
-        return fmap_maybe(lambda x: x.url, self.stratifications[k].gap)
+    # def refkey_to_gap_url(self, k: RefKey) -> str | None:
+    #     return fmap_maybe(lambda x: x.url, self.stratifications[k].gap)
 
-    def refkey_to_x_features_url(self, k: RefKey) -> str | None:
-        return fmap_maybe(lambda x: x.x_features.url, self.stratifications[k].xy)
+    # def refkey_to_x_features_url(self, k: RefKey) -> str | None:
+    #     return fmap_maybe(lambda x: x.x_features.url, self.stratifications[k].xy)
 
-    def refkey_to_y_features_url(self, k: RefKey) -> str | None:
-        return fmap_maybe(lambda x: x.y_features.url, self.stratifications[k].xy)
+    # def refkey_to_y_features_url(self, k: RefKey) -> str | None:
+    #     return fmap_maybe(lambda x: x.y_features.url, self.stratifications[k].xy)
 
-    def refkey_to_x_par_url(self, k: RefKey) -> str | None:
-        return fmap_maybe(lambda x: x.x_par.url, self.stratifications[k].xy)
+    # def refkey_to_x_par_url(self, k: RefKey) -> str | None:
+    #     return fmap_maybe(lambda x: x.x_par.url, self.stratifications[k].xy)
 
-    def refkey_to_simreps_url(self, k: RefKey) -> str | None:
-        return fmap_maybe(
-            lambda x: x.simreps.url, self.stratifications[k].low_complexity
-        )
+    # def refkey_to_simreps_url(self, k: RefKey) -> str | None:
+    #     return fmap_maybe(
+    #         lambda x: x.simreps.url, self.stratifications[k].low_complexity
+    #     )
 
-    def refkey_to_rmsk_url(self, k: RefKey) -> str | None:
-        return fmap_maybe(lambda x: x.rmsk.url, self.stratifications[k].low_complexity)
+    # def refkey_to_rmsk_url(self, k: RefKey) -> str | None:
+    #     return fmap_maybe(lambda x: x.rmsk.url, self.stratifications[k].low_complexity)
 
-    def refkey_to_self_chain_url(self, k: RefKey) -> str | None:
-        return fmap_maybe(lambda x: x.self_chain.url, self.stratifications[k].segdups)
+    # def refkey_to_self_chain_url(self, k: RefKey) -> str | None:
+    #     return fmap_maybe(lambda x: x.self_chain.url, self.stratifications[k].segdups)
 
-    def refkey_to_self_chain_link_url(self, k: RefKey) -> str | None:
-        return fmap_maybe(
-            lambda x: x.self_chain_link.url, self.stratifications[k].segdups
-        )
+    # def refkey_to_self_chain_link_url(self, k: RefKey) -> str | None:
+    #     return fmap_maybe(
+    #         lambda x: x.self_chain_link.url, self.stratifications[k].segdups
+    #     )
 
     def refkey_to_final_chr_prefix(self, k: RefKey) -> str:
         return self.stratifications[k].ref.chr_prefix
