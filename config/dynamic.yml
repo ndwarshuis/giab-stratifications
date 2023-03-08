@@ -46,9 +46,9 @@ stratifications:
         start_col: 6
         end_col: 7
         class_col: 11
+      satellites: null
       simreps:
         url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
-      satellites: null
     xy:
       x_features:
         url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed

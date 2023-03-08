@@ -25,6 +25,7 @@ rule unzip_ref:
         "gunzip -c {input} > {output}"
 
 
+# TODO don't hardcode chr here
 rule index_ref:
     input:
         rules.download_ref.output,
@@ -45,6 +46,7 @@ rule index_ref:
         """
 
 
+# TODO don't use filt here
 rule get_genome:
     input:
         rules.index_ref.output,
@@ -95,6 +97,7 @@ use rule download_ref as download_gaps with:
         envs_path("utils.yml")
 
 
+# TODO don't use filt here
 rule merge_gaps:
     input:
         gaps=rules.download_gaps.output,

@@ -1,6 +1,7 @@
 from more_itertools import unzip
 from collections import namedtuple
 from functools import partial
+from scripts.python.common.config import LowComplexityOutputs
 
 
 lc_src_dir = ref_src_dir / "low_complexity"
@@ -211,25 +212,12 @@ use rule download_ref as download_trf with:
 rule filter_sort_trf:
     input:
         rules.download_trf.output,
-        # genome=rules.get_genome.output,
     output:
         lc_inter_dir / "trf.txt.gz",
     conda:
         envs_path("bedtools.yml")
-    # params:
-    #     filt=lambda wildcards: config.buildkey_to_chr_pattern(
-    #         wildcards.ref_key, wildcards.build_key
-    #     ),
-    # shell:
-    #     """
-    #     gunzip -c {input.bed} | \
-    #     cut -f 2,3,4 | \
-    #     sed -n '/^\(#\|{params.filt}\)\t/p' | \
-    #     bedtools sort -i stdin -g {input.genome} | \
-    #     bgzip -c > {output}
-    #     """
     script:
-        scripts_path("python/low_complexity/filter_sort_rmsk.py")
+        scripts_path("python/low_complexity/filter_sort_trf.py")
 
 
 rule merge_trf:
@@ -328,6 +316,47 @@ rule invert_satellites:
 
 
 ################################################################################
+## Satellites (censat, alternative to RMSK as in above)
+
+
+use rule download_ref as download_censat with:
+    output:
+        lc_src_dir / "censat.txt.gz",
+    params:
+        url=lambda wildcards: config.refkey_to_satellite_url(wildcards.ref_key),
+
+
+rule filter_sort_censat:
+    input:
+        rules.download_rmsk.output,
+    output:
+        lc_inter_dir / "rmsk.txt.gz",
+    conda:
+        envs_path("bedtools.yml")
+    script:
+        scripts_path("python/low_complexity/filter_sort_censat.py")
+
+
+# TODO these also need to be inverted
+rule merge_censat:
+    input:
+        bed=rules.filter_sort_censat.output,
+        genome=rules.get_genome.output,
+    output:
+        lc_final_dir / "GRCh38_satellites_slop5.bed.gz",
+    conda:
+        envs_path("bedtools.yml")
+    shell:
+        """
+        zgrep -v "ct_" {input.bed} | \
+        mergeBed -i stdin | \
+        slopBed -i stdin -b 5 -g {input.genome} | \
+        mergeBed -i stdin | \
+        bgzip -c > {output}
+        """
+
+
+################################################################################
 ## Tandem Repeats
 
 
@@ -361,6 +390,7 @@ use rule invert_satellites as invert_all_uniform_repeats with:
         lc_final_dir / "GRCh38_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz",
 
 
+# TODO add satellites to this
 rule merge_repeats:
     input:
         beds=rules.all_rmsk_classes.input
@@ -389,7 +419,7 @@ tr_bounds = {
     "lt51": {"lower": 0, "upper": 61},
     "51to200": {"lower": 60, "upper": 211},
     "201to10000": {"lower": 210, "upper": 10011},
-    "gt10000": {"lower": 10010, "upper": 1e10},
+    "gt10000": {"lower": 10010, "upper": 1e10},  # NOTE 1e10 ~ Inf
     "gt100": {"lower": 110, "upper": 1e10},
 }
 
@@ -473,18 +503,29 @@ use rule invert_satellites as invert_HPs_and_TRs with:
         lc_final_dir / "GRCh38_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz",
 
 
-rule all_low_complexity:
-    input:
-        # Uniform repeats
-        rules.all_uniform_repeats.input,
-        # Satellites
-        rules.merge_satellites.output,
-        rules.invert_satellites.output,
-        # Tandem Repeats
-        rules.all_TRs.input,
-        rules.merge_filtered_TRs.output,
-        rules.invert_TRs.output,
-        # "Everything" (in theory)
-        rules.merge_HPs_and_TRs.output,
-        rules.invert_HPs_and_TRs.output,
-        rules.invert_all_uniform_repeats.output,
+LowComplexityOutputs(
+    uniform_repeats=rules.all_uniform_repeats.input
+    + rules.invert_all_uniform_repeats.output,
+    all_repeats=rules.all_TRs.input
+    + rules.merge_filtered_TRs.output
+    + rules.invert_TRs.output
+    + rules.merge_HPs_and_TRs.output
+    + rules.invert_HPs_and_TRs.output
+    + rules.merge_satellites.output
+    + rules.invert_satellites.output,
+)
+# rule all_low_complexity:
+#     input:
+#         # Uniform repeats
+#         rules.all_uniform_repeats.input,
+#         rules.invert_all_uniform_repeats.output,
+#         # Satellites
+#         rules.merge_satellites.output,
+#         rules.invert_satellites.output,
+#         # Tandem Repeats
+#         rules.all_TRs.input,
+#         rules.merge_filtered_TRs.output,
+#         rules.invert_TRs.output,
+#         # "Everything" (in theory)
+#         rules.merge_HPs_and_TRs.output,
+#         rules.invert_HPs_and_TRs.output,

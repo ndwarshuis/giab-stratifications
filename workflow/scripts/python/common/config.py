@@ -4,17 +4,32 @@ from pydantic import HttpUrl
 from enum import Enum, unique
 from typing import NewType, NamedTuple, Any, Callable, TypeVar
 from snakemake.io import expand, InputFiles  # type: ignore
+from more_itertools import flatten
 
 X = TypeVar("X")
 Y = TypeVar("Y")
+
+
+BuildKey = NewType("BuildKey", str)
+RefKey = NewType("RefKey", str)
 
 
 def fmap_maybe(f: Callable[[X], Y], x: X | None) -> None | Y:
     return None if x is None else f(x)
 
 
-BuildKey = NewType("BuildKey", str)
-RefKey = NewType("RefKey", str)
+def _flatten_targets(
+    all_targets: list[tuple[InputFiles, bool]],
+    rk: RefKey,
+    bk: BuildKey,
+) -> InputFiles:
+    return [
+        *flatten(
+            expand(target, allow_missing=True, ref_key=rk, build_key=bk)
+            for target, wants in all_targets
+            if wants
+        )
+    ]
 
 
 class ZipFmt(Enum):
@@ -39,8 +54,18 @@ class ChrIndex(Enum):
         return f"{prefix}{self.chr_name}"
 
 
+class SatelliteOutputs(NamedTuple):
+    rmsk: InputFiles
+    censat: InputFiles
+
+
+class LowComplexityOutputs(NamedTuple):
+    uniform_repeats: InputFiles
+    all_repeats: InputFiles
+
+
 class StratOutputs(NamedTuple):
-    low_complexity: InputFiles
+    low_complexity: LowComplexityOutputs
     xy_sex: InputFiles
     xy_auto: InputFiles
     map: InputFiles
@@ -201,9 +226,27 @@ class GiabStrats(BaseModel):
     def buildkey_to_chr_pattern(self, rk: RefKey, bk: BuildKey) -> str:
         return "\\|".join(self.buildkey_to_chr_names(rk, bk))
 
-    def strat_targets(
-        self, rk: RefKey, bk: BuildKey, s: StratOutputs
-    ) -> list[InputFiles]:
+    def satellite_targets(self, rk: RefKey, s: SatelliteOutputs) -> InputFiles:
+        return (
+            s.censat
+            if self.stratifications[rk].low_complexity.satellites is not None
+            else s.rmsk
+        )
+
+    def low_complexity_targets(
+        self, rk: RefKey, bk: BuildKey, s: LowComplexityOutputs
+    ) -> InputFiles:
+        if self.buildkey_to_build(rk, bk).include.low_complexity:
+            r = self.stratifications[rk].low_complexity
+            all_tgts = [
+                (s.uniform_repeats, True),
+                (s.all_repeats, r.rmsk is not None and r.simreps is not None),
+            ]
+            return _flatten_targets(all_tgts, rk, bk)
+        else:
+            return []
+
+    def strat_targets(self, rk: RefKey, bk: BuildKey, s: StratOutputs) -> InputFiles:
         inc = self.buildkey_to_build(rk, bk).include
         cis = self.buildkey_to_chr_indices(rk, bk)
 
@@ -214,18 +257,11 @@ class GiabStrats(BaseModel):
         want_autosomes = len(cis - set([ChrIndex.CHRX, ChrIndex.CHRY])) > 0
 
         all_targets = [
-            (s.low_complexity, inc.low_complexity),
             (s.xy_sex, want_xy),
             (s.xy_auto, want_autosomes),
             (s.map, inc.map),
         ]
 
-        return [
-            p
-            for ps in [
-                expand(target, allow_missing=True, ref_key=rk, build_key=bk)
-                for target, wants in all_targets
-                if wants
-            ]
-            for p in ps
-        ]
+        return _flatten_targets(all_targets, rk, bk) + self.low_complexity_targets(
+            rk, bk, s.low_complexity
+        )
