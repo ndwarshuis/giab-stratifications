@@ -1,7 +1,7 @@
 from more_itertools import unzip
 from collections import namedtuple
 from functools import partial
-from scripts.python.common.config import LowComplexityOutputs
+from scripts.python.common.config import LowComplexityOutputs, SatelliteOutputs
 
 
 lc_src_dir = ref_src_dir / "low_complexity"
@@ -207,7 +207,7 @@ use rule download_ref as download_trf with:
     output:
         lc_src_dir / "trf_simreps.txt.gz",
     params:
-        url=lambda wildcards: config.refkey_to_simreps_url(wildcards.ref_key),
+        src=lambda w: config.refkey_to_simreps_src(w.ref_key),
 
 
 rule filter_sort_trf:
@@ -244,7 +244,7 @@ use rule download_ref as download_rmsk with:
     output:
         lc_src_dir / "rmsk.txt.gz",
     params:
-        url=lambda wildcards: config.refkey_to_rmsk_url(wildcards.ref_key),
+        src=lambda w: config.refkey_to_rmsk_src(w.ref_key),
 
 
 rule filter_sort_rmsk:
@@ -294,7 +294,7 @@ use rule download_ref as download_censat with:
     output:
         lc_src_dir / "censat.txt.gz",
     params:
-        url=lambda wildcards: config.refkey_to_satellite_url(wildcards.ref_key),
+        src=lambda w: config.refkey_to_satellite_src(w.ref_key),
 
 
 rule filter_sort_censat:
@@ -313,7 +313,7 @@ rule merge_censat_satellites:
         bed=rules.filter_sort_censat.output,
         genome=rules.get_genome.output,
     output:
-        lc_final_dir / "GRCh38_satellites_slop5.bed.gz",
+        lc_inter_dir / "GRCh38_censat_satellites_slop5.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -331,7 +331,7 @@ rule merge_rmsk_satellites:
         bed=rules.all_rmsk_classes.input.Satellite,
         genome=rules.get_genome.output,
     output:
-        lc_final_dir / "GRCh38_satellites_slop5.bed.gz",
+        lc_inter_dir / "GRCh38_rmsk_satellites_slop5.bed.gz",
     conda:
         envs_path("bedtools.yml")
     threads: 2
@@ -343,15 +343,20 @@ rule merge_rmsk_satellites:
         """
 
 
-sat_tgts = SatelliteTargets(
+sat_tgts = SatelliteOutputs(
     rmsk=rules.merge_rmsk_satellites.output,
-    censat=merge_censat_satellites.output,
+    censat=rules.merge_censat_satellites.output,
 )
 
 
+# TODO is this really the best way to handle a collider?
 rule merge_satellites:
     input:
-        lambda wildcards: config.satellite_targets(wildcards.ref_key, sat_tgts),
+        lambda w: config.satellite_targets(w.ref_key, sat_tgts),
+    output:
+        lc_inter_dir / "GRCh38_satellites_slop5.bed.gz",
+    shell:
+        "cp {input} {output}"
 
 
 # TODO the previous version of this had chrM in it? (seems like a mistake)
@@ -401,16 +406,13 @@ use rule invert_satellites as invert_all_uniform_repeats with:
         lc_final_dir / "GRCh38_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz",
 
 
-# TODO add satellites to this
 rule merge_repeats:
     input:
         beds=rules.all_rmsk_classes.input
         + rules.merge_trf.output
-        + [
-            rules.all_perfect_uniform_repeats.input.R2_T10,
-            rules.all_perfect_uniform_repeats.input.R3_T14,
-            rules.all_perfect_uniform_repeats.input.R4_T19,
-        ]
+        + rules.all_perfect_uniform_repeats.input.R2_T10
+        + rules.all_perfect_uniform_repeats.input.R3_T14
+        + rules.all_perfect_uniform_repeats.input.R4_T19
         + rules.merge_satellites.output,
         genome=rules.get_genome.output,
     output:
@@ -515,7 +517,7 @@ use rule invert_satellites as invert_HPs_and_TRs with:
         lc_final_dir / "GRCh38_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz",
 
 
-LowComplexityOutputs(
+lc_out = LowComplexityOutputs(
     uniform_repeats=rules.all_uniform_repeats.input
     + rules.invert_all_uniform_repeats.output,
     all_repeats=rules.all_TRs.input

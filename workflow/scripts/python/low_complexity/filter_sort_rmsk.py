@@ -10,7 +10,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     rk = cfg.RefKey(smk.wildcards["ref_key"])
     bk = cfg.BuildKey(smk.wildcards["build_key"])
     rmsk = sconf.stratifications[rk].low_complexity.rmsk
-    bedcols = [rmsk.chr_col, rmsk.start_col, rmsk.end_col, rmsk.class_col]
+    bedcols = [*rmsk.bed_cols.columns, rmsk.class_col]
     df = pd.read_table(bedfile, header=None, usecols=bedcols)
     df.columns = pd.Index(range(len(bedcols)))
     df_ = filter_sort_bed(sconf, lambda x: x.low_complexity.rmsk, rk, bk, df)

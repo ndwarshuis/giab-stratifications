@@ -7,11 +7,11 @@ rule download_ref:
     output:
         ref_src_dir / "ref.fna.gz",
     params:
-        url=lambda wildcards: config.refkey_to_ref_url(wildcards.ref_key),
+        src=lambda w: config.refkey_to_ref_src(w.ref_key),
     conda:
-        envs_path("utils.yml")
-    shell:
-        "curl -sS -L -o {output} {params.url}"
+        envs_path("bedtools.yml")
+    script:
+        scripts_path("python/utils/get_file.py")
 
 
 rule unzip_ref:
@@ -92,9 +92,7 @@ use rule download_ref as download_gaps with:
     output:
         ref_src_dir / "gap.bed.gz",
     params:
-        url=lambda wildcards: config.refkey_to_gap_url(wildcards.ref_key),
-    conda:
-        envs_path("utils.yml")
+        src=lambda w: config.refkey_to_gap_src(w.ref_key),
 
 
 # TODO don't use filt here

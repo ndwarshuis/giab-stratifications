@@ -98,6 +98,10 @@ class BedColumns(BaseModel):
     start: int = 2
     end: int = 3
 
+    @property
+    def columns(self) -> list[int]:
+        return [self.chr, self.start, self.end]
+
 
 class FileSrc(BaseModel):
     filepath: FilePath
@@ -108,8 +112,11 @@ class HttpSrc(BaseModel):
     zipfmt: ZipFmt = ZipFmt.BGZIP
 
 
+AnySrc = FileSrc | HttpSrc
+
+
 class BedFile(BaseModel):
-    src: FileSrc | HttpSrc
+    src: AnySrc
     chr_prefix: str = "chr"
     bed_cols: BedColumns = BedColumns()
 
@@ -124,10 +131,14 @@ class LowComplexity(BaseModel):
     satellites: BedFile | None
 
 
+class XYFeatures(BaseModel):
+    x_bed: BedFile
+    y_bed: BedFile
+    regions: set[XYFeature]
+
+
 class XY(BaseModel):
-    x_features: BedFile
-    y_features: BedFile
-    features: set[XYFeature]
+    features: XYFeatures
     x_par: BedFile
 
 
@@ -148,7 +159,7 @@ class Build(BaseModel):
 
 
 class RefFile(BaseModel):
-    url: HttpUrl
+    src: AnySrc
     chr_prefix: str
 
 
@@ -174,36 +185,41 @@ class GiabStrats(BaseModel):
     def refkey_to_strat(self, k: RefKey) -> Stratification:
         return self.stratifications[k]
 
-    def refkey_to_ref_url(self, k: RefKey) -> str:
-        return self.stratifications[k].ref.url
+    # def refkey_to_src(
+    #     self, k: RefKey, f: Callable[[Stratification], AnySrc | None]
+    # ) -> AnySrc | None:
+    #     return f(self.refkey_to_strat(k))
 
-    # def refkey_to_gap_url(self, k: RefKey) -> str | None:
-    #     return fmap_maybe(lambda x: x.url, self.stratifications[k].gap)
+    def refkey_to_ref_src(self, k: RefKey) -> AnySrc:
+        return self.refkey_to_strat(k).ref.src
 
-    # def refkey_to_x_features_url(self, k: RefKey) -> str | None:
-    #     return fmap_maybe(lambda x: x.x_features.url, self.stratifications[k].xy)
+    def refkey_to_gap_src(self, k: RefKey) -> AnySrc | None:
+        return fmap_maybe(lambda x: x.src, self.stratifications[k].gap)
 
-    # def refkey_to_y_features_url(self, k: RefKey) -> str | None:
-    #     return fmap_maybe(lambda x: x.y_features.url, self.stratifications[k].xy)
+    def refkey_to_x_features_src(self, k: RefKey) -> AnySrc | None:
+        return fmap_maybe(lambda x: x.features.x_bed.src, self.stratifications[k].xy)
 
-    # def refkey_to_x_par_url(self, k: RefKey) -> str | None:
-    #     return fmap_maybe(lambda x: x.x_par.url, self.stratifications[k].xy)
+    def refkey_to_y_features_src(self, k: RefKey) -> AnySrc | None:
+        return fmap_maybe(lambda x: x.features.x_bed.src, self.stratifications[k].xy)
 
-    # def refkey_to_simreps_url(self, k: RefKey) -> str | None:
-    #     return fmap_maybe(
-    #         lambda x: x.simreps.url, self.stratifications[k].low_complexity
-    #     )
+    def refkey_to_x_par_src(self, k: RefKey) -> AnySrc | None:
+        return fmap_maybe(lambda x: x.x_par.src, self.stratifications[k].xy)
 
-    # def refkey_to_rmsk_url(self, k: RefKey) -> str | None:
-    #     return fmap_maybe(lambda x: x.rmsk.url, self.stratifications[k].low_complexity)
+    def refkey_to_simreps_src(self, k: RefKey) -> AnySrc | None:
+        return fmap_maybe(
+            lambda x: x.simreps.src, self.stratifications[k].low_complexity
+        )
 
-    # def refkey_to_self_chain_url(self, k: RefKey) -> str | None:
-    #     return fmap_maybe(lambda x: x.self_chain.url, self.stratifications[k].segdups)
+    def refkey_to_rmsk_src(self, k: RefKey) -> AnySrc | None:
+        return fmap_maybe(lambda x: x.rmsk.src, self.stratifications[k].low_complexity)
 
-    # def refkey_to_self_chain_link_url(self, k: RefKey) -> str | None:
-    #     return fmap_maybe(
-    #         lambda x: x.self_chain_link.url, self.stratifications[k].segdups
-    #     )
+    def refkey_to_self_chain_src(self, k: RefKey) -> AnySrc | None:
+        return fmap_maybe(lambda x: x.self_chain.src, self.stratifications[k].segdups)
+
+    def refkey_to_self_chain_link_src(self, k: RefKey) -> AnySrc | None:
+        return fmap_maybe(
+            lambda x: x.self_chain_link.src, self.stratifications[k].segdups
+        )
 
     def refkey_to_final_chr_prefix(self, k: RefKey) -> str:
         return self.stratifications[k].ref.chr_prefix

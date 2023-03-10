@@ -2,26 +2,22 @@ xy_src_dir = ref_src_dir / "XY"
 xy_final_dir = final_dir / "XY"
 
 
-rule download_genome_features_bed:
+use rule download_ref as download_genome_features_bed with:
     output:
-        xy_src_dir / "genome_features_{chr}.bed",
+        xy_src_dir / "genome_features_{chr}.bed.gz",
     params:
-        url=lambda wildcards: (
-            config.refkey_to_y_features_url
-            if wildcards.chr == "Y"
-            else config.refkey_to_x_features_url
-        )(wildcards.ref_key),
-    conda:
-        envs_path("utils.yml")
-    shell:
-        "curl -sS -L -o {output} {params.url}"
+        src=lambda w: (
+            config.refkey_to_y_features_src
+            if w.chr == "Y"
+            else config.refkey_to_x_features_src
+        )(w.ref_key),
 
 
 use rule download_genome_features_bed as download_X_PAR with:
     output:
-        xy_src_dir / "GRCh38_chrX_PAR.bed",
+        xy_src_dir / "GRCh38_chrX_PAR.bed.gz",
     params:
-        url=lambda wildcards: config.refkey_to_x_par_url(wildcards.ref_key),
+        src=lambda w: config.refkey_to_x_par_src(w.ref_key),
 
 
 rule compress_X_PAR:
@@ -60,7 +56,8 @@ rule filter_XTR_features:
         envs_path("bedtools.yml")
     shell:
         """
-        grep {params.filt} {input} | \
+        gunzip -c {input} | \
+        grep {params.filt} | \
         cut -f 1-3 | \
         sort -k2,2n -k3,3n | \
         bgzip -c > {output}

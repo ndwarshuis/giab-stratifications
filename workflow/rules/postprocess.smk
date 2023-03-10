@@ -66,7 +66,7 @@ rule remove_gaps:
 
 def expand_strat_targets_wc(wildcards):
     s = StratOutputs(
-        low_complexity=rules.all_low_complexity.input,
+        low_complexity=lc_out,
         xy_sex=rules.all_xy.input,
         xy_auto=rules.all_auto.input,
         map=rules.all_map.input,
@@ -92,8 +92,8 @@ rule generate_md5sums:
 rule validate_strats:
     input:
         strats=expand_strat_targets_wc,
-        nonN=lambda wildcards: rules.genome_to_bed.output
-        if config.refkey_to_gap_url(wildcards.ref_key) is None
+        nonN=lambda w: rules.genome_to_bed.output
+        if config.refkey_to_gap_src(w.ref_key) is None
         else rules.remove_gaps.output,
     output:
         final_dir / "validation.html",

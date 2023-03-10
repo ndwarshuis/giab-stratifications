@@ -2,26 +2,18 @@ segdup_res_dir = resources_dir / "SegmentalDuplications"
 segdup_final_dir = final_dir / "SegmentalDuplications"
 
 
-rule download_self_chain:
+use rule download_ref as download_self_chain with:
     output:
         segdup_res_dir / "selfChain.txt.gz",
     params:
-        url=lambda wildcards: config.refkey_to_self_chain_url(wildcards.ref_key),
-    conda:
-        envs_path("utils.yml")
-    shell:
-        "curl -sS -L -o {output} {params.url}"
+        src=lambda w: config.refkey_to_self_chain_src(w.ref_key),
 
 
-rule download_self_chain_link:
+use rule download_ref as download_self_chain_link with:
     output:
         segdup_res_dir / "selfChain_link.txt.gz",
     params:
-        url=lambda wildcards: config.refkey_to_self_chain_link_url(wildcards.ref_key),
-    conda:
-        envs_path("utils.yml")
-    shell:
-        "curl -sS -L -o {output} {params.url}"
+        src=lambda w: config.refkey_to_self_chain_link_src(w.ref_key),
 
 
 rule filter_trivial:
