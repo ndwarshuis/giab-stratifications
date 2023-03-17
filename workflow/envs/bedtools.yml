@@ -16,4 +16,5 @@ dependencies:
   - flake8
   - mypy
   - snakefmt
+  - ipython
   - pandas-stubs=1.5.3

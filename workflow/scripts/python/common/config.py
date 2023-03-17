@@ -1,10 +1,13 @@
+import gzip
 from pathlib import Path
 from pydantic import BaseModel as BaseModel_
-from pydantic import HttpUrl, FilePath
+from pydantic import validator, HttpUrl, FilePath
 from enum import Enum, unique
 from typing import NewType, NamedTuple, Any, Callable, TypeVar
+from typing_extensions import Self
 from snakemake.io import expand, InputFiles  # type: ignore
 from more_itertools import flatten
+from Bio import bgzf  # type: ignore
 
 X = TypeVar("X")
 Y = TypeVar("Y")
@@ -32,10 +35,15 @@ def _flatten_targets(
     ]
 
 
-class ZipFmt(Enum):
+class RefFmt(Enum):
     NOZIP = "nozip"
     GZIP = "gzip"
     BGZIP = "bgzip"
+
+
+class BedFmt(Enum):
+    NOZIP = "nozip"
+    GZIP = "gzip"
 
 
 class XYFeature(Enum):
@@ -47,10 +55,17 @@ class XYFeature(Enum):
 class ChrIndex(Enum):
     _ignore_ = "ChrIndex i"
     ChrIndex = vars()
-    for i in range(23):
+    for i in range(1, 23):
         ChrIndex[f"CHR{i}"] = i
     CHRX = 23
     CHRY = 24
+
+    @classmethod
+    def from_name(cls, n: str) -> Self:
+        try:
+            return next(i for i in cls if i.chr_name == n)
+        except StopIteration:
+            raise ValueError(f"could make chr index from name '{n}'")
 
     def __init__(self, i: int) -> None:
         self.chr_name: str = "X" if i == 23 else ("Y" if i == 24 else str(i))
@@ -94,31 +109,70 @@ class Tools(BaseModel):
 
 # TODO non-negative ints which cannot equal each other
 class BedColumns(BaseModel):
-    chr: int = 1
-    start: int = 2
-    end: int = 3
+    chr: int = 0
+    start: int = 1
+    end: int = 2
 
     @property
     def columns(self) -> list[int]:
         return [self.chr, self.start, self.end]
 
 
-class FileSrc(BaseModel):
+class FileSrc_(BaseModel):
     filepath: FilePath
 
 
-class HttpSrc(BaseModel):
+class BedFileSrc(FileSrc_):
+    filepath: FilePath
+
+    @validator("filepath")
+    def is_gzip(cls, v: FilePath) -> FilePath:
+        # test if gzip by trying to read first byte
+        with gzip.open(v, "r") as f:
+            try:
+                f.read(1)
+            except gzip.BadGzipFile:
+                assert False, "not in gzip format"
+        return v
+
+
+class RefFileSrc(FileSrc_):
+    filepath: FilePath
+
+    @validator("filepath")
+    def is_bgzip(cls, v: FilePath) -> FilePath:
+        # since bgzip is in blocks (vs gzip), determine if in bgzip by
+        # attempting to seek first block
+        with open(v, "rb") as f:
+            try:
+                next(bgzf.BgzfBlocks(f), None)
+            except ValueError:
+                assert False, "not in bgzip format"
+        return v
+
+
+class HttpSrc_(BaseModel):
     url: HttpUrl
-    zipfmt: ZipFmt = ZipFmt.BGZIP
 
 
-AnySrc = FileSrc | HttpSrc
+class BedHttpSrc(HttpSrc_):
+    fmt: BedFmt = BedFmt.GZIP
+
+
+class RefHttpSrc(HttpSrc_):
+    fmt: RefFmt = RefFmt.BGZIP
+
+
+RefSrc = RefFileSrc | RefHttpSrc
+
+BedSrc = BedFileSrc | BedHttpSrc
 
 
 class BedFile(BaseModel):
-    src: AnySrc
+    src: BedSrc
     chr_prefix: str = "chr"
     bed_cols: BedColumns = BedColumns()
+    skip_lines: int = 0
 
 
 class RMSKFile(BedFile):
@@ -137,9 +191,31 @@ class XYFeatures(BaseModel):
     regions: set[XYFeature]
 
 
+class XYPar(BaseModel):
+    start: tuple[int, int]
+    end: tuple[int, int]
+
+    def fmt(self, i: ChrIndex, prefix: str) -> str:
+        # TODO this smells like something I'll be doing alot
+        c = i.chr_name_full(prefix)
+        return "\n".join(
+            [
+                f"{c}\t{self.start[0]}\t{self.start[1]}",
+                f"{c}\t{self.end[0]}\t{self.end[1]}",
+            ]
+        )
+
+
 class XY(BaseModel):
     features: XYFeatures
-    x_par: BedFile
+    x_par: XYPar
+    y_par: XYPar
+
+    def fmt_x_par(self, prefix: str) -> str:
+        return self.x_par.fmt(ChrIndex.CHRX, prefix)
+
+    def fmt_y_par(self, prefix: str) -> str:
+        return self.y_par.fmt(ChrIndex.CHRY, prefix)
 
 
 class SegDups(BaseModel):
@@ -159,7 +235,7 @@ class Build(BaseModel):
 
 
 class RefFile(BaseModel):
-    src: AnySrc
+    src: RefSrc
     chr_prefix: str
 
 
@@ -190,33 +266,45 @@ class GiabStrats(BaseModel):
     # ) -> AnySrc | None:
     #     return f(self.refkey_to_strat(k))
 
-    def refkey_to_ref_src(self, k: RefKey) -> AnySrc:
+    def refkey_to_ref_src(self, k: RefKey) -> RefSrc:
         return self.refkey_to_strat(k).ref.src
 
-    def refkey_to_gap_src(self, k: RefKey) -> AnySrc | None:
+    def refkey_to_gap_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(lambda x: x.src, self.stratifications[k].gap)
 
-    def refkey_to_x_features_src(self, k: RefKey) -> AnySrc | None:
+    def refkey_to_x_features_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(lambda x: x.features.x_bed.src, self.stratifications[k].xy)
 
-    def refkey_to_y_features_src(self, k: RefKey) -> AnySrc | None:
+    def refkey_to_y_features_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(lambda x: x.features.x_bed.src, self.stratifications[k].xy)
 
-    def refkey_to_x_par_src(self, k: RefKey) -> AnySrc | None:
-        return fmap_maybe(lambda x: x.x_par.src, self.stratifications[k].xy)
+    # TODO not DRY
+    def refkey_to_x_par_bed(self, k: RefKey) -> str:
+        prefix = self.refkey_to_final_chr_prefix(k)
+        return self.stratifications[k].xy.x_par.fmt(ChrIndex.CHRX, prefix)
 
-    def refkey_to_simreps_src(self, k: RefKey) -> AnySrc | None:
+    def refkey_to_y_par_bed(self, k: RefKey) -> str:
+        prefix = self.refkey_to_final_chr_prefix(k)
+        return self.stratifications[k].xy.y_par.fmt(ChrIndex.CHRY, prefix)
+
+    def refkey_to_simreps_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(
             lambda x: x.simreps.src, self.stratifications[k].low_complexity
         )
 
-    def refkey_to_rmsk_src(self, k: RefKey) -> AnySrc | None:
+    def refkey_to_rmsk_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(lambda x: x.rmsk.src, self.stratifications[k].low_complexity)
 
-    def refkey_to_self_chain_src(self, k: RefKey) -> AnySrc | None:
+    def refkey_to_satellite_src(self, k: RefKey) -> BedSrc | None:
+        return fmap_maybe(
+            lambda x: fmap_maybe(lambda x: x.src, x.satellites),
+            self.stratifications[k].low_complexity,
+        )
+
+    def refkey_to_self_chain_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(lambda x: x.self_chain.src, self.stratifications[k].segdups)
 
-    def refkey_to_self_chain_link_src(self, k: RefKey) -> AnySrc | None:
+    def refkey_to_self_chain_link_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(
             lambda x: x.self_chain_link.src, self.stratifications[k].segdups
         )

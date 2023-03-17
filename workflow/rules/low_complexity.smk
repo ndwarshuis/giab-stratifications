@@ -28,15 +28,16 @@ rule find_perfect_uniform_repeats:
         ref=rules.filter_sort_ref.output,
         bin=rules.build_repseq.output,
     output:
-        lc_inter_dir / "uniform_repeats_R{unit_len}_L{total_len}.bed",
+        lc_inter_dir / "uniform_repeats_R{unit_len}_T{total_len}.bed",
     log:
-        lc_log_dir / "uniform_repeats_R{unit_len}_L{total_len}.log",
+        lc_log_dir / "uniform_repeats_R{unit_len}_T{total_len}.log",
     conda:
         envs_path("bedtools.yml")
     shell:
         """
-        {input.bin} {wildcards.unit_len} {wildcards.total_len} {input.ref} \
-        > {output} 2> {log}
+        {input.bin} {wildcards.unit_len} {wildcards.total_len} {input.ref} 2> {log} | \
+        sed 's/unit=\(.\)/unit=\\U\\1/' \
+        > {output} 
         """
 
 
@@ -125,7 +126,7 @@ rule merge_perfect_uniform_repeats:
     input:
         rules.all_perfect_uniform_repeats.input.R1_T4,
     output:
-        lc_inter_dir / "repeats_imp_hp_L{merged_len}_B{base}.bed",
+        lc_inter_dir / "repeats_imp_hp_T{merged_len}_B{base}.bed",
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -299,9 +300,9 @@ use rule download_ref as download_censat with:
 
 rule filter_sort_censat:
     input:
-        rules.download_rmsk.output,
+        rules.download_censat.output,
     output:
-        lc_inter_dir / "rmsk.txt.gz",
+        lc_inter_dir / "censat.txt.gz",
     conda:
         envs_path("bedtools.yml")
     script:

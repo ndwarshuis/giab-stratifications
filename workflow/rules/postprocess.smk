@@ -6,7 +6,7 @@ rule remove_gaps:
     input:
         genome=rules.genome_to_bed.output,
         gaps=rules.merge_gaps.output,
-        parY=rules.write_Y_PAR.output,
+        parY=expand(rules.write_PAR.output, allow_missing=True, chr="Y"),
     output:
         ref_inter_dir / "genome_gapless.bed",
     conda:

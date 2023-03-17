@@ -6,14 +6,20 @@ from common.bed import read_filter_sort_bed
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     rk = cfg.RefKey(smk.wildcards["ref_key"])
     bk = cfg.BuildKey(smk.wildcards["build_key"])
+
+    def get_bed(x: cfg.Stratification) -> cfg.BedFile:
+        b = x.low_complexity.satellites
+        assert b is not None
+        return b
+
     read_filter_sort_bed(
         sconf,
         smk.input[0],
         smk.output[0],
-        lambda x: x.low_complexity.rmsk,
+        get_bed,
         rk,
         bk,
-        [sconf.stratifications[rk].low_complexity.rmsk.class_col],
+        [],
     )
 
 

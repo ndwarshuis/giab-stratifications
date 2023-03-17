@@ -13,36 +13,13 @@ use rule download_ref as download_genome_features_bed with:
         )(w.ref_key),
 
 
-use rule download_genome_features_bed as download_X_PAR with:
+rule write_PAR:
     output:
-        xy_src_dir / "GRCh38_chrX_PAR.bed.gz",
-    params:
-        src=lambda w: config.refkey_to_x_par_src(w.ref_key),
-
-
-rule compress_X_PAR:
-    input:
-        rules.download_X_PAR.output,
-    output:
-        xy_final_dir / "GRCh38_chrX_PAR.bed.gz",
+        xy_final_dir / "GRCh38_chr{chr}_PAR.bed.gz",
     conda:
         envs_path("bedtools.yml")
-    shell:
-        "cat {input} | bgzip -c > {output}"
-
-
-# TODO not sure where the actual PAR is, but this will do for now
-# TODO the "chr" in front isn't constant across all refs
-rule write_Y_PAR:
-    output:
-        xy_final_dir / "GRCh38_chrY_PAR.bed.gz",
-    conda:
-        envs_path("bedtools.yml")
-    shell:
-        """
-        echo "chrY\t10000\t2781479\nchrY\t56887902\t57217415" | \
-        bgzip -c > {output}
-        """
+    script:
+        scripts_path("python/xy/write_par.py")
 
 
 rule filter_XTR_features:
@@ -95,9 +72,7 @@ use rule filter_XTR_features as filter_ampliconic_features with:
 
 rule invert_PAR:
     input:
-        bed=lambda wildcards: rules.download_X_PAR.output
-        if wildcards.chr == "X"
-        else rules.write_Y_PAR.output,
+        bed=rules.write_PAR.output,
         genome=rules.get_genome.output,
     output:
         xy_final_dir / "GRCh38_chr{chr}_nonPAR.bed.gz",
@@ -132,6 +107,7 @@ rule all_xy:
     input:
         expand(
             [
+                *rules.write_PAR.output,
                 *rules.filter_XTR_features.output,
                 *rules.filter_ampliconic_features.output,
                 *rules.invert_PAR.output,
@@ -139,8 +115,6 @@ rule all_xy:
             allow_missing=True,
             chr=["X", "Y"],
         ),
-        rules.compress_X_PAR.output,
-        rules.write_Y_PAR.output,
 
 
 # TODO the post processing scripts for these have merge steps; I probably don't
