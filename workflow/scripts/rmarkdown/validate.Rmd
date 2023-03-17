@@ -28,9 +28,9 @@ coverage_plot <- function(df, type) {
   if (nrow(.df) == 0) {
     cat("None\n\n")
   } else {
-    ggplot(.df, aes(strat_level, coverage)) +
+    ggplot(.df, aes(chrom, coverage)) +
       geom_col() +
-      facet_wrap(scales = "free_y", chrom ~ .) +
+      facet_wrap(scales = "free_y", vars(strat_level), ncol = 1, switch = TRUE) +
       theme(legend.position = "top",
             text = element_text(size=30),
             axis.text.x = element_text(angle=90),
@@ -124,7 +124,7 @@ cat_chromosomes(setdiff(included_chroms, expected_chroms), "extra")
 Regions with different types and sizes of low complexity sequence (e.g.,
 homopolymers, STRs, VNTRs, other locally repetitive sequences).
 
-```{r, echo = FALSE, results = "asis"}
+```{r, echo = FALSE, results = "asis", fig.height = 40}
 coverage_plot(df_coverage, "LowComplexity")
 ```
 
