@@ -219,7 +219,7 @@ rule filter_sort_trf:
     conda:
         envs_path("bedtools.yml")
     script:
-        scripts_path("python/low_complexity/filter_sort_trf.py")
+        scripts_path("python/bedtools/low_complexity/filter_sort_trf.py")
 
 
 rule merge_trf:
@@ -256,7 +256,7 @@ rule filter_sort_rmsk:
     conda:
         envs_path("bedtools.yml")
     script:
-        scripts_path("python/low_complexity/filter_sort_rmsk.py")
+        scripts_path("python/bedtools/low_complexity/filter_sort_rmsk.py")
 
 
 rule merge_rmsk_class:
@@ -306,7 +306,7 @@ rule filter_sort_censat:
     conda:
         envs_path("bedtools.yml")
     script:
-        scripts_path("python/low_complexity/filter_sort_censat.py")
+        scripts_path("python/bedtools/low_complexity/filter_sort_censat.py")
 
 
 rule merge_censat_satellites:
@@ -524,7 +524,7 @@ rule verify_low_complexity_format:
     output:
         touch(lc_inter_dir / "verify.done"),
     script:
-        scripts_path("python/low_complexity/verify.py")
+        scripts_path("python/bedtools/verify.py")
 
 
 lc_out = LowComplexityOutputs(

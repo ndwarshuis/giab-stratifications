@@ -19,7 +19,7 @@ rule write_PAR:
     conda:
         envs_path("bedtools.yml")
     script:
-        scripts_path("python/xy/write_par.py")
+        scripts_path("python/bedtools/xy/write_par.py")
 
 
 rule filter_XTR_features:
