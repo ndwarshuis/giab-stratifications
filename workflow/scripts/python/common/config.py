@@ -81,6 +81,7 @@ class SatelliteOutputs(NamedTuple):
 
 class LowComplexityOutputs(NamedTuple):
     uniform_repeats: InputFiles
+    verify: InputFiles
     all_repeats: InputFiles
 
 
@@ -136,18 +137,23 @@ class BedFileSrc(FileSrc_):
         return v
 
 
+def is_bgzip(p: Path) -> bool:
+    # since bgzip is in blocks (vs gzip), determine if in bgzip by
+    # attempting to seek first block
+    with open(p, "rb") as f:
+        try:
+            next(bgzf.BgzfBlocks(f), None)
+            return True
+        except ValueError:
+            return False
+
+
 class RefFileSrc(FileSrc_):
     filepath: FilePath
 
     @validator("filepath")
-    def is_bgzip(cls, v: FilePath) -> FilePath:
-        # since bgzip is in blocks (vs gzip), determine if in bgzip by
-        # attempting to seek first block
-        with open(v, "rb") as f:
-            try:
-                next(bgzf.BgzfBlocks(f), None)
-            except ValueError:
-                assert False, "not in bgzip format"
+    def path_is_bgzip(cls, v: FilePath) -> FilePath:
+        assert is_bgzip(v), "not in bgzip format"
         return v
 
 
@@ -363,6 +369,7 @@ class GiabStrats(BaseModel):
             r = self.stratifications[rk].low_complexity
             all_tgts = [
                 (s.uniform_repeats, True),
+                (s.verify, True),
                 (s.all_repeats, r.rmsk is not None and r.simreps is not None),
             ]
             return _flatten_targets(all_tgts, rk, bk)

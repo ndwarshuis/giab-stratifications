@@ -518,9 +518,19 @@ use rule invert_satellites as invert_HPs_and_TRs with:
         lc_final_dir / "GRCh38_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz",
 
 
+rule verify_low_complexity_format:
+    input:
+        directory(lc_final_dir),
+    output:
+        touch(lc_inter_dir / "verify.done"),
+    script:
+        scripts_path("python/low_complexity/verify.py")
+
+
 lc_out = LowComplexityOutputs(
     uniform_repeats=rules.all_uniform_repeats.input
     + rules.invert_all_uniform_repeats.output,
+    verify=rules.verify_low_complexity_format.output,
     all_repeats=rules.all_TRs.input
     + rules.merge_filtered_TRs.output
     + rules.invert_TRs.output
