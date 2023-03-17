@@ -1,0 +1,8 @@
+name: seqtk
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - seqtk=1.3
+  - bedtools=2.30
+  - samtools=1.14
