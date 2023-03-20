@@ -48,6 +48,7 @@ stratifications:
           low_complexity: true
           xy: false
           map: false
+          gc: true
     
   GRCh38:
     ref:
@@ -101,9 +102,11 @@ stratifications:
           low_complexity: true
           xy: false
           map: false
+          gc: true
       test_xy:
         chr_filter: [23, 24]
         include:
           low_complexity: false
           xy: true
           map: false
+          gc: true

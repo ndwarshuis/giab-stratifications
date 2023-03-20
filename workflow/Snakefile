@@ -46,6 +46,7 @@ include: "rules/repseq.smk"
 include: "rules/ref.smk"
 include: "rules/low_complexity.smk"
 include: "rules/xy.smk"
+include: "rules/gc.smk"
 include: "rules/mappability.smk"
 include: "rules/postprocess.smk"
 

@@ -70,6 +70,7 @@ def expand_strat_targets_wc(wildcards):
         xy_sex=rules.all_xy.input,
         xy_auto=rules.all_auto.input,
         map=rules.all_map.input,
+        gc=rules.all_gc.input,
     )
     return config.strat_targets(wildcards.ref_key, wildcards.build_key, s)
 

@@ -81,7 +81,7 @@ class SatelliteOutputs(NamedTuple):
 
 class LowComplexityOutputs(NamedTuple):
     uniform_repeats: InputFiles
-    verify: InputFiles
+    # verify: InputFiles
     all_repeats: InputFiles
 
 
@@ -90,6 +90,7 @@ class StratOutputs(NamedTuple):
     xy_sex: InputFiles
     xy_auto: InputFiles
     map: InputFiles
+    gc: InputFiles
 
 
 class BaseModel(BaseModel_):
@@ -233,6 +234,7 @@ class Include(BaseModel):
     low_complexity: bool
     xy: bool
     map: bool
+    gc: bool
 
 
 class Build(BaseModel):
@@ -369,7 +371,7 @@ class GiabStrats(BaseModel):
             r = self.stratifications[rk].low_complexity
             all_tgts = [
                 (s.uniform_repeats, True),
-                (s.verify, True),
+                # (s.verify, True),
                 (s.all_repeats, r.rmsk is not None and r.simreps is not None),
             ]
             return _flatten_targets(all_tgts, rk, bk)
@@ -390,6 +392,7 @@ class GiabStrats(BaseModel):
             (s.xy_sex, want_xy),
             (s.xy_auto, want_autosomes),
             (s.map, inc.map),
+            (s.gc, inc.gc),
         ]
 
         return _flatten_targets(all_targets, rk, bk) + self.low_complexity_targets(

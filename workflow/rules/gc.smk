@@ -12,12 +12,13 @@ GC_LIMIT = 40
 
 
 def subset_fractions(x):
+    x_ = int(x)
     ys = (
-        [i for i in GC_BEDS if i <= x]
-        if x < GC_LIMIT
-        else [i for i in GC_BEDS if i >= x]
+        [i for i in GC_BEDS if i <= x_]
+        if x_ < GC_LIMIT
+        else [i for i in GC_BEDS if i >= x_]
     )
-    return zip(ys, ys[1:])
+    return list(zip(ys, ys[1:]))
 
 
 def expand_frac(f):
@@ -26,7 +27,7 @@ def expand_frac(f):
     return expand(p, allow_missing=True, frac=f)
 
 
-def range_inputs(wildcards):
+def subtract_inputs(wildcards):
     lf = int(wildcards["lower_frac"])
     uf = int(wildcards["upper_frac"])
 
@@ -38,7 +39,6 @@ def range_inputs(wildcards):
         if lf < GC_LIMIT
         else (expand_frac(lf), expand_frac(uf))
     )
-
     return {"bed_a": bed_a, "bed_b": bed_b}
 
 
@@ -49,7 +49,7 @@ rule find_gc_content:
     output:
         gc_inter_dir / "l100_gc{frac}.bed.gz",
     params:
-        switch=lambda w: "-wf" if int(wildcards["frac"]) < GC_LIMIT else "-f",
+        switch=lambda w: "-wf" if int(w["frac"]) < GC_LIMIT else "-f",
     conda:
         envs_path("seqtk.yml")
     shell:
@@ -70,29 +70,37 @@ use rule find_gc_content as find_gc_content_final with:
 
 rule subtract_gc_content:
     input:
-        range_inputs,
+        unpack(subtract_inputs),
     output:
         gc_final_dir / "GRCh38_l100_gc{lower_frac}to{upper_frac}_slop50.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
         """
-        subtractBed -a {input.bigger_bed} -b {input.smaller_bed} | \
+        subtractBed -a {input.bed_a} -b {input.bed_b} | \
         bgzip -c > {output}
         """
 
 
+def range_inputs(wildcards):
+    lower, upper = map(
+        list,
+        unzip(
+            subset_fractions(wildcards["lower"]) + subset_fractions(wildcards["upper"])
+        ),
+    )
+    return expand(
+        rules.subtract_gc_content.output,
+        zip,
+        allow_missing=True,
+        lower_frac=lower,
+        upper_frac=upper,
+    )
+
+
 rule intersect_gc_ranges:
     input:
-        lambda w: (
-            fracs := unzip(subset_fraction(w["lower"]) + subset_fractions(w["upper"])),
-            expand(
-                rules.subtract_gc_content.output,
-                zip,
-                lower_frac=fracs[0],
-                upper_frac=fracs[1],
-            ),
-        ),
+        range_inputs,
     output:
         gc_final_dir / "GRCh38_l100_gclt{lower}orgt{upper}_slop50.bed",
     conda:
@@ -107,6 +115,7 @@ rule all_gc:
         expand(
             rules.intersect_gc_ranges.output,
             zip,
+            allow_missing=True,
             lower=[25, 30],
             upper=[65, 50],
         ),
