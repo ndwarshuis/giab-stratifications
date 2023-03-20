@@ -92,6 +92,7 @@ class StratOutputs(NamedTuple):
     map: InputFiles
     gc: InputFiles
     functional: InputFiles
+    segdups: InputFiles
 
 
 class BaseModel(BaseModel_):
@@ -232,8 +233,7 @@ class XY(BaseModel):
 
 
 class SegDups(BaseModel):
-    self_chain: BedFile
-    self_chain_link: BedFile
+    superdups: BedFile | None
 
 
 class Include(BaseModel):
@@ -242,6 +242,7 @@ class Include(BaseModel):
     map: bool
     gc: bool
     functional: bool
+    segdups: bool
 
 
 class Build(BaseModel):
@@ -322,12 +323,10 @@ class GiabStrats(BaseModel):
             self.stratifications[k].low_complexity,
         )
 
-    def refkey_to_self_chain_src(self, k: RefKey) -> BedSrc | None:
-        return fmap_maybe(lambda x: x.self_chain.src, self.stratifications[k].segdups)
-
-    def refkey_to_self_chain_link_src(self, k: RefKey) -> BedSrc | None:
+    def refkey_to_superdups_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(
-            lambda x: x.self_chain_link.src, self.stratifications[k].segdups
+            lambda x: fmap_maybe(lambda x: x.src, x.superdups),
+            self.stratifications[k].segdups,
         )
 
     def refkey_to_functional_ftbl_src(self, k: RefKey) -> BedSrc | None:
@@ -413,6 +412,7 @@ class GiabStrats(BaseModel):
             (s.map, inc.map),
             (s.gc, inc.gc),
             (s.functional, inc.functional),
+            (s.segdups, inc.segdups),
         ]
 
         return _flatten_targets(all_targets, rk, bk) + self.low_complexity_targets(

@@ -39,8 +39,7 @@ stratifications:
         start: [0, 2458320]
         end: [62122809, 62460029]
     segdups:
-      self_chain: {src: {url: "https://dev.null"}}
-      self_chain_link: {src: {url: "https://dev.null"}}
+      superdups: null
     functional:
       ftbl:
         src:
@@ -57,6 +56,7 @@ stratifications:
           map: false
           gc: true
           functional: true
+          segdups: false
     
   GRCh38:
     ref:
@@ -97,12 +97,13 @@ stratifications:
         start: [10000, 2781479]
         end: [56887902, 57217415]
     segdups:
-      self_chain:
-        src: 
-          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/chainSelf.txt.gz
-      self_chain_link:
-        src: 
-          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/chainSelfLink.txt.gz
+      superdups:
+        src:
+          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/genomicSuperDups.txt.gz
+        bed_cols:
+          chr: 1
+          start: 2
+          end: 3
     functional:
       ftbl:
         src:
@@ -119,6 +120,7 @@ stratifications:
           map: false
           gc: true
           functional: true
+          segdups: true
       test_xy:
         chr_filter: [23, 24]
         include:
@@ -127,3 +129,4 @@ stratifications:
           map: false
           gc: true
           functional: true
+          segdups: true
