@@ -12,6 +12,18 @@ def sort_bed_numerically(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def filter_sort_bed_inner(
+    from_map: dict[str, int],
+    to_map: dict[int, str],
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    chr_col = df.columns.tolist()[0]
+    df[chr_col] = df[chr_col].map(from_map)
+    df = sort_bed_numerically(df.dropna(subset=[chr_col]))
+    df[chr_col] = df[chr_col].map(to_map)
+    return df
+
+
 def filter_sort_bed(
     sconf: cfg.GiabStrats,
     f: Callable[[cfg.Stratification], cfg.BedFile],
@@ -21,10 +33,7 @@ def filter_sort_bed(
 ) -> pd.DataFrame:
     from_map = sconf.buildkey_to_init_chr_mapping(f, rk, bk)
     to_map = sconf.buildkey_to_final_chr_mapping(rk, bk)
-    df[0] = df[0].map(from_map)
-    df = sort_bed_numerically(df.dropna(subset=[0]))
-    df[0] = df[0].map(to_map)
-    return df
+    return filter_sort_bed_inner(from_map, to_map, df)
 
 
 def read_filter_sort_bed(

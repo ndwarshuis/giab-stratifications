@@ -91,6 +91,7 @@ class StratOutputs(NamedTuple):
     xy_auto: InputFiles
     map: InputFiles
     gc: InputFiles
+    functional: InputFiles
 
 
 class BaseModel(BaseModel_):
@@ -175,6 +176,11 @@ RefSrc = RefFileSrc | RefHttpSrc
 BedSrc = BedFileSrc | BedHttpSrc
 
 
+class FuncFile(BaseModel):
+    src: BedSrc
+    chr_prefix: str = ""
+
+
 class BedFile(BaseModel):
     src: BedSrc
     chr_prefix: str = "chr"
@@ -235,6 +241,7 @@ class Include(BaseModel):
     xy: bool
     map: bool
     gc: bool
+    functional: bool
 
 
 class Build(BaseModel):
@@ -247,12 +254,18 @@ class RefFile(BaseModel):
     chr_prefix: str
 
 
+class Functional(BaseModel):
+    ftbl: FuncFile
+    gff: FuncFile
+
+
 class Stratification(BaseModel):
     ref: RefFile
     gap: BedFile | None
     low_complexity: LowComplexity
     xy: XY
     segdups: SegDups
+    functional: Functional
     builds: dict[BuildKey, Build]
 
 
@@ -316,6 +329,12 @@ class GiabStrats(BaseModel):
         return fmap_maybe(
             lambda x: x.self_chain_link.src, self.stratifications[k].segdups
         )
+
+    def refkey_to_functional_ftbl_src(self, k: RefKey) -> BedSrc | None:
+        return self.stratifications[k].functional.ftbl.src
+
+    def refkey_to_functional_gff_src(self, k: RefKey) -> BedSrc | None:
+        return self.stratifications[k].functional.gff.src
 
     def refkey_to_final_chr_prefix(self, k: RefKey) -> str:
         return self.stratifications[k].ref.chr_prefix
@@ -393,6 +412,7 @@ class GiabStrats(BaseModel):
             (s.xy_auto, want_autosomes),
             (s.map, inc.map),
             (s.gc, inc.gc),
+            (s.functional, inc.functional),
         ]
 
         return _flatten_targets(all_targets, rk, bk) + self.low_complexity_targets(

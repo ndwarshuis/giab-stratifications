@@ -41,6 +41,13 @@ stratifications:
     segdups:
       self_chain: {src: {url: "https://dev.null"}}
       self_chain_link: {src: {url: "https://dev.null"}}
+    functional:
+      ftbl:
+        src:
+          url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_feature_table.txt.gz
+      gff:
+        src:
+          url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_genomic.gff.gz
     builds:
       test_autosome:
         chr_filter: [21]
@@ -49,6 +56,7 @@ stratifications:
           xy: false
           map: false
           gc: true
+          functional: true
     
   GRCh38:
     ref:
@@ -95,6 +103,13 @@ stratifications:
       self_chain_link:
         src: 
           url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/chainSelfLink.txt.gz
+    functional:
+      ftbl:
+        src:
+          url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_feature_table.txt.gz
+      gff:
+        src:
+          url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gff.gz
     builds:
       test_autosome:
         chr_filter: [21]
@@ -103,6 +118,7 @@ stratifications:
           xy: false
           map: false
           gc: true
+          functional: true
       test_xy:
         chr_filter: [23, 24]
         include:
@@ -110,3 +126,4 @@ stratifications:
           xy: true
           map: false
           gc: true
+          functional: true
