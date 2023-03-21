@@ -1,5 +1,5 @@
-from os.path import dirname
-from scripts.python.common.config import StratOutputs
+from os.path import dirname, basename
+from more_itertools import unique_everseen
 
 
 rule remove_gaps:
@@ -38,49 +38,35 @@ rule remove_gaps:
 # TODO also somehow need to generate the hap.py tables (the tsvs in the root)
 
 
-# def expand_strat_targets(ref_key, build_key):
-#     inc = lookup_build(["include"], ref_key, build_key)
-#     chr_indices = lookup_chr_indices(ref_key, build_key)
-
-#     # XY is special since we should not include the XY strats if we don't also
-#     # have X and Y in the filter. Likewise we should not include an autosomes
-#     # if they are not in the filter
-#     want_xy = "X" in chr_indices and "Y" in chr_indices and inc["xy"]
-#     want_autosomes = len(set(chr_indices) - set(["X", "Y"])) > 0
-
-#     all_targets = [
-#         (rules.all_low_complexity.input, inc["low_complexity"]),
-#         (rules.all_xy.input, want_xy),
-#         (rules.all_auto.input, want_autosomes),
-#         (rules.all_map.input, inc["map"]),
-#     ]
-
-#     return chain(
-#         *[
-#             expand(target, allow_missing=True, ref_key=ref_key, build_key=build_key)
-#             for target, wants in all_targets
-#             if wants
-#         ]
-#     )
+def expand_strat_targets(wildcards):
+    rk = wildcards.ref_key
+    bk = wildcards.build_key
+    targets = [
+        (rules.all_low_complexity.input, config.want_low_complexity),
+        (rules.all_xy_sex.input, config.want_xy_sex),
+        (rules.all_xy_auto.input, config.want_xy_auto),
+        (rules.all_map.input, config.want_map),
+        (rules.all_gc.input, config.want_gc),
+        (rules.all_functional.input, config.want_functional),
+        (rules.all_segdups.input, config.want_segdups),
+    ]
+    wanted = [t for tgt, test in targets if test(rk, bk) for t in tgt]
+    return expand(wanted, allow_missing=True, ref_key=rk, build_key=bk)
 
 
-def expand_strat_targets_wc(wildcards):
-    s = StratOutputs(
-        low_complexity=lc_out,
-        xy_sex=rules.all_xy.input,
-        xy_auto=rules.all_auto.input,
-        map=rules.all_map.input,
-        gc=rules.all_gc.input,
-        functional=rules.all_functional.input,
-        segdups=rules.all_segdups.input,
+def expand_strat_target_dirs(wildcards):
+    return list(
+        unique_everseen(
+            [dirname(str(t)) for t in expand_strat_targets(wildcards)],
+            lambda x: basename(x),
+        )
     )
-    return config.strat_targets(wildcards.ref_key, wildcards.build_key, s)
 
 
 # TODO don't hardcode version
 rule generate_md5sums:
     input:
-        expand_strat_targets_wc,
+        expand_strat_targets,
     output:
         final_dir / "v3.1-genome-stratifications-{ref_key}-md5s.txt",
     params:
@@ -94,7 +80,7 @@ rule generate_md5sums:
 
 rule validate_strats:
     input:
-        strats=expand_strat_targets_wc,
+        strat_dirs=expand_strat_target_dirs,
         nonN=lambda w: rules.genome_to_bed.output
         if config.refkey_to_gap_src(w.ref_key) is None
         else rules.remove_gaps.output,

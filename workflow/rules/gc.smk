@@ -1,7 +1,6 @@
 from functools import partial
 from more_itertools import unzip
 
-# gc_src_dir = ref_src_dir / "GCcontent"
 gc_inter_dir = intermediate_dir / "GCcontent"
 gc_final_dir = final_dir / "GCcontent"
 gc_log_dir = log_dir / "GCcontent"
@@ -47,7 +46,7 @@ rule find_gc_content:
         ref=rules.filter_sort_ref.output,
         genome=rules.get_genome.output,
     output:
-        gc_inter_dir / "l100_gc{frac}.bed.gz",
+        gc_inter_dir / "l100_gc{frac,[0-9]+}.bed.gz",
     params:
         switch=lambda w: "-wf" if int(w["frac"]) < GC_LIMIT else "-f",
     conda:
@@ -65,14 +64,14 @@ rule find_gc_content:
 
 use rule find_gc_content as find_gc_content_final with:
     output:
-        gc_final_dir / "l100_gc{frac}.bed.gz",
+        gc_final_dir / "GRCh38_l100_gc{frac,[0-9]+}.bed.gz",
 
 
 rule subtract_gc_content:
     input:
         unpack(subtract_inputs),
     output:
-        gc_final_dir / "GRCh38_l100_gc{lower_frac}to{upper_frac}_slop50.bed.gz",
+        gc_final_dir / "GRCh38_l100_gc{lower_frac,[0-9]+}to{upper_frac,[0-9]+}_slop50.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -102,7 +101,7 @@ rule intersect_gc_ranges:
     input:
         range_inputs,
     output:
-        gc_final_dir / "GRCh38_l100_gclt{lower}orgt{upper}_slop50.bed",
+        gc_final_dir / "GRCh38_l100_gclt{lower,[0-9]+}orgt{upper,[0-9]+}_slop50.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:

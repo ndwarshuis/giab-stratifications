@@ -1,7 +1,6 @@
 from more_itertools import unzip
 from collections import namedtuple
 from functools import partial
-from scripts.python.common.config import LowComplexityOutputs, SatelliteOutputs
 
 
 lc_src_dir = ref_src_dir / "low_complexity"
@@ -344,16 +343,12 @@ rule merge_rmsk_satellites:
         """
 
 
-sat_tgts = SatelliteOutputs(
-    rmsk=rules.merge_rmsk_satellites.output,
-    censat=rules.merge_censat_satellites.output,
-)
-
-
 # TODO is this really the best way to handle a collider?
 rule merge_satellites:
     input:
-        lambda w: config.satellite_targets(w.ref_key, sat_tgts),
+        lambda w: rules.merge_censat_satellites.output
+        if config.want_low_complexity_censat(w.ref_key)
+        else rules.merge_rmsk_satellites.output,
     output:
         lc_inter_dir / "GRCh38_satellites_slop5.bed.gz",
     shell:
@@ -527,30 +522,18 @@ use rule invert_satellites as invert_HPs_and_TRs with:
 #         scripts_path("python/bedtools/verify.py")
 
 
-lc_out = LowComplexityOutputs(
-    uniform_repeats=rules.all_uniform_repeats.input
-    + rules.invert_all_uniform_repeats.output,
-    # verify=rules.verify_low_complexity_format.output,
-    all_repeats=rules.all_TRs.input
-    + rules.merge_filtered_TRs.output
-    + rules.invert_TRs.output
-    + rules.merge_HPs_and_TRs.output
-    + rules.invert_HPs_and_TRs.output
-    + rules.merge_satellites.output
-    + rules.invert_satellites.output,
-)
-# rule all_low_complexity:
-#     input:
-#         # Uniform repeats
-#         rules.all_uniform_repeats.input,
-#         rules.invert_all_uniform_repeats.output,
-#         # Satellites
-#         rules.merge_satellites.output,
-#         rules.invert_satellites.output,
-#         # Tandem Repeats
-#         rules.all_TRs.input,
-#         rules.merge_filtered_TRs.output,
-#         rules.invert_TRs.output,
-#         # "Everything" (in theory)
-#         rules.merge_HPs_and_TRs.output,
-#         rules.invert_HPs_and_TRs.output,
+rule all_low_complexity:
+    input:
+        # Uniform repeats
+        rules.all_uniform_repeats.input,
+        rules.invert_all_uniform_repeats.output,
+        # Satellites
+        rules.merge_satellites.output,
+        rules.invert_satellites.output,
+        # Tandem Repeats
+        rules.all_TRs.input,
+        rules.merge_filtered_TRs.output,
+        rules.invert_TRs.output,
+        # "Everything" (in theory)
+        rules.merge_HPs_and_TRs.output,
+        rules.invert_HPs_and_TRs.output,

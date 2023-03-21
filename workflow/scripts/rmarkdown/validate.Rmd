@@ -23,23 +23,33 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 ```{r, include=FALSE}
 library(tidyverse)
 
-coverage_plot <- function(df, type) {
+coverage_plot <- function(df, level) {
+  cat(sprintf("#### %s\n\n", level))
+  p <- df %>%
+    ggplot(aes(chrom, coverage)) +
+    geom_col() +
+    scale_y_continuous(labels = scales::percent) +
+    theme(legend.position = "top",
+          text = element_text(size = 30),
+          axis.text.x = element_text(angle = 90),
+          strip.text.y = element_text(angle = 0),
+          panel.spacing.y = unit(2, "lines"))
+  print(p)
+  cat("\n\n")
+}
+
+coverage_plots <- function(df, type) {
   .df <- df %>% filter(strat_type == type)
   if (nrow(.df) == 0) {
     cat("None\n\n")
   } else {
-    ggplot(.df, aes(chrom, coverage)) +
-      geom_col() +
-      facet_wrap(scales = "free_y", vars(strat_level), ncol = 1, switch = TRUE) +
-      theme(legend.position = "top",
-            text = element_text(size=30),
-            axis.text.x = element_text(angle=90),
-            strip.text.y = element_text(angle = 0),
-            panel.spacing.y = unit(2, "lines"))
+    .df %>%
+      group_by(strat_level) %>%
+      group_walk(coverage_plot)
   }
 }
 
-knitr::opts_chunk$set(fig.width=25, fig.height=12, fig_caption=TRUE)
+knitr::opts_chunk$set(fig.width=25, fig.height=5, fig_caption=TRUE)
 
 bed_cols <- c("chrom", "start", "end")
 
@@ -49,10 +59,17 @@ df_chr_sizes <- snakemake@input$nonN %>%
   group_by(chrom) %>%
   summarise(nonN_ref_len = sum(region_size))
 
-df_coverage <- snakemake@input$strats %>%
-  set_names() %>%
-  map(read_tsv, comment = "#", col_types = "cdd", col_names = bed_cols) %>%
-  list_rbind(names_to = "path") %>%
+read_strat <- function(path) {
+  read_tsv(path,
+           comment = "#",
+           col_types = "cdd",
+           col_names = bed_cols) %>%
+    mutate(path = path)
+}
+
+df_coverage <- snakemake@input$strat_dirs %>%
+  list.files(full.names = TRUE) %>%
+  map_dfr(read_strat) %>%
   mutate(region_size = end - start) %>%
   group_by(path, chrom) %>%
   summarise(total_region = sum(region_size)) %>%
@@ -124,8 +141,8 @@ cat_chromosomes(setdiff(included_chroms, expected_chroms), "extra")
 Regions with different types and sizes of low complexity sequence (e.g.,
 homopolymers, STRs, VNTRs, other locally repetitive sequences).
 
-```{r, echo = FALSE, results = "asis", fig.height = 40}
-coverage_plot(df_coverage, "LowComplexity")
+```{r, echo = FALSE, results = "asis"}
+coverage_plots(df_coverage, "LowComplexity")
 ```
 
 ## Functional Technically Difficult
@@ -134,7 +151,7 @@ Different functional, or potentially functional, regions that are also likely to
 be technically difficult to sequence.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plot(df_coverage, "FunctionalTechnicallyDifficult")
+coverage_plots(df_coverage, "FunctionalTechnicallyDifficult")
 ```
 
 ## Functional Regions
@@ -142,7 +159,7 @@ coverage_plot(df_coverage, "FunctionalTechnicallyDifficult")
 Regions to stratify variants inside and outside of coding regions.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plot(df_coverage, "FunctionalRegions")
+coverage_plots(df_coverage, "FunctionalRegions")
 ```
 
 ## GC Content
@@ -150,7 +167,7 @@ coverage_plot(df_coverage, "FunctionalRegions")
 Regions with different ranges(%) of GC content.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plot(df_coverage, "GCcontent")
+coverage_plots(df_coverage, "GCcontent")
 ```
 
 ## Mappability
@@ -158,7 +175,7 @@ coverage_plot(df_coverage, "GCcontent")
 Regions where short read mappability can be challenging.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plot(df_coverage, "mappability")
+coverage_plots(df_coverage, "mappability")
 ```
 
 ## Other Difficult
@@ -167,7 +184,7 @@ Highly variable regions like the VDJ and MHC, near gaps in the reference, or
 errors in the reference.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plot(df_coverage, "OtherDifficult")
+coverage_plots(df_coverage, "OtherDifficult")
 ```
 
 ## Segmental Duplications
@@ -176,7 +193,7 @@ Regions with segmental duplications or regions with non-trivial self-chain
 alignments.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plot(df_coverage, "SegmentalDuplications")
+coverage_plots(df_coverage, "SegmentalDuplications")
 ```
 
 ## Union
@@ -186,7 +203,7 @@ difficult region or complex variant. For example, performance can be measured in
 just the "easy" regions of the genome.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plot(df_coverage, "Union")
+coverage_plots(df_coverage, "Union")
 ```
 
 ## Ancestry
@@ -194,7 +211,7 @@ coverage_plot(df_coverage, "Union")
 Regions with inferred patterns of local ancestry in GRCh38.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plot(df_coverage, "ancestry")
+coverage_plots(df_coverage, "ancestry")
 ```
 
 ## XY
@@ -202,7 +219,7 @@ coverage_plot(df_coverage, "ancestry")
 Regions in chromosomes X and Y
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plot(df_coverage, "XY")
+coverage_plots(df_coverage, "XY")
 ```
 
 ## Genome Specific (benchmark v4.2.1)
@@ -216,5 +233,5 @@ sample, including:
 
 ```{r, echo = FALSE, results = "asis"}
 # TODO this will need to be broken out by specific genomes in the plot
-coverage_plot(df_coverage, "GenomeSpecific")
+coverage_plots(df_coverage, "GenomeSpecific")
 ```

@@ -103,7 +103,7 @@ rule filter_autosomes:
 
 # NOTE the XTR X region is different relative to old strats because it was
 # updated a few months ago
-rule all_xy:
+rule all_xy_sex:
     input:
         expand(
             [
@@ -121,6 +121,6 @@ rule all_xy:
 # need them (at least for hg38) but they were likely added for a reason
 
 
-rule all_auto:
+rule all_xy_auto:
     input:
         rules.filter_autosomes.output,

@@ -3,10 +3,8 @@ from pathlib import Path
 from pydantic import BaseModel as BaseModel_
 from pydantic import validator, HttpUrl, FilePath
 from enum import Enum, unique
-from typing import NewType, NamedTuple, Any, Callable, TypeVar
+from typing import NewType, Any, Callable, TypeVar
 from typing_extensions import Self
-from snakemake.io import expand, InputFiles  # type: ignore
-from more_itertools import flatten
 from Bio import bgzf  # type: ignore
 
 X = TypeVar("X")
@@ -19,20 +17,6 @@ RefKey = NewType("RefKey", str)
 
 def fmap_maybe(f: Callable[[X], Y], x: X | None) -> None | Y:
     return None if x is None else f(x)
-
-
-def _flatten_targets(
-    all_targets: list[tuple[InputFiles, bool]],
-    rk: RefKey,
-    bk: BuildKey,
-) -> InputFiles:
-    return [
-        *flatten(
-            expand(target, allow_missing=True, ref_key=rk, build_key=bk)
-            for target, wants in all_targets
-            if wants
-        )
-    ]
 
 
 class RefFmt(Enum):
@@ -72,27 +56,6 @@ class ChrIndex(Enum):
 
     def chr_name_full(self, prefix: str) -> str:
         return f"{prefix}{self.chr_name}"
-
-
-class SatelliteOutputs(NamedTuple):
-    rmsk: InputFiles
-    censat: InputFiles
-
-
-class LowComplexityOutputs(NamedTuple):
-    uniform_repeats: InputFiles
-    # verify: InputFiles
-    all_repeats: InputFiles
-
-
-class StratOutputs(NamedTuple):
-    low_complexity: LowComplexityOutputs
-    xy_sex: InputFiles
-    xy_auto: InputFiles
-    map: InputFiles
-    gc: InputFiles
-    functional: InputFiles
-    segdups: InputFiles
 
 
 class BaseModel(BaseModel_):
@@ -375,46 +338,29 @@ class GiabStrats(BaseModel):
     def buildkey_to_chr_pattern(self, rk: RefKey, bk: BuildKey) -> str:
         return "\\|".join(self.buildkey_to_chr_names(rk, bk))
 
-    def satellite_targets(self, rk: RefKey, s: SatelliteOutputs) -> InputFiles:
-        return (
-            s.censat
-            if self.stratifications[rk].low_complexity.satellites is not None
-            else s.rmsk
-        )
+    def want_low_complexity_censat(self, rk: RefKey) -> bool:
+        return self.stratifications[rk].low_complexity.satellites is not None
 
-    def low_complexity_targets(
-        self, rk: RefKey, bk: BuildKey, s: LowComplexityOutputs
-    ) -> InputFiles:
-        if self.buildkey_to_build(rk, bk).include.low_complexity:
-            r = self.stratifications[rk].low_complexity
-            all_tgts = [
-                (s.uniform_repeats, True),
-                # (s.verify, True),
-                (s.all_repeats, r.rmsk is not None and r.simreps is not None),
-            ]
-            return _flatten_targets(all_tgts, rk, bk)
-        else:
-            return []
-
-    def strat_targets(self, rk: RefKey, bk: BuildKey, s: StratOutputs) -> InputFiles:
-        inc = self.buildkey_to_build(rk, bk).include
+    def want_xy_sex(self, rk: RefKey, bk: BuildKey) -> bool:
+        inc = self.buildkey_to_build(rk, bk).include.xy
         cis = self.buildkey_to_chr_indices(rk, bk)
+        return ChrIndex.CHRX in cis and ChrIndex.CHRY in cis and inc
 
-        # XY is special since we should not include the XY strats if we don't
-        # also have X and Y in the filter. Likewise we should not include an
-        # autosomes if they are not in the filter
-        want_xy = ChrIndex.CHRX in cis and ChrIndex.CHRY in cis and inc.xy
-        want_autosomes = len(cis - set([ChrIndex.CHRX, ChrIndex.CHRY])) > 0
+    def want_xy_auto(self, rk: RefKey, bk: BuildKey) -> bool:
+        cis = self.buildkey_to_chr_indices(rk, bk)
+        return len(cis - set([ChrIndex.CHRX, ChrIndex.CHRY])) > 0
 
-        all_targets = [
-            (s.xy_sex, want_xy),
-            (s.xy_auto, want_autosomes),
-            (s.map, inc.map),
-            (s.gc, inc.gc),
-            (s.functional, inc.functional),
-            (s.segdups, inc.segdups),
-        ]
+    def want_low_complexity(self, rk: RefKey, bk: BuildKey) -> bool:
+        return self.buildkey_to_build(rk, bk).include.low_complexity
 
-        return _flatten_targets(all_targets, rk, bk) + self.low_complexity_targets(
-            rk, bk, s.low_complexity
-        )
+    def want_map(self, rk: RefKey, bk: BuildKey) -> bool:
+        return self.buildkey_to_build(rk, bk).include.map
+
+    def want_gc(self, rk: RefKey, bk: BuildKey) -> bool:
+        return self.buildkey_to_build(rk, bk).include.gc
+
+    def want_functional(self, rk: RefKey, bk: BuildKey) -> bool:
+        return self.buildkey_to_build(rk, bk).include.functional
+
+    def want_segdups(self, rk: RefKey, bk: BuildKey) -> bool:
+        return self.buildkey_to_build(rk, bk).include.segdups
