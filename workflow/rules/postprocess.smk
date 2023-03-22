@@ -1,6 +1,8 @@
 from os.path import dirname, basename
 from more_itertools import unique_everseen
 
+post_inter_dir = intermediate_dir / "postprocess"
+
 
 rule remove_gaps:
     input:
@@ -76,6 +78,17 @@ rule generate_md5sums:
         sed 's|{params.root}|{wildcards.ref_key}|' \
         > {output}
         """
+
+
+rule verify_strats:
+    input:
+        expand_strat_target_dirs,
+    output:
+        touch(post_inter_dir / "verify.done"),
+    log:
+        post_inter_dir / "verify_strats.log",
+    script:
+        scripts_path("python/bedtools/verify.py")
 
 
 rule validate_strats:
