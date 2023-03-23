@@ -41,6 +41,12 @@ def subtract_inputs(wildcards):
     return {"bed_a": bed_a, "bed_b": bed_b}
 
 
+def seqtk_args(wildcards):
+    _frac = int(wildcards["frac"])
+    switch, frac = ("w", 100 - _frac) if _frac < GC_LIMIT else ("", _frac)
+    return f"-{switch}f 0.{frac}"
+
+
 rule find_gc_content:
     input:
         ref=rules.filter_sort_ref.output,
@@ -48,13 +54,12 @@ rule find_gc_content:
     output:
         gc_inter_dir / "l100_gc{frac,[0-9]+}.bed.gz",
     params:
-        switch=lambda w: "-wf" if int(w["frac"]) < GC_LIMIT else "-f",
-        frac=lambda w: 100 - frac if (frac := int(w["frac"])) < GC_LIMIT else frac,
+        args=seqtk_args,
     conda:
         envs_path("seqtk.yml")
     shell:
         """
-        seqtk gc {params.switch} 0.{params.frac} -l 100 {input.ref} | \
+        seqtk gc {params.args} -l 100 {input.ref} | \
         cut -f1-3 | \
         slopBed -i stdin -g {input.genome} -b 50 | \
         mergeBed -i stdin | \

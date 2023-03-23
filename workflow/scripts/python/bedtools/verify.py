@@ -16,7 +16,7 @@ def test_bed_format(strat_file: Path, reverse_map: dict[str, int]) -> list[str]:
         df = pd.read_table(
             strat_file,
             names=["chrom", "start", "end"],
-            dtype={0: str, 1: int, 2: int},
+            dtype={"chrom": str, "start": int, "end": int},
             header=0,
         )
     except:
