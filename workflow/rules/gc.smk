@@ -49,11 +49,12 @@ rule find_gc_content:
         gc_inter_dir / "l100_gc{frac,[0-9]+}.bed.gz",
     params:
         switch=lambda w: "-wf" if int(w["frac"]) < GC_LIMIT else "-f",
+        frac=lambda w: 100 - frac if (frac := int(w["frac"])) < GC_LIMIT else frac,
     conda:
         envs_path("seqtk.yml")
     shell:
         """
-        seqtk gc {params.switch} 0.{wildcards.frac} -l 100 {input.ref} | \
+        seqtk gc {params.switch} 0.{params.frac} -l 100 {input.ref} | \
         cut -f1-3 | \
         slopBed -i stdin -g {input.genome} -b 50 | \
         mergeBed -i stdin | \
