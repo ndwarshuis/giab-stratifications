@@ -11,25 +11,32 @@ def test_bgzip(strat_file: Path) -> list[str]:
 
 
 def test_bed_format(strat_file: Path, reverse_map: dict[str, int]) -> list[str]:
-    # TODO this could be more informative
     try:
-        df = pd.read_table(
-            strat_file,
-            names=["chrom", "start", "end"],
-            dtype={"chrom": str, "start": int, "end": int},
-            header=0,
-        )
-    except:
-        # if we can't read it, there's something wrong with it (likely an
-        # incorrect number of columns)
-        return ["error when assessing bed format"]
+        df = pd.read_table(strat_file, header=0)
+    except pd.errors.EmptyDataError:
+        # if df is empty, nothing to do
+        return []
+    except Exception as e:
+        # catch any other weird read errors
+        return [str(e)]
 
     # if we can read the file without breaking physics, test the following:
+    # - has 3 columns (typed str, int, int)
     # - no invalid chromosomes (test by converting known chromosomes to
     #   integers, which will produce NaNs for non-matches)
     # - chromosome column is sorted
     # - each region is disjoint and ascending (eg the start of a region is at
     #   least 1bp away from the end of the previous)
+    if len(df.columns) != 3:
+        return ["bed file has wrong number of columns"]
+
+    cols = {"chrom": str, "start": int, "end": int}
+    df.columns = pd.Index([*cols])
+
+    try:
+        df = df.astype(cols)
+    except ValueError as e:
+        return [str(e)]
 
     chr_ints = df["chrom"].map(reverse_map).astype("Int64")
     invalid_chrs = df["chrom"][chr_ints.isnull()].unique().tolist()
