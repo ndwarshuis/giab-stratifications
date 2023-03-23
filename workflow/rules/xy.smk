@@ -1,4 +1,5 @@
 xy_src_dir = ref_src_dir / "XY"
+xy_inter_dir = intermediate_dir / "XY"
 xy_final_dir = final_dir / "XY"
 
 
@@ -13,13 +14,18 @@ use rule download_ref as download_genome_features_bed with:
         )(w.ref_key),
 
 
-rule write_PAR:
+rule write_PAR_final:
     output:
         xy_final_dir / "GRCh38_chr{chr}_PAR.bed.gz",
     conda:
         envs_path("bedtools.yml")
     script:
         scripts_path("python/bedtools/xy/write_par.py")
+
+
+use rule write_PAR_final as write_PAR_intermediate with:
+    output:
+        xy_inter_dir / "GRCh38_chr{chr}_PAR.bed.gz",
 
 
 rule filter_XTR_features:
@@ -70,9 +76,18 @@ use rule filter_XTR_features as filter_ampliconic_features with:
 #         """
 
 
+def par_input(wildcards):
+    test_fun = config.want_xy_y if wildcards.chr == "Y" else config.want_xy_x
+    return (
+        rules.write_PAR_final.output
+        if test_fun(wildcards.ref_key, wildcards.build_key)
+        else rules.write_PAR_intermediate.output
+    )
+
+
 rule invert_PAR:
     input:
-        bed=rules.write_PAR.output,
+        bed=par_input,
         genome=rules.get_genome.output,
     output:
         xy_final_dir / "GRCh38_chr{chr}_nonPAR.bed.gz",
@@ -105,22 +120,36 @@ rule filter_autosomes:
 # updated a few months ago
 rule all_xy_sex:
     input:
-        expand(
-            [
-                *rules.write_PAR.output,
-                *rules.filter_XTR_features.output,
-                *rules.filter_ampliconic_features.output,
-                *rules.invert_PAR.output,
-            ],
-            allow_missing=True,
-            chr=["X", "Y"],
-        ),
+        rules.filter_XTR_features.output,
+        rules.filter_ampliconic_features.output,
+        rules.invert_PAR.output,
 
 
-# TODO the post processing scripts for these have merge steps; I probably don't
-# need them (at least for hg38) but they were likely added for a reason
+# # TODO the post processing scripts for these have merge steps; I probably don't
+# # need them (at least for hg38) but they were likely added for a reason
 
 
 rule all_xy_auto:
     input:
         rules.filter_autosomes.output,
+
+
+# def xy_inputs(wildcards):
+#     rk = wildcards.ref_key
+#     bk = wildcards.build_key
+#     auto = rules.filter_autosomes.output if config.want_xy_auto(rk, bk) else []
+#     sex = expand(
+#         [
+#             *rules.filter_XTR_features.output,
+#             *rules.filter_ampliconic_features.output,
+#             *rules.invert_PAR.output,
+#         ],
+#         allow_missing=True,
+#         chr=config.wanted_xy_chr_names(rk, bk),
+#     )
+#     return auto + sex
+# rule all_xy:
+#     input:
+#         xy_inputs,
+#     output:
+#         directory(xy_final_dir),

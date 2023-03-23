@@ -85,6 +85,7 @@ def get_offset(unit_name):
     return 0 if unit_name == "homopolymer" else 1
 
 
+# NOTE v3.1 doesn't merge here
 rule slop_uniform_repeats:
     input:
         bed=lambda wildcards: lookup_perfect_uniform_repeat(
@@ -100,6 +101,7 @@ rule slop_uniform_repeats:
         """
         slopBed -i {input.bed} -b 5 -g {input.genome} | \
         cut -f1-3 | \
+        mergeBed -i stdin | \
         bgzip -c \
         > {output}
         """

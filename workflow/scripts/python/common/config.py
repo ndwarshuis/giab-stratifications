@@ -341,10 +341,31 @@ class GiabStrats(BaseModel):
     def want_low_complexity_censat(self, rk: RefKey) -> bool:
         return self.stratifications[rk].low_complexity.satellites is not None
 
-    def want_xy_sex(self, rk: RefKey, bk: BuildKey) -> bool:
-        inc = self.buildkey_to_build(rk, bk).include.xy
+    def _want_chr_index(self, rk: RefKey, bk: BuildKey, i: ChrIndex) -> bool:
         cis = self.buildkey_to_chr_indices(rk, bk)
-        return ChrIndex.CHRX in cis and ChrIndex.CHRY in cis and inc
+        return i in cis
+
+    def want_xy_x(self, rk: RefKey, bk: BuildKey) -> bool:
+        return (
+            self._want_chr_index(rk, bk, ChrIndex.CHRX)
+            and self.buildkey_to_build(rk, bk).include.xy
+        )
+
+    def want_xy_y(self, rk: RefKey, bk: BuildKey) -> bool:
+        return (
+            self._want_chr_index(rk, bk, ChrIndex.CHRY)
+            and self.buildkey_to_build(rk, bk).include.xy
+        )
+
+    def wanted_xy_chr_names(self, rk: RefKey, bk: BuildKey) -> list[str]:
+        return [
+            i.chr_name
+            for i in [ChrIndex.CHRX, ChrIndex.CHRY]
+            if self._want_chr_index(rk, bk, i)
+        ]
+
+    def want_xy_sex(self, rk: RefKey, bk: BuildKey) -> bool:
+        return self.want_xy_x(rk, bk) and self.want_xy_y(rk, bk)
 
     def want_xy_auto(self, rk: RefKey, bk: BuildKey) -> bool:
         cis = self.buildkey_to_chr_indices(rk, bk)

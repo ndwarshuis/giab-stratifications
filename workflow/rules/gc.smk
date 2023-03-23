@@ -71,7 +71,8 @@ rule subtract_gc_content:
     input:
         unpack(subtract_inputs),
     output:
-        gc_final_dir / "GRCh38_l100_gc{lower_frac,[0-9]+}to{upper_frac,[0-9]+}_slop50.bed.gz",
+        gc_final_dir
+        / "GRCh38_l100_gc{lower_frac,[0-9]+}to{upper_frac,[0-9]+}_slop50.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
