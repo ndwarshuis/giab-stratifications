@@ -12,17 +12,17 @@ def test_bgzip(strat_file: Path) -> list[str]:
 
 def test_bed_format(strat_file: Path, reverse_map: dict[str, int]) -> list[str]:
     # TODO this could be more informative
-    # try:
-    df = pd.read_table(
-        strat_file,
-        names=["chrom", "start", "end"],
-        dtype={0: str, 1: int, 2: int},
-        header=0,
-    )
-    # except:
-    #     # if we can't read it, there's something wrong with it (likely an
-    #     # incorrect number of columns)
-    #     return ["error when assessing bed format"]
+    try:
+        df = pd.read_table(
+            strat_file,
+            names=["chrom", "start", "end"],
+            dtype={0: str, 1: int, 2: int},
+            header=0,
+        )
+    except:
+        # if we can't read it, there's something wrong with it (likely an
+        # incorrect number of columns)
+        return ["error when assessing bed format"]
 
     # if we can read the file without breaking physics, test the following:
     # - no invalid chromosomes (test by converting known chromosomes to

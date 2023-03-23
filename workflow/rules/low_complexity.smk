@@ -352,7 +352,7 @@ rule merge_satellites:
         if config.want_low_complexity_censat(w.ref_key)
         else rules.merge_rmsk_satellites.output,
     output:
-        lc_inter_dir / "GRCh38_satellites_slop5.bed.gz",
+        lc_final_dir / "GRCh38_satellites_slop5.bed.gz",
     shell:
         "cp {input} {output}"
 

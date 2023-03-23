@@ -2,6 +2,14 @@ from os.path import dirname, basename
 from more_itertools import unique_everseen
 from os import scandir
 
+# TODO merge outputs? (this is something done in postprocessing but seems like
+# it should be part of the validation)
+
+# TODO need to get a bed file that has all Ns from the reference (so they can be subtracted)
+# TODO need a PSA_Y_GRCh38.bed file (assuming to subtract off pseudo-autosomal regions)
+# TODO also somehow need to generate the hap.py tables (the tsvs in the root)
+# TODO add a nice header to the top informing user that "these are strats"?
+
 post_inter_dir = intermediate_dir / "postprocess"
 
 
@@ -23,24 +31,6 @@ rule remove_gaps:
         """
 
 
-# TODO need to get a bed file that has all Ns from the reference (so they can be subtracte
-
-# TODO merge outputs? (this is something done in postprocessing but seems like
-# it should be part of the validation)
-
-# TODO need a PSA_Y_GRCh38.bed file (assuming to subtract off pseudo-autosomal regions)
-
-# lets worry about this last, I might end up replace lots of the merge commands
-# with python, which will make this easy
-# rule add_strat_header:
-#     input:
-#         "",
-#     output:
-#         "",
-
-# TODO also somehow need to generate the hap.py tables (the tsvs in the root)
-
-
 def expand_strat_targets(wildcards):
     rk = wildcards.ref_key
     bk = wildcards.build_key
@@ -52,27 +42,20 @@ def expand_strat_targets(wildcards):
         (rules.all_functional.input, config.want_functional),
         (rules.all_segdups.input, config.want_segdups),
     ]
+    auto = [t for tgt, test in targets if test(rk, bk) for t in tgt]
     sex = expand(
         rules.all_xy_sex.input,
         allow_missing=True,
         chr=config.wanted_xy_chr_names(rk, bk),
     )
-    auto = expand(
-        [t for tgt, test in targets if test(rk, bk) for t in tgt],
-        allow_missing=True,
-        ref_key=rk,
-        build_key=bk,
-    )
-    return auto + sex
+    all_targets = auto + sex
+    invalid = [f for f in all_targets if not f.startswith("results/builds/final")]
+    assert len(invalid) == 0, f"invalid targets: {invalid}"
+    return all_targets
 
 
 def common_dirs(files):
-    return list(
-        unique_everseen(
-            [dirname(str(f)) for f in files],
-            lambda x: basename(x),
-        )
-    )
+    return list(unique_everseen([dirname(str(f)) for f in files]))
 
 
 # TODO don't hardcode version
@@ -84,7 +67,10 @@ rule generate_md5sums:
     params:
         root=lambda wildcards, output: dirname(str(output[0])),
         all_strats=lambda _, input: [
-            p.path for i in common_dirs(input) for p in scandir(i)
+            p.path
+            for i in common_dirs(input)
+            for p in scandir(i)
+            if p.path.endswith(".bed.gz")
         ],
     shell:
         """
@@ -111,8 +97,10 @@ rule unit_test_strats:
 
 rule validate_strats:
     input:
+        # this input isn't actually used, but ensures the unit tests pass
+        # before running the rmd script
         _test=rules.unit_test_strats.output,
-        _targets=expand_strat_targets,
+        targets=expand_strat_targets,
         nonN=lambda w: rules.genome_to_bed.output
         if config.refkey_to_gap_src(w.ref_key) is None
         else rules.remove_gaps.output,
@@ -124,6 +112,6 @@ rule validate_strats:
         expected_chroms=lambda wildcards: config.buildkey_to_chr_names(
             wildcards.ref_key, wildcards.build_key
         ),
-        strat_dirs=lambda _, input: common_dirs(input._targets),
+        strat_dirs=lambda _, input: common_dirs(input.targets),
     script:
         scripts_path("rmarkdown/validate.Rmd")
