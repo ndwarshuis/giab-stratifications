@@ -31,6 +31,12 @@ rule remove_gaps:
         """
 
 
+# NOTE This will only give a limited set of "targets" from each of the strat
+# level types. Because of the way snakemake works, it is not practical or
+# maintainable to specify every single stratification file; therefore we only
+# use the "toplevel" targets which will pull in all others. In downstream rules
+# from this, it is much easier to use condense this to a list of parent
+# directories then manually iterate all strat files in these directories.
 def expand_strat_targets(wildcards):
     rk = wildcards.ref_key
     bk = wildcards.build_key

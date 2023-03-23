@@ -106,31 +106,6 @@ cat(sprintf("Included chromosomes: %s\n\n", str_c(expected_chroms, collapse = ",
 
 ```
 
-<!-- TODO add "unit tests" for overlapping regions and sorting -->
-
-# Unit Tests
-
-Sanity checks for each stratification bed file
-
-## Check for missing/extra chromosomes
-
-```{r, echo = FALSE, results = "asis"}
-
-cat_chromosomes <- function(chroms, which) {
-  s <- if (length(chroms) == 0) {
-    sprintf("No %s chromosomes", which)
-  } else {
-    chr_s <- str_c(chroms, collapse = ", ")
-    sprintf("Chromosomes are %s: %s", which, chr_s)
-  }
-  cat(sprintf("%s\n\n", s))
-}
-
-cat_chromosomes(setdiff(expected_chroms, included_chroms), "missing")
-cat_chromosomes(setdiff(included_chroms, expected_chroms), "extra")
-
-```
-
 # Coverage Plots
 
 <!-- TODO these little panels can be grouped by "genome specific" and "everything" -->
