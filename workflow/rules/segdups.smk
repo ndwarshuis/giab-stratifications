@@ -51,18 +51,24 @@ rule notin_superdups:
     input:
         bed=rules.merge_superdups.output,
         genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output,
     output:
         segdup_final_dir / "GRCh38_notinsegdups.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
-        "complementBed -i {input.bed} -g {input.genome} | bgzip -c > {output}"
+        """
+        complementBed -i {input.bed} -g {input.genome} | \
+        intersectBed -a stdin -b {input.gapless} -sorted | \
+        bgzip -c > {output}
+        """
 
 
 use rule notin_superdups as notin_long_superdups with:
     input:
         bed=rules.filter_long_superdups.output,
         genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output,
     output:
         segdup_final_dir / "GRCh38_notinsegdups_gt10kb.bed.gz",
 

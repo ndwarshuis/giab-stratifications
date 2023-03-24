@@ -44,8 +44,8 @@ scripts_path = partial(build_abs_path, Path("workflow/scripts"))
 
 include: "rules/repseq.smk"
 include: "rules/ref.smk"
-include: "rules/low_complexity.smk"
 include: "rules/xy.smk"
+include: "rules/low_complexity.smk"
 include: "rules/gc.smk"
 include: "rules/functional.smk"
 include: "rules/segdups.smk"

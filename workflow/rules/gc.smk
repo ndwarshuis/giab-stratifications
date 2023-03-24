@@ -51,6 +51,7 @@ rule find_gc_content:
     input:
         ref=rules.filter_sort_ref.output,
         genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output,
     output:
         gc_inter_dir / "l100_gc{frac,[0-9]+}.bed.gz",
     params:
@@ -63,6 +64,7 @@ rule find_gc_content:
         cut -f1-3 | \
         slopBed -i stdin -g {input.genome} -b 50 | \
         mergeBed -i stdin | \
+        intersectBed -a stdin -b {input.gapless} -sorted | \
         bgzip -c \
         > {output}
         """
@@ -112,7 +114,11 @@ rule intersect_gc_ranges:
     conda:
         envs_path("bedtools.yml")
     shell:
-        "multiIntersectBed -i {input} | mergeBed -i stdin | bgzip -c > {output}"
+        """
+        multiIntersectBed -i {input} | \
+        mergeBed -i stdin | \
+        bgzip -c > {output}
+        """
 
 
 # ASSUME this alone will pull in all the individual range beds

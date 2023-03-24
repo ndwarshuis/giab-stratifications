@@ -45,12 +45,17 @@ rule invert_functional:
     input:
         bed=rules.merge_functional.output,
         genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output,
     output:
         func_final_dir / "GRCh38_notinrefseq_cds.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
-        "complementBed -i {input.bed} -g {input.genome} | bgzip -c > {output}"
+        """
+        complementBed -i {input.bed} -g {input.genome} | \
+        intersectBed -a stdin -b {input.gapless} -sorted | \
+        bgzip -c > {output}
+        """
 
 
 rule all_functional:

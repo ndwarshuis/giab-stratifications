@@ -3,6 +3,16 @@ ref_master_dir = results_dir / "ref" / "{ref_key}"
 ref_inter_dir = intermediate_dir / "ref"
 
 
+# lots of things depend on PAR so move this out of the XY ruleset
+rule write_PAR_intermediate:
+    output:
+        ref_inter_dir / "chr{chr}_PAR.bed.gz",
+    conda:
+        envs_path("bedtools.yml")
+    script:
+        scripts_path("python/bedtools/xy/write_par.py")
+
+
 rule download_ref:
     output:
         ref_src_dir / "ref.fna.gz",
@@ -116,4 +126,30 @@ rule merge_gaps:
         bedtools sort -i stdin -g {input.genome} | \
         bedtools merge -i stdin -d 100 \
         > {output}
+        """
+
+
+# TODO hack
+rule get_gapless:
+    input:
+        gaps=lambda w: rules.merge_gaps.output
+        if config.refkey_to_gap_src(w.ref_key)
+        else None,
+        genome=rules.genome_to_bed.output,
+        # TODO not sure what this is doing here?
+        # parY=expand(rules.write_PAR_intermediate.output, allow_missing=True, chr="Y"),
+    output:
+        ref_inter_dir / "genome_gapless.bed",
+    conda:
+        envs_path("bedtools.yml")
+    params:
+        gaps=lambda _, input: "" if input.gaps is None else input.gaps,
+    shell:
+        """
+        gapfile="{params.gaps}"
+        if [[ -z "$gapfile" ]]; then
+            ln -sfr {input.genome} {output}
+        else
+            bedtools subtract -a {input.genome} -b "$gapfile" > {output}
+        fi
         """

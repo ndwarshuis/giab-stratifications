@@ -93,6 +93,7 @@ rule slop_uniform_repeats:
             int(wildcards.total_len) + 1 - get_offset(wildcards.unit_name),
         ),
         genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output,
     output:
         lc_final_dir / "GRCh38_SimpleRepeat_{unit_name}_gt{total_len}_slop5.bed.gz",
     conda:
@@ -102,6 +103,7 @@ rule slop_uniform_repeats:
         slopBed -i {input.bed} -b 5 -g {input.genome} | \
         cut -f1-3 | \
         mergeBed -i stdin | \
+        intersectBed -a stdin -b {input.gapless} -sorted | \
         bgzip -c \
         > {output}
         """
@@ -118,6 +120,7 @@ use rule slop_uniform_repeats as slop_uniform_repeat_ranges with:
             total_lenB=int(wildcards.total_lenB) - offset + 1,
         ),
         genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output,
     output:
         lc_final_dir
         / "GRCh38_SimpleRepeat_{unit_name}_{total_lenA}to{total_lenB}_slop5.bed.gz",
@@ -348,26 +351,40 @@ rule merge_rmsk_satellites:
 # TODO is this really the best way to handle a collider?
 rule merge_satellites:
     input:
-        lambda w: rules.merge_censat_satellites.output
+        bed=lambda w: rules.merge_censat_satellites.output
         if config.want_low_complexity_censat(w.ref_key)
         else rules.merge_rmsk_satellites.output,
+        gapless=rules.get_gapless.output,
     output:
         lc_final_dir / "GRCh38_satellites_slop5.bed.gz",
+    conda:
+        envs_path("bedtools.yml")
     shell:
-        "cp {input} {output}"
+        """
+        intersectBed -a {input.bed} -b {input.gapless} -sorted | \
+        bgzip -c > {output}
+        """
 
 
 # TODO the previous version of this had chrM in it? (seems like a mistake)
 rule invert_satellites:
     input:
         bed=rules.merge_satellites.output,
-        genome=rules.get_genome.output,
     output:
         lc_final_dir / "GRCh38_notinsatellites_slop5.bed.gz",
     conda:
         envs_path("bedtools.yml")
+    # this is a nice trick to avoid specifying input files for rule overrides
+    # when they never change
+    params:
+        gapless=rules.get_gapless.output,
+        genome=rules.get_genome.output,
     shell:
-        "complementBed -i {input.bed} -g {input.genome} | bgzip -c > {output}"
+        """
+        complementBed -i {input.bed} -g {params.genome} |
+        intersectBed -a stdin -b {params.gapless} -sorted | \
+        bgzip -c > {output}
+        """
 
 
 ################################################################################
@@ -399,7 +416,6 @@ rule merge_all_uniform_repeats:
 use rule invert_satellites as invert_all_uniform_repeats with:
     input:
         bed=rules.merge_all_uniform_repeats.output,
-        genome=rules.get_genome.output,
     output:
         lc_final_dir / "GRCh38_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz",
 
@@ -440,10 +456,11 @@ rule filter_TRs:
     input:
         tr=rules.merge_repeats.output,
         hp=rules.merge_all_uniform_repeats.output,
+        gapless=rules.get_gapless.output,
     output:
         lc_final_dir / "GRCh38_AllTandemRepeats_{tr_bound}bp_slop5.bed.gz",
     params:
-        lower=lambda wildcards: tr_bounds[wildcards.tr_bound]["lower"],
+        bounds=lambda wildcards: tr_bounds[wildcards.tr_bound]["lower"],
         upper=lambda wildcards: tr_bounds[wildcards.tr_bound]["upper"],
     conda:
         envs_path("bedtools.yml")
@@ -451,6 +468,7 @@ rule filter_TRs:
         """
         awk '$3-$2>{params.lower} && $3-$2<{params.upper}' {input.tr} | \
         subtractBed -a stdin -b {input.hp} | \
+        intersectBed -a stdin -b {input.gapless} -sorted | \
         bgzip -c > {output}
         """
 
@@ -489,7 +507,6 @@ rule merge_filtered_TRs:
 use rule invert_satellites as invert_TRs with:
     input:
         bed=rules.merge_filtered_TRs.output,
-        genome=rules.get_genome.output,
     output:
         lc_final_dir / "GRCh38_notinallTandemRepeats.bed.gz",
 
@@ -510,7 +527,6 @@ use rule merge_filtered_TRs as merge_HPs_and_TRs with:
 use rule invert_satellites as invert_HPs_and_TRs with:
     input:
         bed=rules.merge_HPs_and_TRs.output,
-        genome=rules.get_genome.output,
     output:
         lc_final_dir / "GRCh38_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz",
 

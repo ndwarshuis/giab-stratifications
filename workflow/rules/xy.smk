@@ -14,16 +14,7 @@ use rule download_ref as download_genome_features_bed with:
         )(w.ref_key),
 
 
-rule write_PAR_final:
-    output:
-        xy_final_dir / "GRCh38_chr{chr}_PAR.bed.gz",
-    conda:
-        envs_path("bedtools.yml")
-    script:
-        scripts_path("python/bedtools/xy/write_par.py")
-
-
-use rule write_PAR_final as write_PAR_intermediate with:
+use rule write_PAR_intermediate as write_PAR_final with:
     output:
         xy_inter_dir / "GRCh38_chr{chr}_PAR.bed.gz",
 

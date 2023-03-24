@@ -67,8 +67,9 @@ read_strat <- function(path) {
     mutate(path = path)
 }
 
-df_coverage <- snakemake@params$strat_dirs %>%
-  list.files(full.names = TRUE) %>%
+df_coverage <- snakemake@input$strats %>%
+  readLines() %>%
+  as.list() %>%
   map_dfr(read_strat) %>%
   mutate(region_size = end - start) %>%
   group_by(path, chrom) %>%
