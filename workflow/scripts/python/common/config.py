@@ -330,14 +330,6 @@ class GiabStrats(BaseModel):
         cs = self.stratifications[rk].builds[bk].chr_filter
         return set([x for x in ChrIndex]) if len(cs) == 0 else cs
 
-    def buildkey_to_chr_names(self, rk: RefKey, bk: BuildKey) -> list[str]:
-        # TODO don't hardcode this in the future
-        prefix = "chr"
-        return [i.chr_name_full(prefix) for i in self.buildkey_to_chr_indices(rk, bk)]
-
-    def buildkey_to_chr_pattern(self, rk: RefKey, bk: BuildKey) -> str:
-        return "\\|".join(self.buildkey_to_chr_names(rk, bk))
-
     def want_low_complexity_censat(self, rk: RefKey) -> bool:
         return self.stratifications[rk].low_complexity.satellites is not None
 
