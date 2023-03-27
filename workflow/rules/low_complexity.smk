@@ -266,14 +266,14 @@ rule filter_sort_rmsk:
 rule merge_rmsk_class:
     input:
         rmsk=rules.filter_sort_rmsk.output,
-        idx=rules.index_ref.output,
     output:
         lc_inter_dir / "rmsk_{rmsk_class}.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
         """
-        zgrep {wildcards.rmsk_class} {input.rmsk} | \
+        gunzip -c {input.rmsk} | \
+        grep {wildcards.rmsk_class} | \
         mergeBed -i stdin | \
         bgzip -c > {output}
         """

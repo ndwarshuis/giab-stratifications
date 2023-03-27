@@ -66,6 +66,7 @@ stratifications:
     gap:
       src: 
         url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
+      bed_cols: {chr: 1, start: 2, end: 3}
     low_complexity:
       rmsk:
         src:

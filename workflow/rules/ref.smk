@@ -35,7 +35,6 @@ rule unzip_ref:
         "gunzip -c {input} > {output}"
 
 
-# TODO don't hardcode chr here
 rule index_ref:
     input:
         rules.download_ref.output,
@@ -46,32 +45,20 @@ rule index_ref:
     shell:
         """
         gunzip -c {input} | \
-        samtools faidx - -o - | \
-        grep -Pv '^\S+_|^\S+EBV\s|^\S+M\s' | \
-        sed 's/^chr//' | \
-        sed 's/^X/23/;s/^Y/24/' | \
-        sort -k1,1n -k2,2n -k3,3n | \
-        sed 's/^23/X/;s/^24/Y/;s/^/chr/' > \
-        {output}
+        samtools faidx - -o - \
+        > {output}
         """
 
 
-# TODO don't use filt here
 rule get_genome:
     input:
         rules.index_ref.output,
     output:
         ref_inter_dir / "genome.txt",
-    params:
-        filt=lambda wildcards: config.buildkey_to_chr_pattern(
-            wildcards.ref_key, wildcards.build_key
-        ),
-    shell:
-        """
-        cut -f 1,2 {input} | \
-        sed -n '/^\(#\|{params.filt}\)\t/p' \
-        > {output}
-        """
+    conda:
+        envs_path("bedtools.yml")
+    script:
+        scripts_path("python/bedtools/ref/get_genome.py")
 
 
 rule genome_to_bed:
@@ -114,19 +101,8 @@ rule merge_gaps:
         ref_inter_dir / "gaps_merged.bed",
     conda:
         envs_path("bedtools.yml")
-    params:
-        filt=lambda wildcards: config.buildkey_to_chr_pattern(
-            wildcards.ref_key, wildcards.build_key
-        ),
-    shell:
-        """
-        gunzip -c {input.gaps} | \
-        cut -f2-4 | \
-        sed -n '/^\(#\|{params.filt}\)\t/p' | \
-        bedtools sort -i stdin -g {input.genome} | \
-        bedtools merge -i stdin -d 100 \
-        > {output}
-        """
+    script:
+        scripts_path("python/bedtools/ref/filter_sort_gaps.py")
 
 
 # This is super convoluted since many rules use the gap file, but I only want
