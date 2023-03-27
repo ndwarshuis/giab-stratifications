@@ -129,27 +129,38 @@ rule merge_gaps:
         """
 
 
-# TODO hack
+# This is super convoluted since many rules use the gap file, but I only want
+# to do all this logic once. Shell script it is...I guess this works
 rule get_gapless:
     input:
-        gaps=lambda w: rules.merge_gaps.output
-        if config.refkey_to_gap_src(w.ref_key)
-        else None,
+        unpack(
+            lambda w: {
+                "gaps": rules.merge_gaps.output[0],
+                "parY": expand(
+                    rules.write_PAR_intermediate.output,
+                    allow_missing=True,
+                    chr="Y",
+                ),
+            }
+            if config.refkey_to_gap_src(w.ref_key)
+            else {"gaps": [], "parY": []}
+        ),
         genome=rules.genome_to_bed.output,
-        # TODO not sure what this is doing here?
-        # parY=expand(rules.write_PAR_intermediate.output, allow_missing=True, chr="Y"),
     output:
-        ref_inter_dir / "genome_gapless.bed",
+        auto=ref_inter_dir / "genome_gapless.bed",
+        parY=ref_inter_dir / "genome_gapless_parY.bed",
     conda:
         envs_path("bedtools.yml")
     params:
-        gaps=lambda _, input: "" if input.gaps is None else input.gaps,
+        hasgaps=lambda _, input: 1 if "gaps" in input else 0,
     shell:
         """
-        gapfile="{params.gaps}"
+        gapfile="{input.gaps}"
         if [[ -z "$gapfile" ]]; then
-            ln -sfr {input.genome} {output}
+            ln -sfr {input.genome} {output.auto}
+            ln -sfr {input.genome} {output.parY}
         else
-            bedtools subtract -a {input.genome} -b "$gapfile" > {output}
+            bedtools subtract -a {input.genome} -b {input.gaps} > {output.parY}
+            bedtools subtract -a {output.parY} -b {input.parY} > {output.auto}
         fi
         """

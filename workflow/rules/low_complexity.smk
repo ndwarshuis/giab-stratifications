@@ -93,7 +93,7 @@ rule slop_uniform_repeats:
             int(wildcards.total_len) + 1 - get_offset(wildcards.unit_name),
         ),
         genome=rules.get_genome.output,
-        gapless=rules.get_gapless.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         lc_final_dir / "GRCh38_SimpleRepeat_{unit_name}_gt{total_len}_slop5.bed.gz",
     conda:
@@ -120,7 +120,7 @@ use rule slop_uniform_repeats as slop_uniform_repeat_ranges with:
             total_lenB=int(wildcards.total_lenB) - offset + 1,
         ),
         genome=rules.get_genome.output,
-        gapless=rules.get_gapless.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         lc_final_dir
         / "GRCh38_SimpleRepeat_{unit_name}_{total_lenA}to{total_lenB}_slop5.bed.gz",
@@ -354,7 +354,7 @@ rule merge_satellites:
         bed=lambda w: rules.merge_censat_satellites.output
         if config.want_low_complexity_censat(w.ref_key)
         else rules.merge_rmsk_satellites.output,
-        gapless=rules.get_gapless.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         lc_final_dir / "GRCh38_satellites_slop5.bed.gz",
     conda:
@@ -377,7 +377,7 @@ rule invert_satellites:
     # this is a nice trick to avoid specifying input files for rule overrides
     # when they never change
     params:
-        gapless=rules.get_gapless.output,
+        gapless=rules.get_gapless.output.auto,
         genome=rules.get_genome.output,
     shell:
         """
@@ -456,11 +456,11 @@ rule filter_TRs:
     input:
         tr=rules.merge_repeats.output,
         hp=rules.merge_all_uniform_repeats.output,
-        gapless=rules.get_gapless.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         lc_final_dir / "GRCh38_AllTandemRepeats_{tr_bound}bp_slop5.bed.gz",
     params:
-        bounds=lambda wildcards: tr_bounds[wildcards.tr_bound]["lower"],
+        lower=lambda wildcards: tr_bounds[wildcards.tr_bound]["lower"],
         upper=lambda wildcards: tr_bounds[wildcards.tr_bound]["upper"],
     conda:
         envs_path("bedtools.yml")

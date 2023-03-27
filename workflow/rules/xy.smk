@@ -21,7 +21,8 @@ use rule write_PAR_intermediate as write_PAR_final with:
 
 rule filter_XTR_features:
     input:
-        rules.download_genome_features_bed.output,
+        bed=rules.download_genome_features_bed.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         xy_final_dir / "GRCh38_chr{chr}_XTR.bed.gz",
     params:
@@ -30,17 +31,19 @@ rule filter_XTR_features:
         envs_path("bedtools.yml")
     shell:
         """
-        gunzip -c {input} | \
+        gunzip -c {input.bed} | \
         grep {params.filt} | \
         cut -f 1-3 | \
         sort -k2,2n -k3,3n | \
+        intersectBed -a stdin -b {input.gapless} -sorted | \
         bgzip -c > {output}
         """
 
 
 use rule filter_XTR_features as filter_ampliconic_features with:
     input:
-        rules.download_genome_features_bed.output,
+        bed=rules.download_genome_features_bed.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         xy_final_dir / "GRCh38_chr{chr}_ampliconic.bed.gz",
     params:
@@ -80,6 +83,7 @@ rule invert_PAR:
     input:
         bed=par_input,
         genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         xy_final_dir / "GRCh38_chr{chr}_nonPAR.bed.gz",
     conda:
@@ -88,21 +92,24 @@ rule invert_PAR:
         """
         complementBed -i {input.bed} -g {input.genome} | \
         grep {wildcards.chr} | \
+        intersectBed -a stdin -b {input.gapless} -sorted | \
         bgzip -c > {output}
         """
 
 
 rule filter_autosomes:
     input:
-        rules.get_genome.output,
+        bed=rules.get_genome.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         xy_final_dir / "GRCh38_AllAutosomes.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
         """
-        awk -v OFS='\t' {{'print $1,\"0\",$2'}} {input} | \
+        awk -v OFS='\t' {{'print $1,\"0\",$2'}} {input.bed} | \
         grep -v \"X\|Y\" | \
+        intersectBed -a stdin -b {input.gapless} -sorted | \
         bgzip -c > {output}
         """
 

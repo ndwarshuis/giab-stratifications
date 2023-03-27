@@ -1,9 +1,15 @@
 from common.config import is_bgzip
-from typing import Any
+from typing import Any, NamedTuple
 from pathlib import Path
 import pandas as pd
 import common.config as cfg
 from pybedtools import BedTool as bt  # type: ignore
+from os.path import dirname, basename
+
+
+class GaplessBT(NamedTuple):
+    auto: bt
+    parY: bt
 
 
 def test_bgzip(strat_file: Path) -> list[str]:
@@ -13,7 +19,7 @@ def test_bgzip(strat_file: Path) -> list[str]:
 def test_bed(
     strat_file: Path,
     reverse_map: dict[str, int],
-    gapless: bt,
+    gapless: GaplessBT,
 ) -> list[str]:
     # test bed files in multiple phases, where each phase depends on the
     # previous being valid
@@ -58,7 +64,11 @@ def test_bed(
     same_chrom = df["chrom"] == df["chrom"].shift(1)
     distance = (df["start"] - df["end"].shift(1))[same_chrom]
     overlapping_lines = distance[distance < 1].index.tolist()
-    gaps = bt.from_dataframe(df).subtract(gapless).to_dataframe()
+
+    # choose gap file depending on if this is an XY strat or not
+    isXY = basename(dirname(strat_file)) == "XY"
+    gapless_bt = gapless.parY if isXY else gapless.auto
+    gaps = bt.from_dataframe(df).subtract(gapless_bt).to_dataframe()
 
     return [
         msg
@@ -80,7 +90,7 @@ def test_bed(
 def run_all_tests(
     strat_file: Path,
     reverse_map: dict[str, int],
-    gapless: Path,
+    gapless: GaplessBT,
 ) -> list[tuple[Path, str]]:
     return [
         (strat_file, msg)
@@ -99,7 +109,10 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     bk = cfg.BuildKey(smk.wildcards["build_key"])
     reverse_map = {v: k for k, v in sconf.buildkey_to_final_chr_mapping(rk, bk).items()}
 
-    gapless = bt(str(smk.input["gapless"]))
+    gapless = GaplessBT(
+        auto=bt(str(smk.input["gapless_auto"])),
+        parY=bt(str(smk.input["gapless_parY"])),
+    )
 
     all_failures = [
         res

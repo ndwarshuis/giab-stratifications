@@ -32,20 +32,25 @@ rule combine_ftbl_and_gff:
 
 rule merge_functional:
     input:
-        rules.combine_ftbl_and_gff.output,
+        bed=rules.combine_ftbl_and_gff.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         func_final_dir / "GRCh38_refseq_cds.bed.gz",
     conda:
         envs_path("bedtools.yml")
     shell:
-        "mergeBed -i {input} | bgzip -c > {output}"
+        """
+        mergeBed -i {input.bed} | \
+        intersectBed -a stdin -b {input.gapless} -sorted | \
+        bgzip -c > {output}
+        """
 
 
 rule invert_functional:
     input:
         bed=rules.merge_functional.output,
         genome=rules.get_genome.output,
-        gapless=rules.get_gapless.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         func_final_dir / "GRCh38_notinrefseq_cds.bed.gz",
     conda:

@@ -51,7 +51,7 @@ rule find_gc_content:
     input:
         ref=rules.filter_sort_ref.output,
         genome=rules.get_genome.output,
-        gapless=rules.get_gapless.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         gc_inter_dir / "l100_gc{frac,[0-9]+}.bed.gz",
     params:

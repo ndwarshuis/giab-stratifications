@@ -69,7 +69,8 @@ rule generate_md5sums:
 rule unit_test_strats:
     input:
         strats=rules.list_all_strats.output,
-        gapless=rules.get_gapless.output,
+        gapless_auto=rules.get_gapless.output.auto,
+        gapless_parY=rules.get_gapless.output.parY,
     output:
         touch(post_inter_dir / "unit_tests.done"),
     log:
@@ -86,10 +87,7 @@ rule validate_strats:
         # before running the rmd script
         _test=rules.unit_test_strats.output,
         strats=rules.list_all_strats.output,
-        nonN=rules.get_gapless.output,
-        # lambda w: rules.genome_to_bed.output
-        # if config.refkey_to_gap_src(w.ref_key) is None
-        # else rules.remove_gaps.output,
+        nonN=rules.get_gapless.output.auto,
     output:
         final_dir / "validation.html",
     conda:

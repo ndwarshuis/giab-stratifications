@@ -49,6 +49,13 @@ coverage_plots <- function(df, type) {
   }
 }
 
+read_gapless <- function(path) {
+  read_tsv(path, col_names = bed_cols, col_types = "cii") %>%
+    mutate(region_size = end - start) %>%
+    group_by(chrom) %>%
+    summarise(nonN_ref_len = sum(region_size))
+}
+
 knitr::opts_chunk$set(fig.width=25, fig.height=5, fig_caption=TRUE)
 
 bed_cols <- c("chrom", "start", "end")
