@@ -50,6 +50,7 @@ include: "rules/gc.smk"
 include: "rules/functional.smk"
 include: "rules/segdups.smk"
 include: "rules/mappability.smk"
+include: "rules/union.smk"
 include: "rules/postprocess.smk"
 
 

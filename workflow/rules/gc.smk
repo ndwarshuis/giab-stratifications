@@ -124,10 +124,12 @@ rule intersect_gc_ranges:
 # ASSUME this alone will pull in all the individual range beds
 rule all_gc:
     input:
-        expand(
-            rules.intersect_gc_ranges.output,
-            zip,
-            allow_missing=True,
-            lower=[25, 30],
-            upper=[65, 50],
-        ),
+        **{
+            key: expand(
+                rules.intersect_gc_ranges.output,
+                allow_missing=True,
+                lower=lwr,
+                upper=upr,
+            )
+            for key, lwr, upr in [("wide", 25, 65), ("narrow", 30, 50)]
+        },

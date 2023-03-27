@@ -23,9 +23,11 @@ def expand_strat_targets(wildcards):
         (rules.all_low_complexity.input, config.want_low_complexity),
         (rules.all_xy_auto.input, config.want_xy_auto),
         (rules.all_map.input, config.want_map),
-        (rules.all_gc.input, config.want_gc),
+        ([rules.all_gc.input.wide[0], rules.all_gc.input.narrow[0]], config.want_gc),
         (rules.all_functional.input, config.want_functional),
         (rules.all_segdups.input, config.want_segdups),
+        (rules.invert_segdup_and_map.output, config.want_segdup_and_map),
+        (rules.invert_alldifficult.output, config.want_alldifficult),
     ]
     auto = [t for tgt, test in targets if test(rk, bk) for t in tgt]
     sex = expand(
@@ -37,10 +39,6 @@ def expand_strat_targets(wildcards):
     invalid = [f for f in all_targets if not f.startswith("results/builds/final")]
     assert len(invalid) == 0, f"invalid targets: {invalid}"
     return all_targets
-
-
-# def common_dirs(files):
-#     return list(unique_everseen([dirname(str(f)) for f in files]))
 
 
 rule list_all_strats:

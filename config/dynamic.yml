@@ -49,7 +49,7 @@ stratifications:
           url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_genomic.gff.gz
     builds:
       test_autosome:
-        chr_filter: [21]
+        chr_filter: [21, 22]
         include:
           low_complexity: true
           xy: false
@@ -57,6 +57,7 @@ stratifications:
           gc: true
           functional: true
           segdups: false
+          union: true
     
   GRCh38:
     ref:
@@ -114,7 +115,7 @@ stratifications:
           url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gff.gz
     builds:
       test_autosome:
-        chr_filter: [21]
+        chr_filter: [21, 22]
         include:
           low_complexity: true
           xy: false
@@ -122,6 +123,7 @@ stratifications:
           gc: true
           functional: true
           segdups: true
+          union: true
       test_xy:
         chr_filter: [23, 24]
         include:
@@ -131,3 +133,4 @@ stratifications:
           gc: true
           functional: true
           segdups: true
+          union: true

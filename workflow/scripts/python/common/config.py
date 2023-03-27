@@ -206,6 +206,7 @@ class Include(BaseModel):
     gc: bool
     functional: bool
     segdups: bool
+    union: bool
 
 
 class Build(BaseModel):
@@ -326,6 +327,9 @@ class GiabStrats(BaseModel):
     def buildkey_to_build(self, rk: RefKey, bk: BuildKey) -> Build:
         return self.stratifications[rk].builds[bk]
 
+    def buildkey_to_include(self, rk: RefKey, bk: BuildKey) -> Include:
+        return self.buildkey_to_build(rk, bk).include
+
     def buildkey_to_chr_indices(self, rk: RefKey, bk: BuildKey) -> set[ChrIndex]:
         cs = self.stratifications[rk].builds[bk].chr_filter
         return set([x for x in ChrIndex]) if len(cs) == 0 else cs
@@ -340,13 +344,13 @@ class GiabStrats(BaseModel):
     def want_xy_x(self, rk: RefKey, bk: BuildKey) -> bool:
         return (
             self._want_chr_index(rk, bk, ChrIndex.CHRX)
-            and self.buildkey_to_build(rk, bk).include.xy
+            and self.buildkey_to_include(rk, bk).xy
         )
 
     def want_xy_y(self, rk: RefKey, bk: BuildKey) -> bool:
         return (
             self._want_chr_index(rk, bk, ChrIndex.CHRY)
-            and self.buildkey_to_build(rk, bk).include.xy
+            and self.buildkey_to_include(rk, bk).xy
         )
 
     def wanted_xy_chr_names(self, rk: RefKey, bk: BuildKey) -> list[str]:
@@ -364,16 +368,33 @@ class GiabStrats(BaseModel):
         return len(cis - set([ChrIndex.CHRX, ChrIndex.CHRY])) > 0
 
     def want_low_complexity(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_build(rk, bk).include.low_complexity
+        return self.buildkey_to_include(rk, bk).low_complexity
 
     def want_map(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_build(rk, bk).include.map
+        return self.buildkey_to_include(rk, bk).map
 
     def want_gc(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_build(rk, bk).include.gc
+        return self.buildkey_to_include(rk, bk).gc
 
     def want_functional(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_build(rk, bk).include.functional
+        return self.buildkey_to_include(rk, bk).functional
 
     def want_segdups(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_build(rk, bk).include.segdups
+        return self.buildkey_to_include(rk, bk).segdups
+
+    def _want_union(self, rk: RefKey, bk: BuildKey) -> bool:
+        return self.buildkey_to_include(rk, bk).union
+
+    def want_segdup_and_map(self, rk: RefKey, bk: BuildKey) -> bool:
+        return (
+            self.buildkey_to_include(rk, bk).union
+            and self.want_segdups(rk, bk)
+            and self.want_map(rk, bk)
+        )
+
+    def want_alldifficult(self, rk: RefKey, bk: BuildKey) -> bool:
+        return (
+            self.want_segdup_and_map(rk, bk)
+            and self.want_low_complexity(rk, bk)
+            and self.want_gc(rk, bk)
+        )
