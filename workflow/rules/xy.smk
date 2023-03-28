@@ -21,33 +21,37 @@ use rule write_PAR_intermediate as write_PAR_final with:
 
 rule filter_XTR_features:
     input:
-        bed=rules.download_genome_features_bed.output,
+        bed=rules.download_genome_features_bed.output[0],
         gapless=rules.get_gapless.output.auto,
     output:
         xy_final_dir / "GRCh38_chr{chr}_XTR.bed.gz",
-    params:
-        filt="XTR",
     conda:
         envs_path("bedtools.yml")
-    shell:
-        """
-        gunzip -c {input.bed} | \
-        grep {params.filt} | \
-        cut -f 1-3 | \
-        sort -k2,2n -k3,3n | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
-        bgzip -c > {output}
-        """
+    params:
+        level="XTR",
+    script:
+        scripts_path("python/bedtools/xy/filter_sort_features.py")
+
+
+# shell:
+#     """
+#     gunzip -c {input.bed} | \
+#     grep {params.filt} | \
+#     cut -f 1-3 | \
+#     sort -k2,2n -k3,3n | \
+#     intersectBed -a stdin -b {input.gapless} -sorted | \
+#     bgzip -c > {output}
+#     """
 
 
 use rule filter_XTR_features as filter_ampliconic_features with:
     input:
-        bed=rules.download_genome_features_bed.output,
+        bed=rules.download_genome_features_bed.output[0],
         gapless=rules.get_gapless.output.auto,
     output:
         xy_final_dir / "GRCh38_chr{chr}_ampliconic.bed.gz",
     params:
-        filt="Ampliconic",
+        level="Ampliconic",
 
 
 # rule filter_xy_features:

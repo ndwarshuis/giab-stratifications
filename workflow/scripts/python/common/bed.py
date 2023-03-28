@@ -1,6 +1,8 @@
 import pandas as pd
 import common.config as cfg
 from typing import Callable
+from Bio import bgzf  # type: ignore
+import csv
 
 
 def sort_bed_numerically(df: pd.DataFrame) -> pd.DataFrame:
@@ -36,6 +38,29 @@ def filter_sort_bed(
     return filter_sort_bed_inner(from_map, to_map, df)
 
 
+def read_bed(path: str, b: cfg.BedFile, more: list[int]) -> pd.DataFrame:
+    bedcols = [*b.bed_cols.columns, *more]
+    df = pd.read_table(
+        path,
+        header=None,
+        usecols=bedcols,
+        sep=b.sep,
+        comment="#",
+        skiprows=b.skip_lines,
+        # satisfy type checker :/
+        dtype={k: v for k, v in b.bed_cols.columns.items()},
+    )
+    df.columns = pd.Index(range(len(bedcols)))
+    return df
+
+
+def write_bed(path: str, df: pd.DataFrame) -> None:
+    with bgzf.open(path, "w") as f:
+        w = csv.writer(f, delimiter="\t")
+        for r in df.itertuples(index=False):
+            w.writerow(r)
+
+
 def read_filter_sort_bed(
     sconf: cfg.GiabStrats,
     ipath: str,
@@ -46,14 +71,6 @@ def read_filter_sort_bed(
     more: list[int],
 ) -> None:
     bedfile = f(sconf.stratifications[rk])
-    bedcols = [*bedfile.bed_cols.columns, *more]
-    df = pd.read_table(
-        ipath,
-        header=None,
-        usecols=bedcols,
-        comment="#",
-        skiprows=bedfile.skip_lines,
-    )
-    df.columns = pd.Index(range(len(bedcols)))
+    df = read_bed(ipath, bedfile, more)
     df_ = filter_sort_bed(sconf, f, rk, bk, df)
-    df_.to_csv(opath, sep="\t", header=False, index=False)
+    write_bed(opath, df_)

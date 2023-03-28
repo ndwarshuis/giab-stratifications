@@ -3,7 +3,7 @@ from pathlib import Path
 from pydantic import BaseModel as BaseModel_
 from pydantic import validator, HttpUrl, FilePath
 from enum import Enum, unique
-from typing import NewType, Any, Callable, TypeVar
+from typing import NewType, Any, Callable, TypeVar, Type
 from typing_extensions import Self
 from Bio import bgzf  # type: ignore
 
@@ -81,8 +81,8 @@ class BedColumns(BaseModel):
     end: int = 2
 
     @property
-    def columns(self) -> list[int]:
-        return [self.chr, self.start, self.end]
+    def columns(self) -> dict[int, Type[int | str]]:
+        return {self.chr: str, self.start: int, self.end: int}
 
 
 class FileSrc_(BaseModel):
@@ -150,6 +150,7 @@ class BedFile(BaseModel):
     chr_prefix: str = "chr"
     bed_cols: BedColumns = BedColumns()
     skip_lines: int = 0
+    sep: str = "\t"
 
 
 class RMSKFile(BedFile):
@@ -162,10 +163,15 @@ class LowComplexity(BaseModel):
     satellites: BedFile | None
 
 
+class XYFile(BedFile):
+    level_col: int
+
+
 class XYFeatures(BaseModel):
-    x_bed: BedFile
-    y_bed: BedFile
-    regions: set[XYFeature]
+    x_bed: XYFile
+    y_bed: XYFile
+    ampliconic: bool
+    xtr: bool
 
 
 class XYPar(BaseModel):
