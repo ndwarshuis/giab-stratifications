@@ -1,7 +1,7 @@
 import gzip
 from pathlib import Path
 from pydantic import BaseModel as BaseModel_
-from pydantic import validator, HttpUrl, FilePath
+from pydantic import validator, HttpUrl, FilePath, NonNegativeInt
 from enum import Enum, unique
 from typing import NewType, Any, Callable, TypeVar, Type, NamedTuple
 from typing_extensions import Self
@@ -20,23 +20,28 @@ def fmap_maybe(f: Callable[[X], Y], x: X | None) -> None | Y:
 
 
 class RefFmt(Enum):
+    """Valid file formats for reference."""
+
     NOZIP = "nozip"
     GZIP = "gzip"
     BGZIP = "bgzip"
 
 
 class BedFmt(Enum):
+    """Valid file formats for input bed file."""
+
     NOZIP = "nozip"
     GZIP = "gzip"
 
 
-class XYFeature(Enum):
-    XTR = "XTR"
-    Ampliconic = "Ampliconic"
-
-
 @unique
 class ChrIndex(Enum):
+    """Represents a valid chromosome index.
+
+    Chromosomes are numbered by integers 1-24 (23 and 24 being X and Y
+    respectively). These integers reflect the sort order in output bed files.
+    """
+
     _ignore_ = "ChrIndex i"
     ChrIndex = vars()
     for i in range(1, 23):
@@ -59,6 +64,14 @@ class ChrIndex(Enum):
 
 
 class ChrConversion(NamedTuple):
+    """Data to filter, sort, and standardize chromosome names.
+
+    Members:
+    fromPrefix - chr prefix of input file (usually a bed file)
+    toPrefix - chr prefix of output stratification file (should match ref)
+    indices - the desired chromosome indices to keep
+    """
+
     fromPrefix: str
     toPrefix: str
     indices: set[ChrIndex]
@@ -79,20 +92,57 @@ class BaseModel(BaseModel_):
 
 
 class Paths(BaseModel):
+    """Local build paths for snakemake."""
+
     resources: Path
     results: Path
 
 
 class Tools(BaseModel):
+    """Urls for tools to download/build/use in the pipeline."""
+
     repseq: HttpUrl
     gemlib: HttpUrl
 
 
 # TODO non-negative ints which cannot equal each other
 class BedColumns(BaseModel):
-    chr: int = 0
-    start: int = 1
-    end: int = 2
+    """Denotes coordinate columns in a bed file (0-indexed)."""
+
+    chr: NonNegativeInt = 0
+    start: NonNegativeInt = 1
+    end: NonNegativeInt = 2
+
+    @validator("start")
+    def start_different(
+        cls,
+        v: NonNegativeInt,
+        values: dict[str, int],
+    ) -> NonNegativeInt:
+        try:
+            assert values["chr"] != v, "Bed columns must be different"
+        except KeyError:
+            pass
+        return v
+
+    @validator("end")
+    def end_different(
+        cls,
+        v: NonNegativeInt,
+        values: dict[str, int],
+    ) -> NonNegativeInt:
+        try:
+            assert (
+                values["chr"] != v and values["start"] != v
+            ), "Bed columns must be different"
+        except KeyError:
+            pass
+        return v
+
+    def assert_different(self, x: int) -> None:
+        assert (
+            self.chr != x and self.start != x and self.end != x
+        ), "Column must be different index"
 
     @property
     def columns(self) -> dict[int, Type[int | str]]:
@@ -104,7 +154,7 @@ class FileSrc_(BaseModel):
 
 
 class BedFileSrc(FileSrc_):
-    filepath: FilePath
+    """Filepath for bedfile."""
 
     @validator("filepath")
     def is_gzip(cls, v: FilePath) -> FilePath:
@@ -129,7 +179,7 @@ def is_bgzip(p: Path) -> bool:
 
 
 class RefFileSrc(FileSrc_):
-    filepath: FilePath
+    """Filepath for reference."""
 
     @validator("filepath")
     def path_is_bgzip(cls, v: FilePath) -> FilePath:
@@ -142,10 +192,14 @@ class HttpSrc_(BaseModel):
 
 
 class BedHttpSrc(HttpSrc_):
+    """Url for bed file."""
+
     fmt: BedFmt = BedFmt.GZIP
 
 
 class RefHttpSrc(HttpSrc_):
+    """Url for reference."""
+
     fmt: RefFmt = RefFmt.BGZIP
 
 
@@ -155,33 +209,77 @@ BedSrc = BedFileSrc | BedHttpSrc
 
 
 class FuncFile(BaseModel):
+    """Functional stratifications input file."""
+
     src: BedSrc
     chr_prefix: str = ""
 
 
 class BedFile(BaseModel):
+    """Inport specs for a bed-like file.
+
+    Members:
+    src - how to get the file
+    chr_prefix - the prefix on the chromosomes
+    bed_cols - the columns for the bed coordinates
+    skip_lines - how many input lines to skip
+    sep - column separator regexp (for "beds" with spaces instead of tabs)
+    """
+
     src: BedSrc
     chr_prefix: str = "chr"
     bed_cols: BedColumns = BedColumns()
-    skip_lines: int = 0
+    skip_lines: NonNegativeInt = 0
     sep: str = "\t"
 
 
 class RMSKFile(BedFile):
-    class_col: int
+    """Input file for repeat masker stratification."""
+
+    class_col: NonNegativeInt
+
+    @validator("class_col")
+    def end_different(
+        cls,
+        v: NonNegativeInt,
+        values: dict[str, BedColumns],
+    ) -> NonNegativeInt:
+        try:
+            values["bed_cols"].assert_different(v)
+        except KeyError:
+            pass
+        return v
 
 
 class LowComplexity(BaseModel):
+    """Configuration for low complexity stratification."""
+
     rmsk: RMSKFile
     simreps: BedFile
     satellites: BedFile | None
 
 
 class XYFile(BedFile):
-    level_col: int
+    """Bed file input for XY features."""
+
+    level_col: NonNegativeInt
+
+    @validator("level_col")
+    def level_different(
+        cls,
+        v: NonNegativeInt,
+        values: dict[str, BedColumns],
+    ) -> NonNegativeInt:
+        try:
+            values["bed_cols"].assert_different(v)
+        except KeyError:
+            pass
+        return v
 
 
 class XYFeatures(BaseModel):
+    """Configuration for XY features stratifications."""
+
     x_bed: XYFile
     y_bed: XYFile
     ampliconic: bool
@@ -189,8 +287,15 @@ class XYFeatures(BaseModel):
 
 
 class XYPar(BaseModel):
-    start: tuple[int, int]
-    end: tuple[int, int]
+    """Regions for the PARs on the X/Y chromosomes."""
+
+    start: tuple[NonNegativeInt, NonNegativeInt]
+    end: tuple[NonNegativeInt, NonNegativeInt]
+
+    @validator("start", "end")
+    def positive_region(cls, v: tuple[int, int]) -> tuple[int, int]:
+        assert v[1] > v[0], "End must be greater than start"
+        return v
 
     def fmt(self, i: ChrIndex, prefix: str) -> str:
         # TODO this smells like something I'll be doing alot
@@ -204,6 +309,8 @@ class XYPar(BaseModel):
 
 
 class XY(BaseModel):
+    """Configuration for the XY stratification."""
+
     features: XYFeatures
     x_par: XYPar
     y_par: XYPar
@@ -216,10 +323,14 @@ class XY(BaseModel):
 
 
 class SegDups(BaseModel):
+    """Configuration for Segdup stratifications."""
+
     superdups: BedFile | None
 
 
 class Include(BaseModel):
+    """Flags to control which stratification levels are included."""
+
     low_complexity: bool
     xy: bool
     map: bool
@@ -230,21 +341,29 @@ class Include(BaseModel):
 
 
 class Build(BaseModel):
+    """Spec for a stratification build."""
+
     chr_filter: set[ChrIndex]
     include: Include
 
 
 class RefFile(BaseModel):
+    """Specification for reference file."""
+
     src: RefSrc
     chr_prefix: str
 
 
 class Functional(BaseModel):
+    """Configuration for Functional stratifications."""
+
     ftbl: FuncFile
     gff: FuncFile
 
 
 class Stratification(BaseModel):
+    """Configuration for stratifications for a given reference."""
+
     ref: RefFile
     gap: BedFile | None
     low_complexity: LowComplexity
@@ -255,6 +374,8 @@ class Stratification(BaseModel):
 
 
 class GiabStrats(BaseModel):
+    """Top level stratification object."""
+
     paths: Paths
     tools: Tools
     stratifications: dict[str, Stratification]
@@ -264,13 +385,31 @@ class GiabStrats(BaseModel):
     def items(self) -> Any:
         return {}.items()
 
+    # general accessors
+
     def refkey_to_strat(self, k: RefKey) -> Stratification:
         return self.stratifications[k]
 
-    # def refkey_to_src(
-    #     self, k: RefKey, f: Callable[[Stratification], AnySrc | None]
-    # ) -> AnySrc | None:
-    #     return f(self.refkey_to_strat(k))
+    def buildkey_to_build(self, rk: RefKey, bk: BuildKey) -> Build:
+        return self.stratifications[rk].builds[bk]
+
+    def refkey_to_bedfile(
+        self,
+        k: RefKey,
+        f: Callable[[Stratification], BedFile | None],
+    ) -> BedFile:
+        b = f(self.refkey_to_strat(k))
+        assert b is not None, "Bedfile is null; this should not happen"
+        return b
+
+    def buildkey_to_include(self, rk: RefKey, bk: BuildKey) -> Include:
+        return self.buildkey_to_build(rk, bk).include
+
+    def buildkey_to_chr_indices(self, rk: RefKey, bk: BuildKey) -> set[ChrIndex]:
+        cs = self.stratifications[rk].builds[bk].chr_filter
+        return set([x for x in ChrIndex]) if len(cs) == 0 else cs
+
+    # src getters (for use in downloading inputs)
 
     def refkey_to_ref_src(self, k: RefKey) -> RefSrc:
         return self.refkey_to_strat(k).ref.src
@@ -283,15 +422,6 @@ class GiabStrats(BaseModel):
 
     def refkey_to_y_features_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(lambda x: x.features.x_bed.src, self.stratifications[k].xy)
-
-    # TODO not DRY
-    def refkey_to_x_par_bed(self, k: RefKey) -> str:
-        prefix = self.refkey_to_final_chr_prefix(k)
-        return self.stratifications[k].xy.x_par.fmt(ChrIndex.CHRX, prefix)
-
-    def refkey_to_y_par_bed(self, k: RefKey) -> str:
-        prefix = self.refkey_to_final_chr_prefix(k)
-        return self.stratifications[k].xy.y_par.fmt(ChrIndex.CHRY, prefix)
 
     def refkey_to_simreps_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(
@@ -319,25 +449,10 @@ class GiabStrats(BaseModel):
     def refkey_to_functional_gff_src(self, k: RefKey) -> BedSrc | None:
         return self.stratifications[k].functional.gff.src
 
+    # chromosome standardization
+
     def refkey_to_final_chr_prefix(self, k: RefKey) -> str:
         return self.stratifications[k].ref.chr_prefix
-
-    def refkey_to_input_chr_prefix(
-        self,
-        f: Callable[[Stratification], BedFile],
-        k: RefKey,
-    ) -> str:
-        return f(self.stratifications[k]).chr_prefix
-
-    def buildkey_to_init_chr_mapping(
-        self,
-        f: Callable[[Stratification], BedFile],
-        rk: RefKey,
-        bk: BuildKey,
-    ) -> dict[str, int]:
-        p = self.refkey_to_input_chr_prefix(f, rk)
-        cs = self.buildkey_to_chr_indices(rk, bk)
-        return {c.chr_name_full(p): c.value for c in cs}
 
     def buildkey_to_final_chr_mapping(self, rk: RefKey, bk: BuildKey) -> dict[int, str]:
         p = self.refkey_to_final_chr_prefix(rk)
@@ -354,15 +469,7 @@ class GiabStrats(BaseModel):
         cis = self.buildkey_to_chr_indices(rk, bk)
         return ChrConversion(fromChr, toChr, cis)
 
-    def buildkey_to_build(self, rk: RefKey, bk: BuildKey) -> Build:
-        return self.stratifications[rk].builds[bk]
-
-    def buildkey_to_include(self, rk: RefKey, bk: BuildKey) -> Include:
-        return self.buildkey_to_build(rk, bk).include
-
-    def buildkey_to_chr_indices(self, rk: RefKey, bk: BuildKey) -> set[ChrIndex]:
-        cs = self.stratifications[rk].builds[bk].chr_filter
-        return set([x for x in ChrIndex]) if len(cs) == 0 else cs
+    # include switches (for controlling which snakemake rules to activate)
 
     def want_low_complexity_censat(self, rk: RefKey) -> bool:
         return self.stratifications[rk].low_complexity.satellites is not None
