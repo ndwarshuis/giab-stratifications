@@ -7,20 +7,10 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     rk = cfg.RefKey(smk.wildcards["ref_key"])
     bk = cfg.BuildKey(smk.wildcards["build_key"])
 
-    def get_bed(x: cfg.Stratification) -> cfg.BedFile:
-        b = x.low_complexity.satellites
-        assert b is not None
-        return b
+    bedfile = sconf.refkey_to_strat(rk).low_complexity.satellites
+    assert bedfile is not None, "this should not happen"
 
-    read_filter_sort_bed(
-        sconf,
-        smk.input[0],
-        smk.output[0],
-        get_bed,
-        rk,
-        bk,
-        [],
-    )
+    read_filter_sort_bed(sconf, smk.input[0], smk.output[0], bedfile, rk, bk)
 
 
 main(snakemake, snakemake.config)  # type: ignore

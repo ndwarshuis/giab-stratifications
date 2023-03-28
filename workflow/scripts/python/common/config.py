@@ -3,7 +3,7 @@ from pathlib import Path
 from pydantic import BaseModel as BaseModel_
 from pydantic import validator, HttpUrl, FilePath
 from enum import Enum, unique
-from typing import NewType, Any, Callable, TypeVar, Type
+from typing import NewType, Any, Callable, TypeVar, Type, NamedTuple
 from typing_extensions import Self
 from Bio import bgzf  # type: ignore
 
@@ -56,6 +56,20 @@ class ChrIndex(Enum):
 
     def chr_name_full(self, prefix: str) -> str:
         return f"{prefix}{self.chr_name}"
+
+
+class ChrConversion(NamedTuple):
+    fromPrefix: str
+    toPrefix: str
+    indices: set[ChrIndex]
+
+
+def conversion_to_init_mapper(c: ChrConversion) -> dict[str, int]:
+    return {i.chr_name_full(c.fromPrefix): i.value for i in c.indices}
+
+
+def conversion_to_final_mapper(c: ChrConversion) -> dict[int, str]:
+    return {i.value: i.chr_name_full(c.toPrefix) for i in c.indices}
 
 
 class BaseModel(BaseModel_):
@@ -329,6 +343,16 @@ class GiabStrats(BaseModel):
         p = self.refkey_to_final_chr_prefix(rk)
         cs = self.buildkey_to_chr_indices(rk, bk)
         return {c.value: c.chr_name_full(p) for c in cs}
+
+    def buildkey_to_chr_conversion(
+        self,
+        rk: RefKey,
+        bk: BuildKey,
+        fromChr: str,
+    ) -> ChrConversion:
+        toChr = self.refkey_to_final_chr_prefix(rk)
+        cis = self.buildkey_to_chr_indices(rk, bk)
+        return ChrConversion(fromChr, toChr, cis)
 
     def buildkey_to_build(self, rk: RefKey, bk: BuildKey) -> Build:
         return self.stratifications[rk].builds[bk]

@@ -12,19 +12,20 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     assert i in [cfg.ChrIndex.CHRX, cfg.ChrIndex.CHRY], "invalid sex chr"
 
-    def get_bed(x: cfg.Stratification) -> cfg.BedFile:
-        f = x.xy.features
-        b = f.x_bed if i is cfg.ChrIndex.CHRX else f.y_bed
-        assert b is not None
-        return b
+    fs = sconf.refkey_to_strat(rk).xy.features
+    bedfile = fs.x_bed if i is cfg.ChrIndex.CHRX else fs.y_bed
 
-    # TODO don't hardcode class column
-    df = read_bed(smk.input["bed"], get_bed(sconf.stratifications[rk]), [3])
-    filtsort = filter_sort_bed(sconf, get_bed, rk, bk, df)
-    filtsort[3] = filtsort[3].str.contains(level)
+    assert bedfile is not None, "this should not happen"
+
+    level_col = bedfile.level_col
+    conv = sconf.buildkey_to_chr_conversion(rk, bk, bedfile.chr_prefix)
+
+    df = read_bed(smk.input["bed"], bedfile, [level_col])
+    filtsort = filter_sort_bed(conv, df)
+    filtsort[level_col] = filtsort[level_col].str.contains(level)
     gapless = bt(smk.input["gapless"])
     nogaps = (
-        bt.from_dataframe(filtsort.drop(columns=[3]))
+        bt.from_dataframe(filtsort.drop(columns=[level_col]))
         .intersect(b=gapless, sorted=True)
         .to_dataframe()
     )

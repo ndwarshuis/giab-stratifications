@@ -49,7 +49,7 @@ rule list_all_strats:
     conda:
         envs_path("bedtools.yml")
     script:
-        scripts_path("python/bedtools/list_strats.py")
+        scripts_path("python/bedtools/postprocess/list_strats.py")
 
 
 # TODO don't hardcode version
@@ -61,7 +61,7 @@ rule generate_md5sums:
     conda:
         envs_path("bedtools.yml")
     script:
-        scripts_path("python/bedtools/list_md5.py")
+        scripts_path("python/bedtools/postprocess/list_md5.py")
 
 
 rule unit_test_strats:
@@ -76,7 +76,7 @@ rule unit_test_strats:
     conda:
         envs_path("bedtools.yml")
     script:
-        scripts_path("python/bedtools/run_unit_tests.py")
+        scripts_path("python/bedtools/postprocess/run_unit_tests.py")
 
 
 rule validate_strats:

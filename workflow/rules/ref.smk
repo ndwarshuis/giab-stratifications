@@ -21,7 +21,7 @@ rule download_ref:
     conda:
         envs_path("bedtools.yml")
     script:
-        scripts_path("python/bedtools/get_file.py")
+        scripts_path("python/bedtools/misc/get_file.py")
 
 
 rule unzip_ref:
