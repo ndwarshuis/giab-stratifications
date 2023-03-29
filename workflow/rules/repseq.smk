@@ -1,10 +1,10 @@
 rule download_repseq:
     output:
-        resources_dir / "tools" / "repseq.tar.gz",
+        config.tools_src_dir / "repseq.tar.gz",
     params:
         url=config.tools.repseq,
     conda:
-        envs_path("utils.yml")
+        config.env_path("utils")
     shell:
         "curl -sS -L -o {output} {params.url}"
 
@@ -13,7 +13,7 @@ rule unpack_repseq:
     input:
         rules.download_repseq.output,
     output:
-        directory(results_dir / "tools" / "make" / "repseq"),
+        directory(config.tools_make_dir / "repseq"),
     shell:
         """
         mkdir {output} && \
@@ -26,8 +26,8 @@ rule build_repseq:
     input:
         rules.unpack_repseq.output,
     output:
-        results_dir / "tools" / "bin" / "repseq",
+        config.tools_bin_dir / "repseq",
     conda:
-        envs_path("build.yml")
+        config.env_path("build")
     shell:
         "make -C {input} && mv {input}/repseq {output}"

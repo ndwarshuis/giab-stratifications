@@ -398,6 +398,10 @@ class GiabStrats(BaseModel):
         return self.resources_dir / "tools"
 
     @property
+    def tools_make_dir(self) -> Path:
+        return self.results_dir / "tools" / "make"
+
+    @property
     def tools_bin_dir(self) -> Path:
         return self.results_dir / "tools" / "bin"
 
@@ -442,7 +446,7 @@ class GiabStrats(BaseModel):
         assert p.exists(), f"{p} does not exist"
         return p
 
-    def env_file(self, envname: str) -> Path:
+    def env_path(self, envname: str) -> Path:
         return self._workflow_path(["envs", f"{envname}.yml"])
 
     def _scripts_dir(self, rest: list[str]) -> Path:

@@ -14,7 +14,7 @@ rule download_gem:
     params:
         url=config.tools.gemlib,
     conda:
-        envs_path("utils.yml")
+        config.env_path("utils")
     shell:
         "curl -sS -L -o {output} {params.url}"
 
@@ -31,9 +31,9 @@ rule unpack_gem:
         config.tools_bin_dir / "gem-indexer_bwt-dna",
         config.tools_bin_dir / "gem-indexer_generate",
         # the things I actually need
-        indexer=bin_dir / "gem-indexer",
-        mappability=bin_dir / "gem-mappability",
-        gem2wig=bin_dir / "gem-2-wig",
+        indexer=config.tools_bin_dir / "gem-indexer",
+        mappability=config.tools_bin_dir / "gem-mappability",
+        gem2wig=config.tools_bin_dir / "gem-2-wig",
     params:
         bins=lambda wildcards, output: " ".join(
             str(gemlib_bin / basename(o)) for o in output
@@ -132,9 +132,9 @@ rule invert_unique:
         bed=rules.wig_to_bed.output,
         genome=rules.get_genome.output,
     output:
-        map_final_dir / "GRCh38_nonunique_l{l}_m{m}_e{e}.bed.gz",
+        map_final_path("nonunique_l{l}_m{m}_e{e}"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         complementBed -i {input.bed} -g {input.genome} | \
@@ -162,7 +162,7 @@ rule merge_nonunique:
     output:
         map_final_path("lowmappabilityall"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         multiIntersectBed -i {input} | \
@@ -179,7 +179,7 @@ rule invert_merged_nonunique:
     output:
         map_final_path("notinlowmappabilityall"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         "complementBed -i {input.bed} -g {input.genome} | bgzip -c > {output}"
 

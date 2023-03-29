@@ -2,7 +2,7 @@ from more_itertools import unzip
 from collections import namedtuple
 from functools import partial
 
-lc_src_dir = config.ref_src_path / "low_complexity"
+lc_src_dir = config.ref_src_dir / "low_complexity"
 lc_inter_dir = config.build_intermediate_dir / "LowComplexity"
 lc_log_dir = config.build_log_dir / "LowComplexity"
 
@@ -33,7 +33,7 @@ rule find_perfect_uniform_repeats:
     log:
         lc_log_dir / "uniform_repeats_R{unit_len}_T{total_len}.log",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         {input.bin} {wildcards.unit_len} {wildcards.total_len} {input.ref} 2> {log} | \
@@ -78,7 +78,7 @@ rule subtract_uniform_repeats:
     output:
         lc_inter_dir / "uniform_repeat_range_{unit_name}_{total_lenA}to{total_lenB}.bed",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         "subtractBed -a {input.a} -b {input.b} > {output}"
 
@@ -99,7 +99,7 @@ rule slop_uniform_repeats:
     output:
         lc_final_path("SimpleRepeat_{unit_name}_gt{total_len}_slop5"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         slopBed -i {input.bed} -b 5 -g {input.genome} | \
@@ -133,7 +133,7 @@ rule merge_perfect_uniform_repeats:
     output:
         lc_inter_dir / "repeats_imp_hp_T{merged_len}_B{base}.bed",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         grep 'unit={wildcards.base}' {input} | \
@@ -154,7 +154,7 @@ rule merge_imperfect_uniform_repeats:
     output:
         lc_final_path("SimpleRepeat_imperfecthomopolgt{merged_len}_slop5"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     threads: 3
     shell:
         """
@@ -222,9 +222,9 @@ rule filter_sort_trf:
     output:
         lc_inter_dir / "trf.txt.gz",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     script:
-        scripts_path("python/bedtools/low_complexity/filter_sort_trf.py")
+        config.python_script("bedtools/low_complexity/filter_sort_trf.py")
 
 
 rule merge_trf:
@@ -233,7 +233,7 @@ rule merge_trf:
     output:
         lc_inter_dir / "trf_simpleRepeats.bed.gz",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         gunzip -c {input} | \
@@ -259,9 +259,9 @@ rule filter_sort_rmsk:
     output:
         lc_inter_dir / "rmsk.txt.gz",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     script:
-        scripts_path("python/bedtools/low_complexity/filter_sort_rmsk.py")
+        config.python_script("bedtools/low_complexity/filter_sort_rmsk.py")
 
 
 rule merge_rmsk_class:
@@ -270,7 +270,7 @@ rule merge_rmsk_class:
     output:
         lc_inter_dir / "rmsk_{rmsk_class}.bed.gz",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         gunzip -c {input.rmsk} | \
@@ -309,9 +309,9 @@ rule filter_sort_censat:
     output:
         lc_inter_dir / "censat.txt.gz",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     script:
-        scripts_path("python/bedtools/low_complexity/filter_sort_censat.py")
+        config.python_script("bedtools/low_complexity/filter_sort_censat.py")
 
 
 rule merge_censat_satellites:
@@ -321,7 +321,7 @@ rule merge_censat_satellites:
     output:
         lc_inter_dir / "GRCh38_censat_satellites_slop5.bed.gz",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         zgrep -v "ct_" {input.bed} | \
@@ -339,7 +339,7 @@ rule merge_rmsk_satellites:
     output:
         lc_inter_dir / "GRCh38_rmsk_satellites_slop5.bed.gz",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     threads: 2
     shell:
         """
@@ -359,7 +359,7 @@ rule merge_satellites:
     output:
         lc_final_path("satellites_slop5"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         intersectBed -a {input.bed} -b {input.gapless} -sorted | \
@@ -374,7 +374,7 @@ rule invert_satellites:
     output:
         lc_final_path("notinsatellites_slop5"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     # this is a nice trick to avoid specifying input files for rule overrides
     # when they never change
     params:
@@ -400,7 +400,7 @@ rule merge_all_uniform_repeats:
     output:
         lc_final_path("AllHomopolymers_gt6bp_imperfectgt10bp_slop5"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     threads: 4
     shell:
         """
@@ -432,7 +432,7 @@ rule merge_repeats:
     output:
         lc_inter_dir / "AllTandemRepeats_intermediate.bed",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     threads: 3
     shell:
         """
@@ -463,7 +463,7 @@ rule filter_TRs:
         lower=lambda wildcards: tr_bounds[wildcards.tr_bound]["lower"],
         upper=lambda wildcards: tr_bounds[wildcards.tr_bound]["upper"],
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         awk '$3-$2>{params.lower} && $3-$2<{params.upper}' {input.tr} | \
@@ -494,7 +494,7 @@ rule merge_filtered_TRs:
     output:
         lc_final_path("AllTandemRepeats"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     threads: 2
     shell:
         """

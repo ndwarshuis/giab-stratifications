@@ -85,7 +85,7 @@ rule subtract_gc_content:
     output:
         gc_final_path("gc{lower_frac,[0-9]+}to{upper_frac,[0-9]+}_slop50"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         subtractBed -a {input.bed_a} -b {input.bed_b} | \
@@ -115,7 +115,7 @@ rule intersect_gc_ranges:
     output:
         gc_final_path("gclt{lower,[0-9]+}orgt{upper,[0-9]+}_slop50"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         multiIntersectBed -i {input} | \

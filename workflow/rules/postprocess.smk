@@ -7,7 +7,7 @@ from os import scandir
 # TODO also somehow need to generate the hap.py tables (the tsvs in the root)
 # TODO add a nice header to the top informing user that "these are strats"?
 
-post_inter_dir = intermediate_dir / "postprocess"
+post_inter_dir = config.build_intermediate_dir / "postprocess"
 
 
 # NOTE This will only give a limited set of "targets" from each of the strat
@@ -48,9 +48,9 @@ rule list_all_strats:
     output:
         post_inter_dir / "all_strats.txt",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     script:
-        scripts_path("python/bedtools/postprocess/list_strats.py")
+        config.python_script("bedtools/postprocess/list_strats.py")
 
 
 # TODO don't hardcode version
@@ -60,9 +60,9 @@ rule generate_md5sums:
     output:
         config.build_final_dir / "v3.1-genome-stratifications-{ref_key}-md5s.txt",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     script:
-        scripts_path("python/bedtools/postprocess/list_md5.py")
+        config.python_script("bedtools/postprocess/list_md5.py")
 
 
 rule unit_test_strats:
@@ -75,9 +75,9 @@ rule unit_test_strats:
     log:
         post_inter_dir / "unit_tests.log",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     script:
-        scripts_path("python/bedtools/postprocess/run_unit_tests.py")
+        config.python_script("bedtools/postprocess/run_unit_tests.py")
 
 
 rule validate_strats:
@@ -90,6 +90,6 @@ rule validate_strats:
     output:
         config.build_final_dir / "validation.html",
     conda:
-        envs_path("rmarkdown.yml")
+        config.env_path("rmarkdown")
     script:
-        scripts_path("rmarkdown/validate.Rmd")
+        config.rmd_script("validate.Rmd")

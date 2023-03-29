@@ -1,5 +1,5 @@
 func_src_dir = config.ref_src_dir / "FunctionalRegions"
-func_inter_dir = config.intermediate_dir / "FunctionalRegions"
+func_inter_dir = config.build_intermediate_dir / "FunctionalRegions"
 # func_log_dir = config.log_dir / "FunctionalRegions"
 
 
@@ -28,9 +28,9 @@ rule combine_ftbl_and_gff:
     output:
         func_inter_dir / "refseq_cds.bed.gz",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     script:
-        scripts_path("python/bedtools/functional/combine_ftbl_and_gff.py")
+        config.python_script("bedtools/functional/combine_ftbl_and_gff.py")
 
 
 rule merge_functional:
@@ -40,7 +40,7 @@ rule merge_functional:
     output:
         func_final_path("refseq_cds"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         mergeBed -i {input.bed} | \
@@ -57,7 +57,7 @@ rule invert_functional:
     output:
         func_final_path("notinrefseq_cds"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         complementBed -i {input.bed} -g {input.genome} | \

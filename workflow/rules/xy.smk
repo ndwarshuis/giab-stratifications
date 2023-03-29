@@ -29,11 +29,11 @@ rule filter_XTR_features:
     output:
         xy_final_path("chr{chr}_XTR"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     params:
         level="XTR",
     script:
-        scripts_path("python/bedtools/xy/filter_sort_features.py")
+        config.python_script("bedtools/xy/filter_sort_features.py")
 
 
 use rule filter_XTR_features as filter_ampliconic_features with:
@@ -63,7 +63,7 @@ rule invert_PAR:
     output:
         xy_final_path("chr{chr}_nonPAR"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         complementBed -i {input.bed} -g {input.genome} | \
@@ -80,7 +80,7 @@ rule filter_autosomes:
     output:
         xy_final_path("AllAutosomes"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         awk -v OFS='\t' {{'print $1,\"0\",$2'}} {input.bed} | \
@@ -106,24 +106,3 @@ rule all_xy_sex:
 rule all_xy_auto:
     input:
         rules.filter_autosomes.output,
-
-
-# def xy_inputs(wildcards):
-#     rk = wildcards.ref_key
-#     bk = wildcards.build_key
-#     auto = rules.filter_autosomes.output if config.want_xy_auto(rk, bk) else []
-#     sex = expand(
-#         [
-#             *rules.filter_XTR_features.output,
-#             *rules.filter_ampliconic_features.output,
-#             *rules.invert_PAR.output,
-#         ],
-#         allow_missing=True,
-#         chr=config.wanted_xy_chr_names(rk, bk),
-#     )
-#     return auto + sex
-# rule all_xy:
-#     input:
-#         xy_inputs,
-#     output:
-#         directory(xy_final_dir),

@@ -20,9 +20,9 @@ rule filter_sort_superdups:
     output:
         segdup_inter_dir / "filter_sorted.bed.gz",
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     script:
-        scripts_path("python/bedtools/segdups/filter_sort_superdups.py")
+        config.python_script("bedtools/segdups/filter_sort_superdups.py")
 
 
 rule merge_superdups:
@@ -32,7 +32,7 @@ rule merge_superdups:
     output:
         segdup_final_path("segdups"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         mergeBed -i {input.bed} -d 100 | \
@@ -47,7 +47,7 @@ rule filter_long_superdups:
     output:
         segdup_final_path("segdups_gt10kb"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         gunzip -c {input} | \
@@ -64,7 +64,7 @@ rule notin_superdups:
     output:
         segdup_final_path("notinsegdups"),
     conda:
-        envs_path("bedtools.yml")
+        config.env_path("bedtools")
     shell:
         """
         complementBed -i {input.bed} -g {input.genome} | \
