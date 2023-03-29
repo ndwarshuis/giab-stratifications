@@ -1,4 +1,5 @@
-uni_final_dir = final_dir / "Union"
+def uni_final_path(name):
+    return config.build_strat_path("Union", name)
 
 
 rule intersect_segdup_and_map:
@@ -6,7 +7,7 @@ rule intersect_segdup_and_map:
         rules.merge_superdups.output,
         rules.merge_nonunique.output,
     output:
-        uni_final_dir / "GRCh38_alllowmapandsegdupregions.bed.gz",
+        uni_final_path("alllowmapandsegdupregions"),
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -24,7 +25,7 @@ rule invert_segdup_and_map:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        uni_final_dir / "GRCh38_notinalllowmapandsegdupregions.bed.gz",
+        uni_final_path("notinalllowmapandsegdupregions"),
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -43,7 +44,7 @@ use rule intersect_segdup_and_map as intersect_alldifficult with:
         rules.all_gc.input.wide,
         rules.merge_HPs_and_TRs.output,
     output:
-        uni_final_dir / "GRCh38_alldifficultregions.bed.gz",
+        uni_final_path("alldifficultregions"),
 
 
 use rule invert_segdup_and_map as invert_alldifficult with:
@@ -52,4 +53,4 @@ use rule invert_segdup_and_map as invert_alldifficult with:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        uni_final_dir / "GRCh38_notinalldifficultregions.bed.gz",
+        uni_final_path("notinalldifficultregions"),

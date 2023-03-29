@@ -17,17 +17,17 @@ config = GiabStrats.parse_obj(config)
 ################################################################################
 # Paths
 
-conf_paths = config.paths
-resources_dir = conf_paths.resources
-results_dir = conf_paths.results
+# conf_paths = config.paths
+# resources_dir = conf_paths.resources
+# results_dir = conf_paths.results
 scripts_root = Path("workflow/scripts")
 
 # TODO need to restrict wildcards for refkey and build key so underscors don't
 # get mangled
-builds_dir = results_dir / "builds"
-log_dir = builds_dir / "log" / "{ref_key}@{build_key}"
-intermediate_dir = builds_dir / "intermediates" / "{ref_key}@{build_key}"
-final_dir = builds_dir / "final" / "{ref_key}@{build_key}"
+# builds_dir = results_dir / "builds"
+# log_dir = builds_dir / "log" / "{ref_key}@{build_key}"
+# intermediate_dir = builds_dir / "intermediates" / "{ref_key}@{build_key}"
+# final_dir = builds_dir / "final" / "{ref_key}@{build_key}"
 
 
 def build_abs_path(relpath, basename):
@@ -52,47 +52,6 @@ include: "rules/segdups.smk"
 include: "rules/mappability.smk"
 include: "rules/union.smk"
 include: "rules/postprocess.smk"
-
-
-# def expand_targets():
-#     all_builds = [
-#         (ref_key, build_key, b["include"])
-#         for ref_key, r in config["stratifications"].items()
-#         for build_key, b in r["builds"].items()
-#     ]
-
-#     def expand_target(target, f):
-#         return [
-#             expand(
-#                 target,
-#                 allow_missing=True,
-#                 ref_key=ref_key,
-#                 build_key=build_key,
-#             )
-#             for ref_key, build_key, include in all_builds
-#             if f(include, ref_key, build_key)
-#         ]
-
-#     # XY is special since we should not include the XY strats if we don't also
-#     # have X and Y in the filter. Likewise we should not include an autosomes
-#     # if they are not in the filter
-
-#     def include_xy(include, ref_key, build_key):
-#         chr_indices = lookup_chr_indices(ref_key, build_key)
-#         return "X" in chr_indices and "Y" in chr_indices and include["xy"]
-
-#     def include_auto(include, ref_key, build_key):
-#         chr_indices = lookup_chr_indices(ref_key, build_key)
-#         return len(set(chr_indices) - set(["X", "Y"])) > 0
-
-#     return (
-#         expand_target(
-#             rules.all_low_complexity.input, lambda inc, *_: inc["low_complexity"]
-#         )
-#         + expand_target(rules.all_xy.input, include_xy)
-#         + expand_target(rules.all_auto.input, include_auto)
-#         + expand_target(rules.all_map.input, lambda inc, *_: inc["map"])
-#     )
 
 
 rule all:

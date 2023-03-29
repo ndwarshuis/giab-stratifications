@@ -1,6 +1,9 @@
-xy_src_dir = ref_src_dir / "XY"
-xy_inter_dir = intermediate_dir / "XY"
-xy_final_dir = final_dir / "XY"
+xy_src_dir = config.ref_src_dir / "XY"
+xy_inter_dir = config.build_intermediate_dir / "XY"
+
+
+def xy_final_path(name):
+    return config.build_strat_path("XY", name)
 
 
 use rule download_ref as download_genome_features_bed with:
@@ -24,7 +27,7 @@ rule filter_XTR_features:
         bed=rules.download_genome_features_bed.output[0],
         gapless=rules.get_gapless.output.auto,
     output:
-        xy_final_dir / "GRCh38_chr{chr}_XTR.bed.gz",
+        xy_final_path("chr{chr}_XTR"),
     conda:
         envs_path("bedtools.yml")
     params:
@@ -33,45 +36,14 @@ rule filter_XTR_features:
         scripts_path("python/bedtools/xy/filter_sort_features.py")
 
 
-# shell:
-#     """
-#     gunzip -c {input.bed} | \
-#     grep {params.filt} | \
-#     cut -f 1-3 | \
-#     sort -k2,2n -k3,3n | \
-#     intersectBed -a stdin -b {input.gapless} -sorted | \
-#     bgzip -c > {output}
-#     """
-
-
 use rule filter_XTR_features as filter_ampliconic_features with:
     input:
         bed=rules.download_genome_features_bed.output[0],
         gapless=rules.get_gapless.output.auto,
     output:
-        xy_final_dir / "GRCh38_chr{chr}_ampliconic.bed.gz",
+        xy_final_path("chr{chr}_ampliconic"),
     params:
         level="Ampliconic",
-
-
-# rule filter_xy_features:
-#     input:
-#         rules.download_genome_features_bed.output,
-#     output:
-#         xy_final_dir / "GRCh38_chr{chr}_{region,XTR|ampliconic}.bed.gz",
-#     params:
-#         filt=lambda wildcards: "Ampliconic"
-#         if wildcards.region == "ampliconic"
-#         else wildcards.region,
-#     conda:
-#         envs_path("bedtools.yml")
-#     shell:
-#         """
-#         grep {params.filt} {input} | \
-#         cut -f 1-3 | \
-#         sort -k2,2n -k3,3n | \
-#         bgzip -c > {output}
-#         """
 
 
 def par_input(wildcards):
@@ -89,7 +61,7 @@ rule invert_PAR:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        xy_final_dir / "GRCh38_chr{chr}_nonPAR.bed.gz",
+        xy_final_path("chr{chr}_nonPAR"),
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -106,7 +78,7 @@ rule filter_autosomes:
         bed=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        xy_final_dir / "GRCh38_AllAutosomes.bed.gz",
+        xy_final_path("AllAutosomes"),
     conda:
         envs_path("bedtools.yml")
     shell:

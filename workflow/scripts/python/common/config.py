@@ -205,6 +205,8 @@ class RefHttpSrc(HttpSrc_):
 
 RefSrc = RefFileSrc | RefHttpSrc
 
+# TODO this is for more than just "bed files" (right now it basically means "a
+# file that is either not zipped or gzipped but not bgzipped")
 BedSrc = BedFileSrc | BedHttpSrc
 
 
@@ -384,6 +386,73 @@ class GiabStrats(BaseModel):
     # the config as it passes into an rmd script)
     def items(self) -> Any:
         return {}.items()
+
+    # file paths
+
+    @property
+    def resources_dir(self) -> Path:
+        return self.paths.resources
+
+    @property
+    def tools_src_dir(self) -> Path:
+        return self.resources_dir / "tools"
+
+    @property
+    def tools_bin_dir(self) -> Path:
+        return self.results_dir / "tools" / "bin"
+
+    @property
+    def ref_src_dir(self) -> Path:
+        return self.paths.resources / "{ref_key}"
+
+    @property
+    def results_dir(self) -> Path:
+        return self.paths.resources
+
+    @property
+    def builds_dir(self) -> Path:
+        return self.results_dir / "builds"
+
+    def _build_dir(self, which: Path) -> Path:
+        return self.builds_dir / which / "{ref_key}@{build_key}"
+
+    @property
+    def build_log_dir(self) -> Path:
+        return self._build_dir(Path("log"))
+
+    @property
+    def build_intermediate_dir(self) -> Path:
+        return self._build_dir(Path("intermediates"))
+
+    @property
+    def build_final_dir(self) -> Path:
+        return self._build_dir(Path("final"))
+
+    @property
+    def final_dir(self) -> Path:
+        return self._build_dir(Path("final")).parent
+
+    def build_strat_path(self, level: str, name: str) -> Path:
+        return self._build_dir(Path("final")) / level / f"{{ref_key}}_{name}.bed.gz"
+
+    # because smk doesn't check these for existence yet:
+    # https://github.com/snakemake/snakemake/issues/1657
+    def _workflow_path(self, components: list[str]) -> Path:
+        p = Path("workflow", *components).resolve()
+        assert p.exists(), f"{p} does not exist"
+        return p
+
+    def env_file(self, envname: str) -> Path:
+        return self._workflow_path(["envs", f"{envname}.yml"])
+
+    def _scripts_dir(self, rest: list[str]) -> Path:
+        return self._workflow_path(["scripts", *rest])
+
+    def python_script(self, basename: str) -> Path:
+        return self._scripts_dir(["python", basename])
+
+    def rmd_script(self, basename: str) -> Path:
+        return self._scripts_dir(["rmarkdown", basename])
 
     # general accessors
 

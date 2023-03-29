@@ -1,13 +1,16 @@
 from os.path import splitext, basename
 from pathlib import Path
 
-map_inter_dir = intermediate_dir / "mappability"
-map_final_dir = final_dir / "mappability"
+map_inter_dir = config.build_intermediate_dir / "mappability"
+
+
+def map_final_path(name):
+    return config.build_strat_path("mappability", name)
 
 
 rule download_gem:
     output:
-        resources_dir / "tools" / "gemlib.tbz2",
+        config.tools_src_dir / "gemlib.tbz2",
     params:
         url=config.tools.gemlib,
     conda:
@@ -15,8 +18,6 @@ rule download_gem:
     shell:
         "curl -sS -L -o {output} {params.url}"
 
-
-bin_dir = results_dir / "bin"
 
 gemlib_bin = Path("GEM-binaries-Linux-x86_64-core_i3-20130406-045632/bin")
 
@@ -26,9 +27,9 @@ rule unpack_gem:
         rules.download_gem.output,
     output:
         # called by other binaries
-        bin_dir / "gem-indexer_fasta2meta+cont",
-        bin_dir / "gem-indexer_bwt-dna",
-        bin_dir / "gem-indexer_generate",
+        config.tools_bin_dir / "gem-indexer_fasta2meta+cont",
+        config.tools_bin_dir / "gem-indexer_bwt-dna",
+        config.tools_bin_dir / "gem-indexer_generate",
         # the things I actually need
         indexer=bin_dir / "gem-indexer",
         mappability=bin_dir / "gem-mappability",
@@ -159,7 +160,7 @@ rule merge_nonunique:
     input:
         rules.all_nonunique.input,
     output:
-        map_final_dir / "GRCh38_lowmappabilityall.bed.gz",
+        map_final_path("lowmappabilityall"),
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -176,7 +177,7 @@ rule invert_merged_nonunique:
         bed=rules.merge_nonunique.output,
         genome=rules.get_genome.output,
     output:
-        map_final_dir / "GRCh38_notinlowmappabilityall.bed.gz",
+        map_final_path("notinlowmappabilityall"),
     conda:
         envs_path("bedtools.yml")
     shell:

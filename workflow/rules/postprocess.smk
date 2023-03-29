@@ -36,7 +36,8 @@ def expand_strat_targets(wildcards):
         chr=config.wanted_xy_chr_names(rk, bk),
     )
     all_targets = auto + sex
-    invalid = [f for f in all_targets if not f.startswith("results/builds/final")]
+    # TODO not DRY
+    invalid = [f for f in all_targets if not f.startswith(str(config.final_dir))]
     assert len(invalid) == 0, f"invalid targets: {invalid}"
     return all_targets
 
@@ -57,7 +58,7 @@ rule generate_md5sums:
     input:
         rules.list_all_strats.output,
     output:
-        final_dir / "v3.1-genome-stratifications-{ref_key}-md5s.txt",
+        config.build_final_dir / "v3.1-genome-stratifications-{ref_key}-md5s.txt",
     conda:
         envs_path("bedtools.yml")
     script:
@@ -87,7 +88,7 @@ rule validate_strats:
         strats=rules.list_all_strats.output,
         nonN=rules.get_gapless.output.auto,
     output:
-        final_dir / "validation.html",
+        config.build_final_dir / "validation.html",
     conda:
         envs_path("rmarkdown.yml")
     script:

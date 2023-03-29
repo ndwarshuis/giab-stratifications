@@ -1,6 +1,10 @@
-segdup_src_dir = ref_src_dir / "SegmentalDuplications"
-segdup_inter_dir = intermediate_dir / "SegmentalDuplications"
-segdup_final_dir = final_dir / "SegmentalDuplications"
+segdup_src_dir = config.ref_src_dir / "SegmentalDuplications"
+segdup_inter_dir = config.build_intermediate_dir / "SegmentalDuplications"
+# segdup_final_dir = final_dir / "SegmentalDuplications"
+
+
+def segdup_final_path(name):
+    return config.build_strat_path("SegmentalDuplications", name)
 
 
 use rule download_ref as download_superdups with:
@@ -26,7 +30,7 @@ rule merge_superdups:
         bed=rules.filter_sort_superdups.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        segdup_final_dir / "GRCh38_segdups.bed.gz",
+        segdup_final_path("segdups"),
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -41,7 +45,7 @@ rule filter_long_superdups:
     input:
         rules.merge_superdups.output,
     output:
-        segdup_final_dir / "GRCh38_segdups_gt10kb.bed.gz",
+        segdup_final_path("segdups_gt10kb"),
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -58,7 +62,7 @@ rule notin_superdups:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        segdup_final_dir / "GRCh38_notinsegdups.bed.gz",
+        segdup_final_path("notinsegdups"),
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -75,7 +79,7 @@ use rule notin_superdups as notin_long_superdups with:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        segdup_final_dir / "GRCh38_notinsegdups_gt10kb.bed.gz",
+        segdup_final_path("notinsegdups_gt10kb"),
 
 
 rule all_segdups:

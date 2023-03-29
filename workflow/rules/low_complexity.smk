@@ -2,11 +2,13 @@ from more_itertools import unzip
 from collections import namedtuple
 from functools import partial
 
+lc_src_dir = config.ref_src_path / "low_complexity"
+lc_inter_dir = config.build_intermediate_dir / "LowComplexity"
+lc_log_dir = config.build_log_dir / "LowComplexity"
 
-lc_src_dir = ref_src_dir / "low_complexity"
-lc_inter_dir = intermediate_dir / "LowComplexity"
-lc_final_dir = final_dir / "LowComplexity"
-lc_log_dir = log_dir / "LowComplexity"
+
+def lc_final_path(name):
+    return config.build_strat_path("LowComplexity", name)
 
 
 ################################################################################
@@ -95,7 +97,7 @@ rule slop_uniform_repeats:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        lc_final_dir / "GRCh38_SimpleRepeat_{unit_name}_gt{total_len}_slop5.bed.gz",
+        lc_final_path("SimpleRepeat_{unit_name}_gt{total_len}_slop5"),
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -122,8 +124,7 @@ use rule slop_uniform_repeats as slop_uniform_repeat_ranges with:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        lc_final_dir
-        / "GRCh38_SimpleRepeat_{unit_name}_{total_lenA}to{total_lenB}_slop5.bed.gz",
+        lc_final_path("SimpleRepeat_{unit_name}_{total_lenA}to{total_lenB}_slop5"),
 
 
 rule merge_perfect_uniform_repeats:
@@ -151,7 +152,7 @@ rule merge_imperfect_uniform_repeats:
         ),
         genome=rules.get_genome.output,
     output:
-        lc_final_dir / "GRCh38_SimpleRepeat_imperfecthomopolgt{merged_len}_slop5.bed.gz",
+        lc_final_path("SimpleRepeat_imperfecthomopolgt{merged_len}_slop5"),
     conda:
         envs_path("bedtools.yml")
     threads: 3
@@ -356,7 +357,7 @@ rule merge_satellites:
         else rules.merge_rmsk_satellites.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        lc_final_dir / "GRCh38_satellites_slop5.bed.gz",
+        lc_final_path("satellites_slop5"),
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -371,7 +372,7 @@ rule invert_satellites:
     input:
         bed=rules.merge_satellites.output,
     output:
-        lc_final_dir / "GRCh38_notinsatellites_slop5.bed.gz",
+        lc_final_path("notinsatellites_slop5"),
     conda:
         envs_path("bedtools.yml")
     # this is a nice trick to avoid specifying input files for rule overrides
@@ -394,11 +395,10 @@ rule invert_satellites:
 rule merge_all_uniform_repeats:
     input:
         imperfect=rules.all_uniform_repeats.input.imperfect_gt10,
-        # imperfect=all_uniform_repeats["imperfect_gt10"],
         perfect=rules.all_perfect_uniform_repeats.input.R1_T7,
         genome=rules.get_genome.output,
     output:
-        lc_final_dir / "GRCh38_AllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz",
+        lc_final_path("AllHomopolymers_gt6bp_imperfectgt10bp_slop5"),
     conda:
         envs_path("bedtools.yml")
     threads: 4
@@ -417,7 +417,7 @@ use rule invert_satellites as invert_all_uniform_repeats with:
     input:
         bed=rules.merge_all_uniform_repeats.output,
     output:
-        lc_final_dir / "GRCh38_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz",
+        lc_final_path("notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5"),
 
 
 rule merge_repeats:
@@ -458,7 +458,7 @@ rule filter_TRs:
         hp=rules.merge_all_uniform_repeats.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        lc_final_dir / "GRCh38_AllTandemRepeats_{tr_bound}bp_slop5.bed.gz",
+        lc_final_path("AllTandemRepeats_{tr_bound}bp_slop5"),
     params:
         lower=lambda wildcards: tr_bounds[wildcards.tr_bound]["lower"],
         upper=lambda wildcards: tr_bounds[wildcards.tr_bound]["upper"],
@@ -492,7 +492,7 @@ rule merge_filtered_TRs:
         rules.all_TRs.input._201to10000,
         rules.all_TRs.input._gt10000,
     output:
-        lc_final_dir / "GRCh38_AllTandemRepeats.bed.gz",
+        lc_final_path("AllTandemRepeats"),
     conda:
         envs_path("bedtools.yml")
     threads: 2
@@ -508,7 +508,7 @@ use rule invert_satellites as invert_TRs with:
     input:
         bed=rules.merge_filtered_TRs.output,
     output:
-        lc_final_dir / "GRCh38_notinallTandemRepeats.bed.gz",
+        lc_final_path("notinallTandemRepeats"),
 
 
 ################################################################################
@@ -520,7 +520,7 @@ use rule merge_filtered_TRs as merge_HPs_and_TRs with:
         rules.merge_filtered_TRs.input,
         rules.merge_all_uniform_repeats.output,
     output:
-        lc_final_dir / "GRCh38_AllTandemRepeatsandHomopolymers_slop5.bed.gz",
+        lc_final_path("AllTandemRepeatsandHomopolymers_slop5"),
 
 
 # NOTE chrM in the original
@@ -528,7 +528,7 @@ use rule invert_satellites as invert_HPs_and_TRs with:
     input:
         bed=rules.merge_HPs_and_TRs.output,
     output:
-        lc_final_dir / "GRCh38_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz",
+        lc_final_path("notinAllTandemRepeatsandHomopolymers_slop5"),
 
 
 rule all_low_complexity:

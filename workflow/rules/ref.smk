@@ -1,6 +1,5 @@
-ref_src_dir = resources_dir / "{ref_key}"
-ref_master_dir = results_dir / "ref" / "{ref_key}"
-ref_inter_dir = intermediate_dir / "ref"
+ref_master_dir = config.results_dir / "ref" / "{ref_key}"
+ref_inter_dir = config.build_intermediate_dir / "ref"
 
 
 # lots of things depend on PAR so move this out of the XY ruleset
@@ -15,7 +14,7 @@ rule write_PAR_intermediate:
 
 rule download_ref:
     output:
-        ref_src_dir / "ref.fna.gz",
+        config.ref_src_dir / "ref.fna.gz",
     params:
         src=lambda w: config.refkey_to_ref_src(w.ref_key),
     conda:
@@ -87,7 +86,7 @@ rule filter_sort_ref:
 
 use rule download_ref as download_gaps with:
     output:
-        ref_src_dir / "gap.bed.gz",
+        config.ref_src_dir / "gap.bed.gz",
     params:
         src=lambda w: config.refkey_to_gap_src(w.ref_key),
 

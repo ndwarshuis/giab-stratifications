@@ -1,7 +1,10 @@
-func_src_dir = ref_src_dir / "FunctionalRegions"
-func_inter_dir = intermediate_dir / "FunctionalRegions"
-func_final_dir = final_dir / "FunctionalRegions"
-func_log_dir = log_dir / "FunctionalRegions"
+func_src_dir = config.ref_src_dir / "FunctionalRegions"
+func_inter_dir = config.intermediate_dir / "FunctionalRegions"
+# func_log_dir = config.log_dir / "FunctionalRegions"
+
+
+def func_final_path(name):
+    return config.build_strat_path("FunctionalRegions", name)
 
 
 use rule download_ref as download_ftbl with:
@@ -35,7 +38,7 @@ rule merge_functional:
         bed=rules.combine_ftbl_and_gff.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        func_final_dir / "GRCh38_refseq_cds.bed.gz",
+        func_final_path("refseq_cds"),
     conda:
         envs_path("bedtools.yml")
     shell:
@@ -52,7 +55,7 @@ rule invert_functional:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        func_final_dir / "GRCh38_notinrefseq_cds.bed.gz",
+        func_final_path("notinrefseq_cds"),
     conda:
         envs_path("bedtools.yml")
     shell:
