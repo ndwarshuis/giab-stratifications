@@ -2,8 +2,6 @@ from functools import partial
 from more_itertools import unzip
 
 gc_inter_dir = config.intermediate_build_dir / "GCcontent"
-# gc_final_dir = final_dir / "GCcontent"
-# gc_log_dir = log_dir / "GCcontent"
 
 
 def gc_final_path(name):

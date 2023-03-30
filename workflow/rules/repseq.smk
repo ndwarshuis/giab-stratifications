@@ -21,7 +21,6 @@ rule unpack_repseq:
         """
 
 
-# TODO add logging
 rule build_repseq:
     input:
         rules.unpack_repseq.output,
@@ -29,5 +28,7 @@ rule build_repseq:
         config.tools_bin_dir / "repseq",
     conda:
         config.env_path("build")
+    log:
+        config.log_root_dir / "tools" / "repseq_build.log",
     shell:
-        "make -C {input} && mv {input}/repseq {output}"
+        "make -C {input} 2>&1 > {log} && mv {input}/repseq {output}"

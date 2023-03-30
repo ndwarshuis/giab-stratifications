@@ -2,6 +2,7 @@ from os.path import splitext, basename
 from pathlib import Path
 
 map_inter_dir = config.intermediate_build_dir / "mappability"
+map_log_dir = config.log_build_dir / "mappability"
 
 
 def map_final_path(name):
@@ -57,6 +58,8 @@ rule gem_index:
     params:
         base=lambda wildcards, output: splitext(output[0])[0],
     threads: 8
+    log:
+        map_log_dir / "index.log",
     shell:
         """
         PATH={bin_dir}:$PATH
@@ -64,7 +67,7 @@ rule gem_index:
         --complement emulate \
         -T {threads} \
         -i {input.fa} \
-        -o {params.base}
+        -o {params.base} 2> {log}
         """
 
 
@@ -77,6 +80,8 @@ rule gem_mappability:
     params:
         base=lambda wildcards, output: splitext(output[0])[0],
     threads: 8
+    log:
+        map_log_dir / "mappability_l{l}_m{m}_e{e}.log",
     shell:
         """
         {input.bin} \
@@ -85,7 +90,7 @@ rule gem_mappability:
         -l {wildcards.l} \
         -T {threads} \
         -I {input.fa} \
-        -o {params.base}
+        -o {params.base} 2> {log}
         """
 
 
@@ -98,16 +103,17 @@ rule gem_to_wig:
         map_inter_dir / "GRCh38_unique_l{l}_m{m}_e{e}.wig",
     params:
         base=lambda wildcards, output: splitext(output[0])[0],
+    log:
+        map_log_dir / "gem2wig_l{l}_m{m}_e{e}.log",
     shell:
         """
         {input.bin} \
         -I {input.idx} \
         -i {input.map} \
-        -o {params.base}
+        -o {params.base} 2> {log}
         """
 
 
-# TODO sort here?
 rule wig_to_bed:
     input:
         rules.gem_to_wig.output,
@@ -138,7 +144,7 @@ rule invert_unique:
     shell:
         """
         complementBed -i {input.bed} -g {input.genome} | \
-        mergeBed -d 100 -i stdin |
+        mergeBed -d 100 -i stdin | \
         bgzip -c > \
         {output}
         """
