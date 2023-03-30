@@ -1,4 +1,6 @@
 ref_master_dir = config.intermediate_root_dir / "ref" / "{ref_key}"
+ref_master_log_dir = config.log_root_dir / "ref" / "{ref_key}"
+
 ref_inter_dir = config.intermediate_build_dir / "ref"
 ref_log_dir = config.log_build_dir / "ref"
 
@@ -43,11 +45,13 @@ rule index_ref:
         ref_master_dir / "ref.fna.fai",
     conda:
         config.env_path("utils")
+    log:
+        ref_master_log_dir / "index_ref.log",
     shell:
         """
         gunzip -c {input} | \
         samtools faidx - -o - \
-        > {output}
+        2> {log} > {output}
         """
 
 
@@ -58,6 +62,8 @@ rule get_genome:
         ref_inter_dir / "genome.txt",
     conda:
         config.env_path("bedtools")
+    log:
+        ref_log_dir / "get_genome.log",
     script:
         config.python_script("bedtools/ref/get_genome.py")
 

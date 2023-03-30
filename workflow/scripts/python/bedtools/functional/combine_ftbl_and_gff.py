@@ -5,9 +5,6 @@ from common.bed import filter_sort_bed_inner
 
 JOIN_KEY = "genomic_accession"
 
-# ASSUME chromosomes in the ftbl file are like "1, 2, 3...X, Y"
-FROM_MAP = {x.chr_name: x.value for x in cfg.ChrIndex}
-
 
 def read_ftbl(path: str) -> pd.DataFrame:
     cols = ["assembly_unit", "seq_type", "chromosome", JOIN_KEY]
@@ -51,8 +48,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     rk = cfg.RefKey(smk.wildcards["ref_key"])
     bk = cfg.BuildKey(smk.wildcards["build_key"])
     to_map = sconf.buildkey_to_final_chr_mapping(rk, bk)
-    # TODO this seems hacky
-    from_map = {k: v for k, v in FROM_MAP.items() if v in to_map}
+    # ASSUME chromosomes in the ftbl file are like "1, 2, 3...X, Y"
+    from_map = {i.chr_name: i.value for i in cfg.ChrIndex if i.value in to_map}
 
     filter_sort_bed_inner(from_map, to_map, df).to_csv(
         smk.output[0],

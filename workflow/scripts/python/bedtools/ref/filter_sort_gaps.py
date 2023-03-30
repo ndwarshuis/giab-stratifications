@@ -1,7 +1,7 @@
 from typing import Any
 import common.config as cfg
-from common.bed import filter_sort_bed, read_bed, write_bed
 from pybedtools import BedTool as bt  # type: ignore
+from common.bed import filter_sort_bed, read_bed, write_bed
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:

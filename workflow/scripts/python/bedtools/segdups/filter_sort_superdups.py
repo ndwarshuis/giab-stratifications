@@ -6,9 +6,8 @@ from common.bed import read_filter_sort_bed
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     rk = cfg.RefKey(smk.wildcards["ref_key"])
     bk = cfg.BuildKey(smk.wildcards["build_key"])
-
-    bedfile = sconf.refkey_to_bedfile(rk, lambda x: x.segdups.superdups)
-
+    bedfile = sconf.refkey_to_strat(rk).segdups.superdups
+    assert bedfile is not None, "this should not happen"
     read_filter_sort_bed(sconf, smk.input[0], smk.output[0], bedfile, rk, bk)
 
 

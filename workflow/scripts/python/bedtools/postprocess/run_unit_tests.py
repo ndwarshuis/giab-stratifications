@@ -1,10 +1,13 @@
-from common.config import is_bgzip
 from typing import Any, NamedTuple
 from pathlib import Path
 import pandas as pd
-import common.config as cfg
 from pybedtools import BedTool as bt  # type: ignore
 from os.path import dirname, basename
+from common.config import is_bgzip
+import common.config as cfg
+from common.io import setup_logging
+
+log = setup_logging(snakemake.log[0])  # type: ignore
 
 
 class GaplessBT(NamedTuple):
@@ -120,11 +123,11 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         for res in run_all_tests(p, reverse_map, gapless)
     ]
 
-    with open(smk.log[0], "w") as f:
-        for res in all_failures:
-            f.write("ERROR - %s: %s\n" % res)
+    for res in all_failures:
+        log.error("%s: %s" % res)
 
-    assert len(all_failures) == 0, "failed at least one unit test"
+    if len(all_failures) > 0:
+        exit(1)
 
 
 main(snakemake, snakemake.config)  # type: ignore

@@ -1,18 +1,20 @@
 from typing import Any
-import common.config as cfg
 from Bio import bgzf  # type: ignore
+import common.config as cfg
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     i = cfg.ChrIndex.from_name(smk.wildcards["chr"])
     k = cfg.RefKey(smk.wildcards["ref_key"])
     prefix = sconf.refkey_to_final_chr_prefix(k)
-    if i == cfg.ChrIndex.CHRX:
-        par = sconf.stratifications[k].xy.fmt_x_par(prefix)
-    elif i == cfg.ChrIndex.CHRY:
-        par = sconf.stratifications[k].xy.fmt_y_par(prefix)
+    cxy = sconf.stratifications[k].xy
+
+    assert i in [cfg.ChrIndex.CHRX, cfg.ChrIndex.CHRY], "invalid sex chr"
+
+    par_fun = cxy.fmt_x_par if i == cfg.ChrIndex.CHRX else cxy.fmt_y_par
+
     with bgzf.BgzfWriter(smk.output[0], "w") as f:
-        f.write(par)
+        f.write(par_fun(prefix))
 
 
 main(snakemake, snakemake.config)  # type: ignore

@@ -471,15 +471,6 @@ class GiabStrats(BaseModel):
     def buildkey_to_build(self, rk: RefKey, bk: BuildKey) -> Build:
         return self.stratifications[rk].builds[bk]
 
-    def refkey_to_bedfile(
-        self,
-        k: RefKey,
-        f: Callable[[Stratification], BedFile | None],
-    ) -> BedFile:
-        b = f(self.refkey_to_strat(k))
-        assert b is not None, "Bedfile is null; this should not happen"
-        return b
-
     def buildkey_to_include(self, rk: RefKey, bk: BuildKey) -> Include:
         return self.buildkey_to_build(rk, bk).include
 
@@ -495,11 +486,11 @@ class GiabStrats(BaseModel):
     def refkey_to_gap_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(lambda x: x.src, self.stratifications[k].gap)
 
-    def refkey_to_x_features_src(self, k: RefKey) -> BedSrc | None:
-        return fmap_maybe(lambda x: x.features.x_bed.src, self.stratifications[k].xy)
+    def refkey_to_x_features_src(self, k: RefKey) -> BedSrc:
+        return self.stratifications[k].xy.features.x_bed.src
 
-    def refkey_to_y_features_src(self, k: RefKey) -> BedSrc | None:
-        return fmap_maybe(lambda x: x.features.x_bed.src, self.stratifications[k].xy)
+    def refkey_to_y_features_src(self, k: RefKey) -> BedSrc:
+        return self.stratifications[k].xy.features.y_bed.src
 
     def refkey_to_simreps_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(

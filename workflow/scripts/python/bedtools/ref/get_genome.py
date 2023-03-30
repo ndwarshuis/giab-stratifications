@@ -1,7 +1,7 @@
 from typing import Any
+import pandas as pd
 import common.config as cfg
 from common.bed import filter_sort_bed_inner
-import pandas as pd
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
