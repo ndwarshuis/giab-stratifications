@@ -411,7 +411,7 @@ class GiabStrats(BaseModel):
 
     @property
     def results_dir(self) -> Path:
-        return self.paths.resources
+        return self.paths.results
 
     @property
     def builds_dir(self) -> Path:
