@@ -1,5 +1,5 @@
 segdup_src_dir = config.ref_src_dir / "SegmentalDuplications"
-segdup_inter_dir = config.build_intermediate_dir / "SegmentalDuplications"
+segdup_inter_dir = config.intermediate_build_dir / "SegmentalDuplications"
 # segdup_final_dir = final_dir / "SegmentalDuplications"
 
 

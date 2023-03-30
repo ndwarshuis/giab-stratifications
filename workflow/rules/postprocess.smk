@@ -7,7 +7,7 @@ from os import scandir
 # TODO also somehow need to generate the hap.py tables (the tsvs in the root)
 # TODO add a nice header to the top informing user that "these are strats"?
 
-post_inter_dir = config.build_intermediate_dir / "postprocess"
+post_inter_dir = config.intermediate_build_dir / "postprocess"
 
 
 # NOTE This will only give a limited set of "targets" from each of the strat
@@ -37,7 +37,7 @@ def expand_strat_targets(wildcards):
     )
     all_targets = auto + sex
     # TODO not DRY
-    invalid = [f for f in all_targets if not f.startswith(str(config.final_dir))]
+    invalid = [f for f in all_targets if not f.startswith(str(config.final_root_dir))]
     assert len(invalid) == 0, f"invalid targets: {invalid}"
     return all_targets
 
@@ -58,7 +58,7 @@ rule generate_md5sums:
     input:
         rules.list_all_strats.output,
     output:
-        config.build_final_dir / "v3.1-genome-stratifications-{ref_key}-md5s.txt",
+        config.final_build_dir / "v3.1-genome-stratifications-{ref_key}-md5s.txt",
     conda:
         config.env_path("bedtools")
     script:
@@ -88,7 +88,7 @@ rule validate_strats:
         strats=rules.list_all_strats.output,
         nonN=rules.get_gapless.output.auto,
     output:
-        config.build_final_dir / "validation.html",
+        config.final_build_dir / "validation.html",
     conda:
         config.env_path("rmarkdown")
     script:

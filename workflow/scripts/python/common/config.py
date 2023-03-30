@@ -398,14 +398,6 @@ class GiabStrats(BaseModel):
         return self.resources_dir / "tools"
 
     @property
-    def tools_make_dir(self) -> Path:
-        return self.results_dir / "tools" / "make"
-
-    @property
-    def tools_bin_dir(self) -> Path:
-        return self.results_dir / "tools" / "bin"
-
-    @property
     def ref_src_dir(self) -> Path:
         return self.paths.resources / "{ref_key}"
 
@@ -414,30 +406,43 @@ class GiabStrats(BaseModel):
         return self.paths.results
 
     @property
-    def builds_dir(self) -> Path:
-        return self.results_dir / "builds"
-
-    def _build_dir(self, which: Path) -> Path:
-        return self.builds_dir / which / "{ref_key}@{build_key}"
+    def tools_make_dir(self) -> Path:
+        return self.results_dir / "tools" / "make"
 
     @property
-    def build_log_dir(self) -> Path:
-        return self._build_dir(Path("log"))
+    def tools_bin_dir(self) -> Path:
+        return self.results_dir / "tools" / "bin"
 
     @property
-    def build_intermediate_dir(self) -> Path:
-        return self._build_dir(Path("intermediates"))
+    def final_root_dir(self) -> Path:
+        return self.results_dir / "final"
 
     @property
-    def build_final_dir(self) -> Path:
-        return self._build_dir(Path("final"))
+    def final_build_dir(self) -> Path:
+        return self.results_dir / "final" / "{ref_key}@{build_key}"
 
     @property
-    def final_dir(self) -> Path:
-        return self._build_dir(Path("final")).parent
+    def intermediate_root_dir(self) -> Path:
+        return self.results_dir / "intermediates"
+
+    @property
+    def intermediate_build_dir(self) -> Path:
+        return self.intermediate_root_dir / "{ref_key}@{build_key}"
+
+    @property
+    def intermediate_ref_dir(self) -> Path:
+        return self.intermediate_root_dir / "ref"
+
+    @property
+    def log_root_dir(self) -> Path:
+        return self.results_dir / "log"
+
+    @property
+    def log_build_dir(self) -> Path:
+        return self.log_root_dir / "{ref_key}@{build_key}"
 
     def build_strat_path(self, level: str, name: str) -> Path:
-        return self._build_dir(Path("final")) / level / f"{{ref_key}}_{name}.bed.gz"
+        return self.final_build_dir / level / f"{{ref_key}}_{name}.bed.gz"
 
     # because smk doesn't check these for existence yet:
     # https://github.com/snakemake/snakemake/issues/1657

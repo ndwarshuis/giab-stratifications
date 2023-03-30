@@ -1,5 +1,5 @@
 func_src_dir = config.ref_src_dir / "FunctionalRegions"
-func_inter_dir = config.build_intermediate_dir / "FunctionalRegions"
+func_inter_dir = config.intermediate_build_dir / "FunctionalRegions"
 # func_log_dir = config.log_dir / "FunctionalRegions"
 
 

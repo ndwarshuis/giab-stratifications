@@ -3,8 +3,8 @@ from collections import namedtuple
 from functools import partial
 
 lc_src_dir = config.ref_src_dir / "low_complexity"
-lc_inter_dir = config.build_intermediate_dir / "LowComplexity"
-lc_log_dir = config.build_log_dir / "LowComplexity"
+lc_inter_dir = config.intermediate_build_dir / "LowComplexity"
+lc_log_dir = config.log_build_dir / "LowComplexity"
 
 
 def lc_final_path(name):
@@ -24,6 +24,7 @@ uniform_repeats = {
 }
 
 
+# TODO this fa can be gzipped
 rule find_perfect_uniform_repeats:
     input:
         ref=rules.filter_sort_ref.output,

@@ -1,7 +1,7 @@
 from functools import partial
 from more_itertools import unzip
 
-gc_inter_dir = config.build_intermediate_dir / "GCcontent"
+gc_inter_dir = config.intermediate_build_dir / "GCcontent"
 # gc_final_dir = final_dir / "GCcontent"
 # gc_log_dir = log_dir / "GCcontent"
 
@@ -51,13 +51,14 @@ def seqtk_args(wildcards):
     return f"-{switch}f 0.{frac}"
 
 
+# TODO this can take a gzipped fa file
 rule find_gc_content:
     input:
         ref=rules.filter_sort_ref.output,
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        gc_inter_dir / "l100_gc{frac,[0-9]+}.bed.gz",
+        gc_inter_dir / "gc{frac,[0-9]+}.bed.gz",
     params:
         args=seqtk_args,
     conda:

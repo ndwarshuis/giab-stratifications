@@ -1,5 +1,5 @@
 xy_src_dir = config.ref_src_dir / "XY"
-xy_inter_dir = config.build_intermediate_dir / "XY"
+xy_inter_dir = config.intermediate_build_dir / "XY"
 
 
 def xy_final_path(name):

@@ -1,5 +1,6 @@
-ref_master_dir = config.results_dir / "ref" / "{ref_key}"
-ref_inter_dir = config.build_intermediate_dir / "ref"
+ref_master_dir = config.intermediate_root_dir / "ref" / "{ref_key}"
+ref_inter_dir = config.intermediate_build_dir / "ref"
+ref_log_dir = config.log_build_dir / "ref"
 
 
 # lots of things depend on PAR so move this out of the XY ruleset
@@ -34,6 +35,7 @@ rule unzip_ref:
         "gunzip -c {input} > {output}"
 
 
+# TODO is this only used for getting the genome? if so combine with rule 'get_genome'
 rule index_ref:
     input:
         rules.download_ref.output,
@@ -71,15 +73,17 @@ rule genome_to_bed:
 
 rule filter_sort_ref:
     input:
-        fa=rules.unzip_ref.output,
+        fa=rules.download_ref.output,
         genome=rules.get_genome.output,
     output:
         ref_inter_dir / "ref_filtered.fa",
     conda:
         config.env_path("utils")
+    log:
+        ref_log_dir / "filter_sort_ref.log",
     shell:
         """
-        samtools faidx {input.fa} $(cut -f1 {input.genome} | tr '\n' ' ') > \
+        samtools faidx {input.fa} $(cut -f1 {input.genome} | tr '\n' ' ') 2> {log} > \
         {output}
         """
 

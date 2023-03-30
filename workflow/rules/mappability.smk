@@ -1,7 +1,7 @@
 from os.path import splitext, basename
 from pathlib import Path
 
-map_inter_dir = config.build_intermediate_dir / "mappability"
+map_inter_dir = config.intermediate_build_dir / "mappability"
 
 
 def map_final_path(name):
