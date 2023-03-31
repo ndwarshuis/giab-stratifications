@@ -203,6 +203,7 @@ class RefHttpSrc(HttpSrc_):
     fmt: RefFmt = RefFmt.BGZIP
 
 
+# TODO test the format of downloaded files for bgzip
 RefSrc = RefFileSrc | RefHttpSrc
 
 # TODO this is for more than just "bed files" (right now it basically means "a
@@ -210,11 +211,12 @@ RefSrc = RefFileSrc | RefHttpSrc
 BedSrc = BedFileSrc | BedHttpSrc
 
 
-class FuncFile(BaseModel):
-    """Functional stratifications input file."""
+# TODO what does the chr prefix actually mean here?
+# class FuncFile(BaseModel):
+#     """Functional stratifications input file."""
 
-    src: BedSrc
-    chr_prefix: str = ""
+#     src: BedSrc
+#     chr_prefix: str = ""
 
 
 class BedFile(BaseModel):
@@ -359,8 +361,8 @@ class RefFile(BaseModel):
 class Functional(BaseModel):
     """Configuration for Functional stratifications."""
 
-    ftbl: FuncFile
-    gff: FuncFile
+    ftbl_src: BedSrc
+    gff_src: BedSrc
 
 
 class Stratification(BaseModel):
@@ -512,11 +514,11 @@ class GiabStrats(BaseModel):
             self.stratifications[k].segdups,
         )
 
-    def refkey_to_functional_ftbl_src(self, k: RefKey) -> BedSrc | None:
-        return self.stratifications[k].functional.ftbl.src
+    def refkey_to_functional_ftbl_src(self, k: RefKey) -> BedSrc:
+        return self.stratifications[k].functional.ftbl_src
 
-    def refkey_to_functional_gff_src(self, k: RefKey) -> BedSrc | None:
-        return self.stratifications[k].functional.gff.src
+    def refkey_to_functional_gff_src(self, k: RefKey) -> BedSrc:
+        return self.stratifications[k].functional.gff_src
 
     # chromosome standardization
 
