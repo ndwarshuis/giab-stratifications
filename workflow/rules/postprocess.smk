@@ -2,8 +2,6 @@ from os.path import dirname, basename
 from more_itertools import unique_everseen
 from os import scandir
 
-# TODO need to get a bed file that has all Ns from the reference (so they can be subtracted)
-# TODO need a PSA_Y_GRCh38.bed file (assuming to subtract off pseudo-autosomal regions)
 # TODO also somehow need to generate the hap.py tables (the tsvs in the root)
 # TODO add a nice header to the top informing user that "these are strats"?
 
@@ -63,6 +61,15 @@ rule generate_md5sums:
         config.env_path("bedtools")
     script:
         config.python_script("bedtools/postprocess/list_md5.py")
+
+
+rule generate_tsv_list:
+    input:
+        rules.list_all_strats.output,
+    output:
+        config.final_build_dir / "v3.1-{ref_key}-all-stratifications.tsv",
+    script:
+        config.python_script("bedtools/postprocess/generate_tsv.py")
 
 
 rule unit_test_strats:

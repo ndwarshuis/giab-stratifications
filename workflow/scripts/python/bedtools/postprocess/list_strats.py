@@ -17,7 +17,7 @@ def main(smk: Any) -> None:
     ]
 
     with open(smk.output[0], "w") as f:
-        for s in strats:
+        for s in sorted(strats):
             f.write(s + "\n")
 
 
