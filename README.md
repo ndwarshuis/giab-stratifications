@@ -20,12 +20,10 @@ site](https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-st
  
 ## Summary Of Stratifications
 
-Stratifications can be binned into seven types: Low Complexity, Functional
+Stratifications can be binned into several types: Low Complexity, Functional
 Technically Difficult, Genome Specific, Functional Regions, GC content,
 mappability, Other Difficult, Segmental Duplications, Union, Ancestry and XY.
-General information for stratification types are provided below. Associated
-stratification READMEs provide more information on what the individual files
-cover and represent.
+General information for stratification types are provided below.
 
 ### Low Complexity
 
