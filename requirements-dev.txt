@@ -1,3 +1,0 @@
-r-tidyverse
-r-styler
-r-rmarkdown
