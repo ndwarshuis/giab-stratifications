@@ -18,38 +18,6 @@ benchmark tools such as [hap.py](https://github.com/Illumina/hap.py).
 *NOTE: stratification BED files are only accessible on the [GIAB FTP
 site](https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/)*
  
-## General Information
-
-Author Information
-- Principal Investigator: Justin Zook, NIST, jzook@nist.gov
-- Nate Olson, NIST, nathanael.olson@nist.gov
-- Justin Wagner, NIST, justin.wagner@nist.gov
-- Jennifer McDaniel, NIST, jennifer.mcdaniel@nist.gov
-
-Date of data collection: 2015-01-01 to 2022-07-11
-
-## Sharing/Access Information
-
-Licenses/restrictions placed on the data, or limitations of reuse:
-Publicly released data are freely available for reuse without embargo.
-
-Citations for stratifications are located in the associated READMEs.
-
-If stratifications were used in benchmarking with GA4GH/GIAB best practices or
-hap.py please reference:
-
-	Krusche, P., Trigg, L., Boutros, P.C. et al. 
-	Best practices for benchmarking germline small-variant calls in human genomes. 
-	Nat Biotechnol 37, 555-560 (2019). https://doi.org/10.1038/s41587-019-0054-x
-
-### Links to publicly accessible locations of the data:
-
-[GIAB FTP URL](https://ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/)
-- Individual stratification BED files as well as zipped directories (tar.gz) of files
-- stratification READMEs
-- .tsvs for benchmarking with hap.py
-- MD5 checksums
-
 ## Summary Of Stratifications
 
 Stratifications can be binned into seven types: Low Complexity, Functional
@@ -194,6 +162,37 @@ All output will either be in `resources` (downloaded files) or `results`
 `reference_key@build_key` (see configuration section and `config/dynamic.yml`
 for more details on what these mean). Within each of these files are the
 stratification BED files and associated metadata.
+
+## General Information
+
+Author Information
+- Principal Investigator: Justin Zook, NIST, jzook@nist.gov
+- Nate Olson, NIST, nathanael.olson@nist.gov
+- Justin Wagner, NIST, justin.wagner@nist.gov
+- Jennifer McDaniel, NIST, jennifer.mcdaniel@nist.gov
+- Nate Dwarshuis, NIST, nathan.dwarshuis@nist.gov
+
+## Sharing/Access Information
+
+Licenses/restrictions placed on the data, or limitations of reuse:
+Publicly released data are freely available for reuse without embargo.
+
+Citations for stratifications are located in the associated READMEs.
+
+If stratifications were used in benchmarking with GA4GH/GIAB best practices or
+hap.py please reference:
+
+	Krusche, P., Trigg, L., Boutros, P.C. et al. 
+	Best practices for benchmarking germline small-variant calls in human genomes. 
+	Nat Biotechnol 37, 555-560 (2019). https://doi.org/10.1038/s41587-019-0054-x
+
+### Links to publicly accessible locations of the data:
+
+[GIAB FTP URL](https://ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/)
+- Individual stratification BED files as well as zipped directories (tar.gz) of files
+- stratification READMEs
+- .tsvs for benchmarking with hap.py
+- MD5 checksums
 
 ## Data-Use Policy 
 
