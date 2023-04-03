@@ -392,6 +392,7 @@ rule merge_all_uniform_repeats:
         imperfect=rules.all_uniform_repeats.input.imperfect_ge10,
         perfect=rules.all_perfect_uniform_repeats.input.R1_T7,
         genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         lc_final_path("AllHomopolymers_ge7bp_imperfectge10bp_slop5"),
     conda:
@@ -402,6 +403,7 @@ rule merge_all_uniform_repeats:
         mergeBed -i stdin | \
         multiIntersectBed -i stdin {input.imperfect} | \
         mergeBed -i stdin | \
+        intersectBed -a stdin -b {input.gapless} -sorted | \
         bgzip -c \
         > {output}
         """
