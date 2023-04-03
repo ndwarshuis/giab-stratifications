@@ -34,7 +34,7 @@ stratifications:
       # this prefix.
       #
       # Defaults: 'chr'
-      # chr_prefix: chr
+      chr_prefix: chr
 
       # The format of the fasta file. Fasta files are assumed to be in bgzip
       # format. If this is not the case, specify the real format here, and the
@@ -245,19 +245,17 @@ stratifications:
           url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/genomicSuperDups.txt.gz
         bed_cols: {chr: 1, start: 2, end: 3}
     functional:
-      ftbl:
-        src:
-          url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.25_GRCh37.p13/GCF_000001405.25_GRCh37.p13_feature_table.txt.gz
-      gff:
-        src:
-          url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.25_GRCh37.p13/GCF_000001405.25_GRCh37.p13_genomic.gff.gz
+      ftbl_src:
+        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.25_GRCh37.p13/GCF_000001405.25_GRCh37.p13_feature_table.txt.gz
+      gff_src:
+        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.25_GRCh37.p13/GCF_000001405.25_GRCh37.p13_genomic.gff.gz
     builds:
       test_autosome:
         chr_filter: [21, 22]
         include:
           low_complexity: true
           xy: false
-          map: true
+          map: false
           gc: true
           functional: true
           segdups: true
@@ -315,12 +313,10 @@ stratifications:
     segdups:
       superdups: null
     functional:
-      ftbl:
-        src:
-          url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_feature_table.txt.gz
-      gff:
-        src:
-          url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_genomic.gff.gz
+      ftbl_src:
+        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_feature_table.txt.gz
+      gff_src:
+        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_genomic.gff.gz
     builds:
       test_autosome:
         chr_filter: [21, 22]
