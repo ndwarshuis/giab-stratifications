@@ -9,6 +9,16 @@ def map_final_path(name):
     return config.build_strat_path("mappability", name)
 
 
+################################################################################
+# download a bunch of stuff to run GEM
+#
+# NOTE: this is in bioconda, but the bioconda version does not have gem-2-wig
+# for some reason
+
+
+gemlib_bin = Path("GEM-binaries-Linux-x86_64-core_i3-20130406-045632/bin")
+
+
 rule download_gem:
     output:
         config.tools_src_dir / "gemlib.tbz2",
@@ -18,9 +28,6 @@ rule download_gem:
         config.env_path("utils")
     shell:
         "curl -sS -L -o {output} {params.url}"
-
-
-gemlib_bin = Path("GEM-binaries-Linux-x86_64-core_i3-20130406-045632/bin")
 
 
 rule unpack_gem:
@@ -47,6 +54,10 @@ rule unpack_gem:
         --strip-components=2 \
         {params.bins}
         """
+
+
+################################################################################
+# index/align
 
 
 rule gem_index:
@@ -133,74 +144,99 @@ rule wig_to_bed:
         """
 
 
-rule invert_unique:
+################################################################################
+# create stratifications
+
+
+rule get_nonunique:
     input:
-        bed=rules.wig_to_bed.output,
-        genome=rules.get_genome.output,
-        gapless=rules.get_gapless.output.auto,
+        rules.wig_to_bed.output,
     output:
         map_final_path("nonunique_l{l}_m{m}_e{e}"),
     conda:
         config.env_path("bedtools")
+    params:
+        genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output.auto,
     shell:
         """
-        complementBed -i {input.bed} -g {input.genome} | \
+        complementBed -i {input} -g {params.genome} | \
         mergeBed -d 100 -i stdin | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
+        intersectBed -a stdin -b {params.gapless} -sorted | \
         bgzip -c > \
         {output}
         """
 
 
-rule all_nonunique:
-    input:
-        expand(
-            rules.invert_unique.output,
-            zip,
-            allow_missing=True,
-            l=[100, 250],
-            m=[2, 0],
-            e=[1, 0],
-        ),
+# same as above but don't put the file in the final directory
+use rule get_nonunique as get_nonunique_single with:
+    output:
+        map_inter_dir / "nonunique_l{l}_m{m}_e{e}",
+
+
+# This rule is complicated because we need to deal with the case of single vs
+# multiple parameter specifications. If there is only one, we only need the
+# "lowmappabilityall" all bed file as it includes all the data we want. If
+# multiple, we need multiple bed files for each individual spec (eg
+# "nonunique_lx_my_ez") plus the "lowmappabilityall". This hacky script handles
+# this logic.
+def nonunique_inputs(wildcards):
+    rk = wildcards.ref_key
+    bk = wildcards.build_key
+    l, m, e = config.buildkey_to_mappability(rk, bk)
+    n = len(l)
+    if n == 0:
+        assert False, "this should not happen"
+    elif n == 1:
+        path = rules.get_nonunique_single.output
+    else:
+        path = rules.get_nonunique.output
+    return expand(path, zip, allow_missing=True, l=l, m=m, e=e)
 
 
 rule merge_nonunique:
     input:
-        bed=rules.all_nonunique.input,
+        bed=nonunique_inputs,
         gapless=rules.get_gapless.output.auto,
     output:
         map_final_path("lowmappabilityall"),
     conda:
         config.env_path("bedtools")
+    params:
+        n=lambda _, input: len(input.bed),
     shell:
         """
-        multiIntersectBed -i {input.bed} | \
-        mergeBed -d 100 -i stdin | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
-        bgzip -c > \
-        {output}
+        n={params.n}
+        if [ $n == 1 ]; then 
+            cp {input.bed} {output}
+        else
+            multiIntersectBed -i {input.bed} | \
+            mergeBed -d 100 -i stdin | \
+            intersectBed -a stdin -b {input.gapless} -sorted | \
+            bgzip -c > \
+            {output}
+        fi
         """
 
 
 rule invert_merged_nonunique:
     input:
-        bed=rules.merge_nonunique.output,
-        genome=rules.get_genome.output,
-        gapless=rules.get_gapless.output.auto,
+        rules.merge_nonunique.output,
     output:
         map_final_path("notinlowmappabilityall"),
     conda:
         config.env_path("bedtools")
+    params:
+        genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output.auto,
     shell:
         """
-        complementBed -i {input.bed} -g {input.genome} | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
+        complementBed -i {input} -g {params.genome} | \
+        intersectBed -a stdin -b {params.gapless} -sorted | \
         bgzip -c > {output}
         """
 
 
 rule all_map:
     input:
-        rules.all_nonunique.input,
-        rules.merge_nonunique.output,
         rules.invert_merged_nonunique.output,

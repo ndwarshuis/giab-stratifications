@@ -173,9 +173,6 @@ stratifications:
           low_complexity: true
           # Include all XY if true
           xy: false
-          # Include hard-to-map if true (note, this is computationally very
-          # heavy)
-          map: false
           # Include GC content regions if true
           gc: true
           # Include functional regions if true
@@ -185,17 +182,36 @@ stratifications:
           # Include union if true. Note, since union actually unifies the GC,
           # XY, LowComplexity, and mappabilty regions, this flag may do nothing
           # if some of these are also false.
-          union: true
+          union: false
+          # List hard-to-map alignment parameters to compute. Use an empty list
+          # if this is not desired. NOTE: this is computationally very heavy,
+          # especially when using long lengths with non-zero mismatches/indels.
+          #
+          # Each member the the list must be a mapping with "length" (l),
+          # "mismatches" (m), and "indels" (i) set (all non-negative integers).
+          # This corresponds to finding regions of length l that have at least
+          # one other alignment in the genome with SNPs m and INDELs i.
+          mappability: []
       test_xy:
         chr_filter: [23, 24]
         include:
-          low_complexity: false
+          low_complexity: true
           xy: true
-          map: false
           gc: true
           functional: true
           segdups: true
           union: true
+          mappability: []
+      test_map:
+        chr_filter: [21]
+        include:
+          low_complexity: false
+          xy: false
+          gc: false
+          functional: false
+          segdups: true
+          union: true
+          mappability: [{length: 50, mismatches: 0, indels: 0}]
 
   GRCh37:
     ref:
@@ -255,21 +271,21 @@ stratifications:
         include:
           low_complexity: true
           xy: false
-          map: false
           gc: true
           functional: true
           segdups: true
           union: true
+          mappability: []
       test_xy:
         chr_filter: [23, 24]
         include:
           low_complexity: false
           xy: true
-          map: false
           gc: true
           functional: true
           segdups: true
-          union: true
+          union: false
+          mappability: []
 
   CHM13:
     ref:
@@ -323,8 +339,19 @@ stratifications:
         include:
           low_complexity: true
           xy: false
-          map: false
           gc: true
           functional: true
           segdups: false
           union: true
+          mappability: []
+
+      test_xy:
+        chr_filter: [23, 24]
+        include:
+          low_complexity: false
+          xy: true
+          gc: true
+          functional: true
+          segdups: false
+          union: true
+          mappability: []

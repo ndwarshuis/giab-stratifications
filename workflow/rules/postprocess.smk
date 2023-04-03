@@ -2,7 +2,6 @@ from os.path import dirname, basename
 from more_itertools import unique_everseen
 from os import scandir
 
-# TODO also somehow need to generate the hap.py tables (the tsvs in the root)
 # TODO add a nice header to the top informing user that "these are strats"?
 
 post_inter_dir = config.intermediate_build_dir / "postprocess"
@@ -17,10 +16,12 @@ post_inter_dir = config.intermediate_build_dir / "postprocess"
 def expand_strat_targets(wildcards):
     rk = wildcards.ref_key
     bk = wildcards.build_key
+
+    # all targets except sex (which needs an additional wildcard)
     targets = [
         (rules.all_low_complexity.input, config.want_low_complexity),
         (rules.all_xy_auto.input, config.want_xy_auto),
-        (rules.all_map.input, config.want_map),
+        (rules.all_map.input, config.want_mappability),
         ([rules.all_gc.input.wide[0], rules.all_gc.input.narrow[0]], config.want_gc),
         (rules.all_functional.input, config.want_functional),
         (rules.all_segdups.input, config.want_segdups),
@@ -28,13 +29,16 @@ def expand_strat_targets(wildcards):
         (rules.invert_alldifficult.output, config.want_alldifficult),
     ]
     auto = [t for tgt, test in targets if test(rk, bk) for t in tgt]
+
+    # xy (expand target depending on which chromosomes we have selected)
     sex = expand(
         rules.all_xy_sex.input,
         allow_missing=True,
         chr=config.wanted_xy_chr_names(rk, bk),
     )
+
+    # combine and ensure that all "targets" refer to final bed files
     all_targets = auto + sex
-    # TODO not DRY
     invalid = [f for f in all_targets if not f.startswith(str(config.final_root_dir))]
     assert len(invalid) == 0, f"invalid targets: {invalid}"
     return all_targets

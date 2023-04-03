@@ -6,6 +6,7 @@ from enum import Enum, unique
 from typing import NewType, Any, Callable, TypeVar, Type, NamedTuple
 from typing_extensions import Self
 from Bio import bgzf  # type: ignore
+from more_itertools import unzip
 
 X = TypeVar("X")
 Y = TypeVar("Y")
@@ -211,14 +212,6 @@ RefSrc = RefFileSrc | RefHttpSrc
 BedSrc = BedFileSrc | BedHttpSrc
 
 
-# TODO what does the chr prefix actually mean here?
-# class FuncFile(BaseModel):
-#     """Functional stratifications input file."""
-
-#     src: BedSrc
-#     chr_prefix: str = ""
-
-
 class BedFile(BaseModel):
     """Inport specs for a bed-like file.
 
@@ -332,16 +325,24 @@ class SegDups(BaseModel):
     superdups: BedFile | None
 
 
+class LowMapParams(BaseModel):
+    """Parameters for a single mappability bed file."""
+
+    length: NonNegativeInt
+    mismatches: NonNegativeInt
+    indels: NonNegativeInt
+
+
 class Include(BaseModel):
     """Flags to control which stratification levels are included."""
 
     low_complexity: bool
     xy: bool
-    map: bool
     gc: bool
     functional: bool
     segdups: bool
     union: bool
+    mappability: set[LowMapParams]
 
 
 class Build(BaseModel):
@@ -540,6 +541,15 @@ class GiabStrats(BaseModel):
         cis = self.buildkey_to_chr_indices(rk, bk)
         return ChrConversion(fromChr, toChr, cis)
 
+    def buildkey_to_mappability(
+        self,
+        rk: RefKey,
+        bk: BuildKey,
+    ) -> tuple[list[int], list[int], list[int]]:
+        ms = self.buildkey_to_include(rk, bk).mappability
+        l, m, e = unzip((m.length, m.mismatches, m.indels) for m in ms)
+        return ([*l], [*m], [*e])
+
     # include switches (for controlling which snakemake rules to activate)
 
     def want_low_complexity_censat(self, rk: RefKey) -> bool:
@@ -578,9 +588,6 @@ class GiabStrats(BaseModel):
     def want_low_complexity(self, rk: RefKey, bk: BuildKey) -> bool:
         return self.buildkey_to_include(rk, bk).low_complexity
 
-    def want_map(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_include(rk, bk).map
-
     def want_gc(self, rk: RefKey, bk: BuildKey) -> bool:
         return self.buildkey_to_include(rk, bk).gc
 
@@ -593,11 +600,14 @@ class GiabStrats(BaseModel):
     def _want_union(self, rk: RefKey, bk: BuildKey) -> bool:
         return self.buildkey_to_include(rk, bk).union
 
+    def want_mappability(self, rk: RefKey, bk: BuildKey) -> bool:
+        return len(self.buildkey_to_include(rk, bk).mappability) > 0
+
     def want_segdup_and_map(self, rk: RefKey, bk: BuildKey) -> bool:
         return (
             self.buildkey_to_include(rk, bk).union
             and self.want_segdups(rk, bk)
-            and self.want_map(rk, bk)
+            and self.want_mappability(rk, bk)
         )
 
     def want_alldifficult(self, rk: RefKey, bk: BuildKey) -> bool:
