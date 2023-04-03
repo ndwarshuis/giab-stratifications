@@ -84,21 +84,17 @@ rule subtract_uniform_repeats:
         "subtractBed -a {input.a} -b {input.b} > {output}"
 
 
-def get_offset(unit_name):
-    return 0 if unit_name == "homopolymer" else 1
-
-
 # NOTE v3.1 doesn't merge here
 rule slop_uniform_repeats:
     input:
         bed=lambda wildcards: lookup_perfect_uniform_repeat(
             wildcards.unit_name,
-            int(wildcards.total_len) + 1 - get_offset(wildcards.unit_name),
+            int(wildcards.total_len),
         ),
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        lc_final_path("SimpleRepeat_{unit_name}_gt{total_len}_slop5"),
+        lc_final_path("SimpleRepeat_{unit_name}_ge{total_len}_slop5"),
     conda:
         config.env_path("bedtools")
     shell:
@@ -118,9 +114,8 @@ use rule slop_uniform_repeats as slop_uniform_repeat_ranges with:
             rules.subtract_uniform_repeats.output,
             allow_missing=True,
             unit_name=wildcards.unit_name,
-            total_lenA=int(wildcards.total_lenA)
-            - (offset := get_offset(wildcards.unit_name)),
-            total_lenB=int(wildcards.total_lenB) - offset + 1,
+            total_lenA=int(wildcards.total_lenA),
+            total_lenB=int(wildcards.total_lenB),
         ),
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
@@ -139,7 +134,7 @@ rule merge_perfect_uniform_repeats:
         """
         grep 'unit={wildcards.base}' {input} | \
         mergeBed -i stdin -d 1 | \
-        awk '$3-$2>{wildcards.merged_len}' > \
+        awk '$3-$2>={wildcards.merged_len}' > \
         {output}
         """
 
@@ -153,10 +148,9 @@ rule merge_imperfect_uniform_repeats:
         ),
         genome=rules.get_genome.output,
     output:
-        lc_final_path("SimpleRepeat_imperfecthomopolgt{merged_len}_slop5"),
+        lc_final_path("SimpleRepeat_imperfecthomopolge{merged_len}_slop5"),
     conda:
         config.env_path("bedtools")
-    threads: 3
     shell:
         """
         multiIntersectBed -i {input.beds} | \
@@ -171,11 +165,11 @@ rule all_uniform_repeats:
     input:
         # Perfect (greater than X)
         **{
-            f"perfect_{k}_gt{x - 1}": expand(
+            f"perfect_{k}_ge{x}": expand(
                 rules.slop_uniform_repeats.output,
                 allow_missing=True,
                 unit_name=k,
-                total_len=x - 1 + (offset := get_offset(k)),
+                total_len=x,
             )
             for k, v in uniform_repeats.items()
             for x in v.total_lens[v.range_indices - 1 :]
@@ -186,18 +180,18 @@ rule all_uniform_repeats:
                 rules.slop_uniform_repeat_ranges.output,
                 allow_missing=True,
                 unit_name=k,
-                total_lenA=a + (offset := get_offset(k)),
-                total_lenB=b + offset,
+                total_lenA=a,
+                total_lenB=b,
             )
             for k, v in uniform_repeats.items()
             for a, b in zip(
                 v.total_lens[0 : v.range_indices - 1],
-                map(lambda x: x - 1, v.total_lens[1 : v.range_indices]),
+                v.total_lens[1 : v.range_indices],
             )
         },
         # Imperfect (greater than X)
         **{
-            f"imperfect_gt{x}": expand(
+            f"imperfect_ge{x}": expand(
                 rules.merge_imperfect_uniform_repeats.output,
                 allow_missing=True,
                 merged_len=x,
@@ -325,7 +319,8 @@ rule merge_censat_satellites:
         config.env_path("bedtools")
     shell:
         """
-        zgrep -v "ct_" {input.bed} | \
+        gunzip -c {input.bed} | \
+        grep -v "ct_" | \
         mergeBed -i stdin | \
         slopBed -i stdin -b 5 -g {input.genome} | \
         mergeBed -i stdin | \
@@ -341,7 +336,6 @@ rule merge_rmsk_satellites:
         lc_inter_dir / "GRCh38_rmsk_satellites_slop5.bed.gz",
     conda:
         config.env_path("bedtools")
-    threads: 2
     shell:
         """
         slopBed -i {input.bed} -b 5 -g {input.genome} | \
@@ -395,14 +389,13 @@ rule invert_satellites:
 
 rule merge_all_uniform_repeats:
     input:
-        imperfect=rules.all_uniform_repeats.input.imperfect_gt10,
+        imperfect=rules.all_uniform_repeats.input.imperfect_ge10,
         perfect=rules.all_perfect_uniform_repeats.input.R1_T7,
         genome=rules.get_genome.output,
     output:
-        lc_final_path("AllHomopolymers_gt6bp_imperfectgt10bp_slop5"),
+        lc_final_path("AllHomopolymers_ge7bp_imperfectge10bp_slop5"),
     conda:
         config.env_path("bedtools")
-    threads: 4
     shell:
         """
         slopBed -i {input.perfect} -b 5 -g {input.genome} | \
@@ -418,7 +411,7 @@ use rule invert_satellites as invert_all_uniform_repeats with:
     input:
         bed=rules.merge_all_uniform_repeats.output,
     output:
-        lc_final_path("notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5"),
+        lc_final_path("notinAllHomopolymers_ge7bp_imperfectge10bp_slop5"),
 
 
 rule merge_repeats:
@@ -434,7 +427,6 @@ rule merge_repeats:
         lc_inter_dir / "AllTandemRepeats_intermediate.bed",
     conda:
         config.env_path("bedtools")
-    threads: 3
     shell:
         """
         multiIntersectBed -i {input.beds} | \
@@ -443,13 +435,13 @@ rule merge_repeats:
         """
 
 
-# NOTE these look funny because they have slop added
+# NOTE: this is pre-slop
 tr_bounds = {
-    "lt51": {"lower": 0, "upper": 61},
-    "51to200": {"lower": 60, "upper": 211},
-    "201to10000": {"lower": 210, "upper": 10011},
-    "gt10000": {"lower": 10010, "upper": 1e10},  # NOTE 1e10 ~ Inf
-    "gt100": {"lower": 110, "upper": 1e10},
+    "lt51": {"lower": 0, "upper": 51},
+    "51to200": {"lower": 51, "upper": 200},
+    "201to10000": {"lower": 201, "upper": 10000},
+    "ge10000": {"lower": 10000, "upper": 1e10},  # NOTE 1e10 ~ Inf
+    "ge100": {"lower": 100, "upper": 1e10},
 }
 
 
@@ -461,13 +453,14 @@ rule filter_TRs:
     output:
         lc_final_path("AllTandemRepeats_{tr_bound}bp_slop5"),
     params:
-        lower=lambda wildcards: tr_bounds[wildcards.tr_bound]["lower"],
-        upper=lambda wildcards: tr_bounds[wildcards.tr_bound]["upper"],
+        lower=lambda w: tr_bounds[w.tr_bound]["lower"],
+        upper=lambda w: tr_bounds[w.tr_bound]["upper"],
     conda:
         config.env_path("bedtools")
+    # NOTE +10 since this is processing a bed file that had 5bp slop added
     shell:
         """
-        awk '$3-$2>{params.lower} && $3-$2<{params.upper}' {input.tr} | \
+        awk '($3-$2)+10>={params.lower} && ($3-$2)+10<{params.upper}' {input.tr} | \
         subtractBed -a stdin -b {input.hp} | \
         intersectBed -a stdin -b {input.gapless} -sorted | \
         bgzip -c > {output}
@@ -475,6 +468,7 @@ rule filter_TRs:
 
 
 rule all_TRs:
+    # funny prefix since snakemake doesn't like keys that start with digits
     input:
         **{
             f"_{k}": expand(
@@ -491,12 +485,11 @@ rule merge_filtered_TRs:
         rules.all_TRs.input._lt51,
         rules.all_TRs.input._51to200,
         rules.all_TRs.input._201to10000,
-        rules.all_TRs.input._gt10000,
+        rules.all_TRs.input._ge10000,
     output:
         lc_final_path("AllTandemRepeats"),
     conda:
         config.env_path("bedtools")
-    threads: 2
     shell:
         """
         multiIntersectBed -i {input} | \
@@ -524,7 +517,6 @@ use rule merge_filtered_TRs as merge_HPs_and_TRs with:
         lc_final_path("AllTandemRepeatsandHomopolymers_slop5"),
 
 
-# NOTE chrM in the original
 use rule invert_satellites as invert_HPs_and_TRs with:
     input:
         bed=rules.merge_HPs_and_TRs.output,
