@@ -6,3 +6,4 @@
 !lint.sh
 !.flake8
 !mypy.ini
+!.gitlab-ci.yml
