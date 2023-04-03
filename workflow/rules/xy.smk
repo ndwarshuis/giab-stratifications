@@ -90,19 +90,28 @@ rule filter_autosomes:
         """
 
 
-# NOTE the XTR X region is different relative to old strats because it was
-# updated a few months ago
-rule all_xy_sex:
-    input:
-        rules.filter_XTR_features.output,
-        rules.filter_ampliconic_features.output,
-        rules.invert_PAR.output,
-
-
-# # TODO the post processing scripts for these have merge steps; I probably don't
-# # need them (at least for hg38) but they were likely added for a reason
-
-
 rule all_xy_auto:
     input:
         rules.filter_autosomes.output,
+
+
+# helper functions for build targets
+def all_xy_features(wildcards):
+    rk = wildcards.ref_key
+    bk = wildcards.build_key
+    targets = [
+        (rules.filter_XTR_features.output[0], config.want_xy_XTR),
+        (rules.filter_ampliconic_features.output[0], config.want_xy_ampliconic),
+    ]
+    cns = config.wanted_xy_chr_names(rk, bk)
+    return [
+        t for p, f in targets if f(rk) for t in expand(p, allow_missing=True, chr=cns)
+    ]
+
+
+def all_xy_PAR(wildcards):
+    return expand(
+        rules.invert_PAR.output,
+        allow_missing=True,
+        chr=config.wanted_xy_chr_names(wildcards.ref_key, wildcards.build_key),
+    )

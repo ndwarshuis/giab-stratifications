@@ -585,6 +585,12 @@ class GiabStrats(BaseModel):
         cis = self.buildkey_to_chr_indices(rk, bk)
         return len(cis - set([ChrIndex.CHRX, ChrIndex.CHRY])) > 0
 
+    def want_xy_XTR(self, rk: RefKey) -> bool:
+        return self.refkey_to_strat(rk).xy.features.xtr
+
+    def want_xy_ampliconic(self, rk: RefKey) -> bool:
+        return self.refkey_to_strat(rk).xy.features.ampliconic
+
     def want_low_complexity(self, rk: RefKey, bk: BuildKey) -> bool:
         return self.buildkey_to_include(rk, bk).low_complexity
 

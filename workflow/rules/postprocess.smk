@@ -31,11 +31,7 @@ def expand_strat_targets(wildcards):
     auto = [t for tgt, test in targets if test(rk, bk) for t in tgt]
 
     # xy (expand target depending on which chromosomes we have selected)
-    sex = expand(
-        rules.all_xy_sex.input,
-        allow_missing=True,
-        chr=config.wanted_xy_chr_names(rk, bk),
-    )
+    sex = all_xy_features(wildcards) + all_xy_PAR(wildcards)
 
     # combine and ensure that all "targets" refer to final bed files
     all_targets = auto + sex
