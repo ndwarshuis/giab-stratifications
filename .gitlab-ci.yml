@@ -77,9 +77,9 @@ install_global_env:
 ################################################################################
 # lint code
 
-install_lint_envs:
-  stage: lint
-  script: ./setup_dev.sh $LINT_DIR
+# install_lint_envs:
+#   stage: lint
+#   script: ./setup_dev.sh $LINT_DIR
   # cache:
   #   - <<: *lint_cache
 
@@ -88,6 +88,7 @@ run_linters:
   script:
     - echo $CONDA_EXE
     - eval "$(${CONDA_DIR}/bin/conda shell.bash hook 2> /dev/null)"
+    - ./setup_dev.sh $LINT_DIR
     - ./lint.sh $LINT_DIR
   # cache:
   #   - <<: *lint_cache
