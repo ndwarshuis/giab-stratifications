@@ -24,7 +24,6 @@ uniform_repeats = {
 }
 
 
-# TODO this fa can be gzipped
 rule find_perfect_uniform_repeats:
     input:
         ref=rules.filter_sort_ref.output,
@@ -37,7 +36,8 @@ rule find_perfect_uniform_repeats:
         config.env_path("bedtools")
     shell:
         """
-        {input.bin} {wildcards.unit_len} {wildcards.total_len} {input.ref} 2> {log} | \
+        gunzip -c {input.ref} | \
+        {input.bin} {wildcards.unit_len} {wildcards.total_len} - 2> {log} | \
         sed 's/unit=\(.\)/unit=\\U\\1/' \
         > {output} 
         """

@@ -26,17 +26,6 @@ rule download_ref:
         config.python_script("bedtools/misc/get_file.py")
 
 
-rule unzip_ref:
-    input:
-        rules.download_ref.output,
-    output:
-        ref_master_dir / "ref.fna",
-    conda:
-        config.env_path("utils")
-    shell:
-        "gunzip -c {input} > {output}"
-
-
 # TODO is this only used for getting the genome? if so combine with rule 'get_genome'
 rule index_ref:
     input:
@@ -89,8 +78,8 @@ rule filter_sort_ref:
         ref_log_dir / "filter_sort_ref.log",
     shell:
         """
-        samtools faidx {input.fa} $(cut -f1 {input.genome} | tr '\n' ' ') 2> {log} > \
-        {output}
+        samtools faidx {input.fa} $(cut -f1 {input.genome} | tr '\n' ' ') 2> {log} | \
+        bgzip -c > {output}
         """
 
 

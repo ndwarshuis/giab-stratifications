@@ -60,9 +60,19 @@ rule unpack_gem:
 # index/align
 
 
+# this seems to be the only place that requires the fa to be unzipped
+rule unzip_ref:
+    input:
+        rules.filter_sort_ref.output,
+    output:
+        map_inter_dir / "ref.fa",
+    shell:
+        "gunzip -c {input} > {output}"
+
+
 rule gem_index:
     input:
-        fa=rules.filter_sort_ref.output,
+        fa=rules.unzip_ref.output,
         bin=rules.unpack_gem.output.indexer,
     output:
         map_inter_dir / "index.gem",
