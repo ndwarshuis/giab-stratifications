@@ -1,4 +1,1 @@
-channels:
-  - conda-forge
-dependencies:
-  - r-tidyverse=1.3.2
+../scripts/rmarkdown/rmarkdown/env.yml

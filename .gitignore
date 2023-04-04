@@ -1,7 +1,10 @@
 /*
+__pycache__
+
+!/workflow
+!/config
+
 !README.md
-!workflow/*
-!config/*
 !env.yml
 !lint.sh
 !.flake8
