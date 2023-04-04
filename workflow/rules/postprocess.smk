@@ -99,4 +99,4 @@ rule validate_strats:
     conda:
         config.env_path("rmarkdown")
     script:
-        config.rmd_script("validate.Rmd")
+        config.rmd_script("rmarkdown/validate.Rmd")
