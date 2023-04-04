@@ -9,7 +9,7 @@ stages:
 
 variables:
   ENV_DIR: ./this-env
-  LINT_DIR: ./lint
+  LINT_DIR: stratlint
   TESTCONF: config/dynamic-testing.yml
   TESTCONFFULL: config/dynamic-testing-full.yml
   # speed up cache compression
@@ -46,7 +46,7 @@ image: condaforge/mambaforge:4.12.0-0
 
 .lint_cache: &lint_cache
   paths:
-    - ./lint-*
+    - stratlint-*
   key:
     files:
       - workflow/scripts/python/*/env.yml
@@ -77,22 +77,21 @@ install_global_env:
 ################################################################################
 # lint code
 
-# install_lint_envs:
-#   stage: lint
-#   script: ./setup_dev.sh $LINT_DIR
-  # cache:
-  #   - <<: *lint_cache
+install_lint_envs:
+  stage: lint
+  script: ./setup_dev.sh $LINT_DIR
+  cache:
+    - <<: *lint_cache
 
 run_linters:
   stage: lint
   script:
     - echo $CONDA_EXE
     - eval "$(${CONDA_DIR}/bin/conda shell.bash hook 2> /dev/null)"
-    - ./setup_dev.sh $LINT_DIR
     - ./lint.sh $LINT_DIR
-  # cache:
-  #   - <<: *lint_cache
-  #     policy: pull
+  cache:
+    - <<: *lint_cache
+      policy: pull
 
 ################################################################################
 # set up snakemake rule conda environments
