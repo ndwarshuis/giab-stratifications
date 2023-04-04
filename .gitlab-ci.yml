@@ -80,8 +80,8 @@ install_global_env:
 install_lint_envs:
   stage: lint
   script: ./setup_dev.sh $LINT_DIR
-  cache:
-    - <<: *lint_cache
+  # cache:
+  #   - <<: *lint_cache
 
 run_linters:
   stage: lint
@@ -89,9 +89,9 @@ run_linters:
     - echo $CONDA_EXE
     - eval "$(${CONDA_DIR}/bin/conda shell.bash hook 2> /dev/null)"
     - ./lint.sh $LINT_DIR
-  cache:
-    - <<: *lint_cache
-      policy: pull
+  # cache:
+  #   - <<: *lint_cache
+  #     policy: pull
 
 ################################################################################
 # set up snakemake rule conda environments
