@@ -1,5 +1,5 @@
 ---
-title: "v3.1-stratifications Validation"
+title: "Stratification Validation"
 output:
   html_document:
     code_folding: hide
@@ -7,8 +7,6 @@ output:
     toc_depth: 2
     toc_float: true
     df_print: paged
-author: Jenny McDaniel
-date: "`r format(Sys.time(), '%d %B, %Y')`"
 ---
 
 <!-- # Purpose -->
@@ -100,19 +98,27 @@ expected_chroms <- snakemake@params$expected_chroms
 
 ```
 
-# Overview
-
 ```{r, echo = FALSE, results = "asis"}
 
 cat(sprintf("Reference: %s\n\n", snakemake@wildcards$ref_key))
 
 cat(sprintf("Build: %s\n\n", snakemake@wildcards$build_key))
 
-cat(sprintf("Included chromosomes: %s\n\n", str_c(expected_chroms, collapse = ",")))
-
 # TODO can also print out other build information here if we feel like it
 
 ```
+
+# Overview
+
+The following plots can be used to sanity-check the completed stratification bed
+files. These files can be assumed to:
+
+* be valid bed files
+* be sorted
+* have no overlapping regions
+* have only valid chromosomes
+* not intersect with gaps in the reference
+
 
 # Coverage Plots
 
