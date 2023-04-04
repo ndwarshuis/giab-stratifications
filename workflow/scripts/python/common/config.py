@@ -6,7 +6,7 @@ from enum import Enum, unique
 from typing import NewType, Any, Callable, TypeVar, Type, NamedTuple
 from typing_extensions import Self
 from Bio import bgzf  # type: ignore
-from more_itertools import unzip
+from more_itertools import unzip, unique_everseen
 
 X = TypeVar("X")
 Y = TypeVar("Y")
@@ -383,7 +383,7 @@ class GiabStrats(BaseModel):
 
     paths: Paths
     tools: Tools
-    stratifications: dict[str, Stratification]
+    stratifications: dict[RefKey, Stratification]
 
     # hack to make rmd scripts work with this (note this will totally kill
     # the config as it passes into an rmd script)
@@ -622,3 +622,42 @@ class GiabStrats(BaseModel):
             and self.want_low_complexity(rk, bk)
             and self.want_gc(rk, bk)
         )
+
+    # key lists for downloading resources
+
+    @property
+    def _all_builds(self) -> list[tuple[RefKey, BuildKey]]:
+        return [(rk, bk) for rk, s in self.stratifications.items() for bk in s.builds]
+
+    @property
+    def all_refkeys(self) -> list[RefKey]:
+        return [*self.stratifications]
+
+    def _all_refkey_from_want(
+        self,
+        f: Callable[[RefKey, BuildKey], bool],
+    ) -> list[RefKey]:
+        return [*unique_everseen(x[0] for x in self._all_builds if f(*x))]
+
+    @property
+    def all_refkey_gap(self) -> list[RefKey]:
+        return [k for k in self.all_refkeys if self.refkey_to_gap_src(k) is not None]
+
+    @property
+    def all_refkey_rmsk_trf(self) -> list[RefKey]:
+        return self._all_refkey_from_want(self.want_low_complexity)
+
+    @property
+    def all_refkey_censat(self) -> list[RefKey]:
+        return self._all_refkey_from_want(
+            lambda r, b: self.want_low_complexity(r, b)
+            and self.want_low_complexity_censat(r)
+        )
+
+    @property
+    def all_refkey_functional(self) -> list[RefKey]:
+        return self._all_refkey_from_want(self.want_functional)
+
+    @property
+    def all_refkey_segdups(self) -> list[RefKey]:
+        return self._all_refkey_from_want(self.want_segdups)
