@@ -1,5 +1,8 @@
 from typing import TypeVar
 from logging import Logger
+from pathlib import Path
+from Bio import bgzf  # type: ignore
+import gzip
 
 X = TypeVar("X")
 
@@ -24,3 +27,24 @@ def test_not_none(log: Logger, thing: X | None, what: str | None = None) -> X:
         )
         exit(1)
     return thing
+
+
+def is_gzip(p: Path) -> bool:
+    # test if gzip by trying to read first byte
+    with gzip.open(p, "r") as f:
+        try:
+            f.read(1)
+            return True
+        except gzip.BadGzipFile:
+            return False
+
+
+def is_bgzip(p: Path) -> bool:
+    # since bgzip is in blocks (vs gzip), determine if in bgzip by
+    # attempting to seek first block
+    with open(p, "rb") as f:
+        try:
+            next(bgzf.BgzfBlocks(f), None)
+            return True
+        except ValueError:
+            return False

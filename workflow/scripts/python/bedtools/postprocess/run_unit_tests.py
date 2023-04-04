@@ -3,9 +3,8 @@ from pathlib import Path
 import pandas as pd
 from pybedtools import BedTool as bt  # type: ignore
 from os.path import dirname, basename
-from common.config import is_bgzip
 import common.config as cfg
-from common.io import setup_logging
+from common.io import setup_logging, is_bgzip
 
 log = setup_logging(snakemake.log[0])  # type: ignore
 

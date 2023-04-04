@@ -36,14 +36,6 @@ stratifications:
       # Defaults: 'chr'
       chr_prefix: chr
 
-      # The format of the fasta file. Fasta files are assumed to be in bgzip
-      # format. If this is not the case, specify the real format here, and the
-      # fasta will be converted on the fly when downloaded.
-      #
-      # Possible options: bgzip, gzip, nozip
-      # Default: bgzip
-      # fmt: bgzip
-
     # A BED file containing gaps (if any) in the fasta reference. Gaps usually
     # mean regions with 'N' or some other indeterminate base. These gaps will
     # be subtracted off the final stratification files. If this is null, gaps
@@ -61,14 +53,6 @@ stratifications:
       # The prefix of each chromosome. Must match the chromosome column exactly
       # or weird things will happen. Defaults to 'chr'
       # chr_prefix: chr
-
-      # The format of the bed file. Bed files are assumed to be in (b)gzip
-      # format. If this is not the case, specify the real format here, and the
-      # file will be converted on the fly when downloaded.
-      #
-      # Possible options: gzip, nozip
-      # Default: gzip
-      # fmt: gzip
 
       # Number of lines to skip. If the bed file has some unconventional header
       # it may be necessary to skip the first N lines.
@@ -119,13 +103,11 @@ stratifications:
         x_bed:
           src: 
             url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed
-            fmt: nozip
           # Column index for the feature level (eg XTR, Ampliconic, etc)
           level_col: 3
         y_bed:
           src: 
             url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
-            fmt: nozip
           level_col: 3
         # Set to true if XTR regions are desired
         xtr: true
@@ -238,13 +220,11 @@ stratifications:
         x_bed:
           src: 
             url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/hg19/chrX_genomic_features_hg19.bed
-            fmt: nozip
           level_col: 3
           sep: "\\s+"
         y_bed:
           src: 
             url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/hg19/chrY_genomic_features_hg19.bed
-            fmt: nozip
           level_col: 3
           sep: "\\s+"
         xtr: true
@@ -296,7 +276,6 @@ stratifications:
       rmsk:
         src:
           url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/annotation/chm13v2.0_RepeatMasker_4.1.2p1.bed
-          fmt: nozip
         class_col: 6
       simreps:
         src:
@@ -313,12 +292,10 @@ stratifications:
         x_bed:
           src:
             url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/T2T/chrX_genomic_features_CHM13.bed
-            fmt: nozip
           level_col: 3
         y_bed:
           src: 
-            url: https://github.com/SexChrLab/SexChrCoordinates/blob/4ad1faf2b822db6fb89498a750d0b5336703fde3/T2T/chrY_genomic_features_HG002.bed
-            fmt: nozip
+            url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/T2T/chrY_genomic_features_HG002.bed
           level_col: 3
         xtr: true
         ampliconic: false # not present in these files

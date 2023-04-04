@@ -1,12 +1,11 @@
-import gzip
 from pathlib import Path
 from pydantic import BaseModel as BaseModel_
 from pydantic import validator, HttpUrl, FilePath, NonNegativeInt
 from enum import Enum, unique
 from typing import NewType, Any, Callable, TypeVar, Type, NamedTuple
 from typing_extensions import Self
-from Bio import bgzf  # type: ignore
 from more_itertools import unzip, unique_everseen
+from common.io import is_gzip, is_bgzip
 
 X = TypeVar("X")
 Y = TypeVar("Y")
@@ -18,21 +17,6 @@ RefKey = NewType("RefKey", str)
 
 def fmap_maybe(f: Callable[[X], Y], x: X | None) -> None | Y:
     return None if x is None else f(x)
-
-
-class RefFmt(Enum):
-    """Valid file formats for reference."""
-
-    NOZIP = "nozip"
-    GZIP = "gzip"
-    BGZIP = "bgzip"
-
-
-class BedFmt(Enum):
-    """Valid file formats for input bed file."""
-
-    NOZIP = "nozip"
-    GZIP = "gzip"
 
 
 @unique
@@ -151,6 +135,8 @@ class BedColumns(BaseModel):
 
 
 class FileSrc_(BaseModel):
+    """Base class for local src files."""
+
     filepath: FilePath
 
 
@@ -159,24 +145,8 @@ class BedFileSrc(FileSrc_):
 
     @validator("filepath")
     def is_gzip(cls, v: FilePath) -> FilePath:
-        # test if gzip by trying to read first byte
-        with gzip.open(v, "r") as f:
-            try:
-                f.read(1)
-            except gzip.BadGzipFile:
-                assert False, "not in gzip format"
+        assert is_gzip(v), "not in gzip format"
         return v
-
-
-def is_bgzip(p: Path) -> bool:
-    # since bgzip is in blocks (vs gzip), determine if in bgzip by
-    # attempting to seek first block
-    with open(p, "rb") as f:
-        try:
-            next(bgzf.BgzfBlocks(f), None)
-            return True
-        except ValueError:
-            return False
 
 
 class RefFileSrc(FileSrc_):
@@ -189,22 +159,23 @@ class RefFileSrc(FileSrc_):
 
 
 class HttpSrc_(BaseModel):
+    """Base class for downloaded src files."""
+
     url: HttpUrl
 
 
 class BedHttpSrc(HttpSrc_):
-    """Url for bed file."""
+    """Url for bed file"""
 
-    fmt: BedFmt = BedFmt.GZIP
+    pass
 
 
 class RefHttpSrc(HttpSrc_):
-    """Url for reference."""
+    """Url for reference"""
 
-    fmt: RefFmt = RefFmt.BGZIP
+    pass
 
 
-# TODO test the format of downloaded files for bgzip
 RefSrc = RefFileSrc | RefHttpSrc
 
 # TODO this is for more than just "bed files" (right now it basically means "a
