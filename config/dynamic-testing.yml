@@ -301,22 +301,22 @@ stratifications:
       simreps:
         src:
           # from here: https://app.globus.org/file-manager?origin_id=9db1f0a6-a05a-11ea-8f06-0a21f750d19b&origin_path=%2Fteam-segdups%2FAssembly_analysis%2FMasked%2F/T2T_CHM13v2_trf.bed
-          filepath: data/CHM13/LowComplexity/T2T-CHM13v2_trf.bed.gz
+          filepath: test/data/CHM13/LowComplexity/trf21and22.bed.gz
       # https://t2t-consortium.slack.com/files/ULT7E06GL/F039A96RY84/t2t_censat_chm13v2.0_trackv2.0.bed
       satellites:
         src:
-          filepath: data/CHM13/LowComplexity/censat.bed.gz
+          filepath: test/data/CHM13/LowComplexity/censat21and22.bed.gz
         skip_lines: 1
     xy:
       # from a slack thread w/ Melissa Wilson
       features:
         x_bed:
           src:
-            filepath: data/CHM13/XY/x_features.bed.gz
+            filepath: test/data/CHM13/XY/x_features.bed.gz
           level_col: 3
         y_bed:
           src: 
-            filepath: data/CHM13/XY/y_features.bed.gz
+            filepath: test/data/CHM13/XY/y_features.bed.gz
           level_col: 3
         xtr: true
         ampliconic: false # for now
