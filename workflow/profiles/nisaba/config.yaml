@@ -1,0 +1,33 @@
+# anything with wildcards needs quotes since wildcards might contain characters
+# that are openly hostile to most shells
+cluster:
+  mkdir -p cluster_logs/{rule} &&
+  sbatch
+    --partition={resources.partition}
+    --cpus-per-task={threads}
+    --mem={resources.mem_mb}
+    --job-name=smk-'{rule}-{wildcards}'
+    --output='cluster_logs/{rule}/%j-{wildcards}.out'
+    --time={resources.time}
+default-resources:
+  - partition=batch
+  - mem_mb=1000
+  - time="8:0:0"
+set-resources:
+  - gem_index:mem_mb=32000
+  - gem_mappability:mem_mb=32000
+set-threads:
+  - gem_index=16
+  - gem_mappability=16
+restart-times: 0
+max-jobs-per-second: 10
+max-status-checks-per-second: 1
+local-cores: 1
+latency-wait: 60
+jobs: 500
+keep-going: True
+rerun-incomplete: True
+printshellcmds: True
+scheduler: greedy
+use-conda: True
+cluster-cancel: "scancel"
