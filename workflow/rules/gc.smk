@@ -67,7 +67,7 @@ rule find_gc_content:
         cut -f1-3 | \
         slopBed -i stdin -g {input.genome} -b 50 | \
         mergeBed -i stdin | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
+        intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c \
         > {output}
         """

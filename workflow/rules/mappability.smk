@@ -172,7 +172,7 @@ rule get_nonunique:
         """
         complementBed -i {input} -g {params.genome} | \
         mergeBed -d 100 -i stdin | \
-        intersectBed -a stdin -b {params.gapless} -sorted | \
+        intersectBed -a stdin -b {params.gapless} -sorted -g {params.genome} | \
         bgzip -c > \
         {output}
         """
@@ -208,6 +208,7 @@ rule merge_nonunique:
     input:
         bed=nonunique_inputs,
         gapless=rules.get_gapless.output.auto,
+        genome=rules.get_genome.output,
     output:
         map_final_path("lowmappabilityall"),
     conda:
@@ -222,7 +223,7 @@ rule merge_nonunique:
         else
             multiIntersectBed -i {input.bed} | \
             mergeBed -d 100 -i stdin | \
-            intersectBed -a stdin -b {input.gapless} -sorted | \
+            intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
             bgzip -c > \
             {output}
         fi
@@ -242,7 +243,7 @@ rule invert_merged_nonunique:
     shell:
         """
         complementBed -i {input} -g {params.genome} | \
-        intersectBed -a stdin -b {params.gapless} -sorted | \
+        intersectBed -a stdin -b {params.gapless} -sorted -g {params.genome} | \
         bgzip -c > {output}
         """
 

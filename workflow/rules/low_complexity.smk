@@ -102,7 +102,7 @@ rule slop_uniform_repeats:
         slopBed -i {input.bed} -b 5 -g {input.genome} | \
         cut -f1-3 | \
         mergeBed -i stdin | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
+        intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c \
         > {output}
         """
@@ -350,6 +350,7 @@ rule merge_satellites:
         bed=lambda w: rules.merge_censat_satellites.output
         if config.want_low_complexity_censat(w.ref_key)
         else rules.merge_rmsk_satellites.output,
+        genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
         lc_final_path("satellites_slop5"),
@@ -357,7 +358,7 @@ rule merge_satellites:
         "../envs/bedtools.yml"
     shell:
         """
-        intersectBed -a {input.bed} -b {input.gapless} -sorted | \
+        intersectBed -a {input.bed} -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c > {output}
         """
 
@@ -403,7 +404,7 @@ rule merge_all_uniform_repeats:
         mergeBed -i stdin | \
         multiIntersectBed -i stdin {input.imperfect} | \
         mergeBed -i stdin | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
+        intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c \
         > {output}
         """
@@ -451,6 +452,7 @@ rule filter_TRs:
     input:
         tr=rules.merge_repeats.output,
         hp=rules.merge_all_uniform_repeats.output,
+        genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
         lc_final_path("AllTandemRepeats_{tr_bound}bp_slop5"),
@@ -464,7 +466,7 @@ rule filter_TRs:
         """
         awk '($3-$2)+10>={params.lower} && ($3-$2)+10<{params.upper}' {input.tr} | \
         subtractBed -a stdin -b {input.hp} | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
+        intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c > {output}
         """
 

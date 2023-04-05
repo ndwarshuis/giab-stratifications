@@ -25,7 +25,9 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     )
     gapless = bt(smk.input["gapless"])
     nogaps = (
-        bt.from_dataframe(filtsort).intersect(b=gapless, sorted=True).to_dataframe()
+        bt.from_dataframe(filtsort)
+        .intersect(b=gapless, sorted=True, g=str(smk.input["genome"]))
+        .to_dataframe()
     )
     write_bed(smk.output[0], nogaps)
 

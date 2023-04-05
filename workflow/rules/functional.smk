@@ -35,6 +35,7 @@ rule combine_ftbl_and_gff:
 rule merge_functional:
     input:
         bed=rules.combine_ftbl_and_gff.output,
+        genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
         func_final_path("refseq_cds"),
@@ -43,7 +44,7 @@ rule merge_functional:
     shell:
         """
         mergeBed -i {input.bed} | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
+        intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c > {output}
         """
 

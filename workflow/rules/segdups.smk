@@ -27,6 +27,7 @@ rule filter_sort_superdups:
 rule merge_superdups:
     input:
         bed=rules.filter_sort_superdups.output,
+        genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
         segdup_final_path("segdups"),
@@ -35,7 +36,7 @@ rule merge_superdups:
     shell:
         """
         mergeBed -i {input.bed} -d 100 | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
+        intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c > {output}
         """
 
@@ -67,7 +68,7 @@ rule notin_superdups:
     shell:
         """
         complementBed -i {input.bed} -g {input.genome} | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
+        intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c > {output}
         """
 

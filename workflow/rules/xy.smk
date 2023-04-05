@@ -26,6 +26,7 @@ rule filter_XTR_features:
     input:
         bed=rules.download_genome_features_bed.output[0],
         gapless=rules.get_gapless.output.auto,
+        genome=rules.get_genome.output,
     output:
         xy_final_path("chr{chr}_XTR"),
     conda:
@@ -40,6 +41,7 @@ use rule filter_XTR_features as filter_ampliconic_features with:
     input:
         bed=rules.download_genome_features_bed.output[0],
         gapless=rules.get_gapless.output.auto,
+        genome=rules.get_genome.output,
     output:
         xy_final_path("chr{chr}_ampliconic"),
     params:
@@ -68,7 +70,7 @@ rule invert_PAR:
         """
         complementBed -i {input.bed} -g {input.genome} | \
         grep {wildcards.chr} | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
+        intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c > {output}
         """
 
@@ -77,6 +79,7 @@ rule filter_autosomes:
     input:
         bed=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
+        genome=rules.get_genome.output,
     output:
         xy_final_path("AllAutosomes"),
     conda:
@@ -85,7 +88,7 @@ rule filter_autosomes:
         """
         awk -v OFS='\t' {{'print $1,\"0\",$2'}} {input.bed} | \
         grep -v \"X\|Y\" | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
+        intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c > {output}
         """
 

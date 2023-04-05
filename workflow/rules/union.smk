@@ -32,7 +32,7 @@ rule invert_segdup_and_map:
     shell:
         """
         complementBed -i {input.bed} -g {params.genome} |
-        intersectBed -a stdin -b {params.gapless} -sorted | \
+        intersectBed -a stdin -b {params.gapless} -sorted -g {params.genome} | \
         bgzip -c \
         > {output}
         """
