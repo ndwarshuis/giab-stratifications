@@ -10,9 +10,9 @@ rule write_PAR_intermediate:
     output:
         ref_inter_dir / "chr{chr}_PAR.bed.gz",
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     script:
-        config.python_script("bedtools/xy/write_par.py")
+        "../scripts/python/bedtools/xy/write_par.py"
 
 
 rule download_ref:
@@ -21,9 +21,9 @@ rule download_ref:
     params:
         src=lambda w: config.refkey_to_ref_src(w.ref_key),
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     script:
-        config.python_script("bedtools/misc/get_file.py")
+        "../scripts/python/bedtools/misc/get_file.py"
 
 
 # TODO is this only used for getting the genome? if so combine with rule 'get_genome'
@@ -33,7 +33,7 @@ rule index_ref:
     output:
         ref_master_dir / "ref.fna.fai",
     conda:
-        config.env_path("utils")
+        "../envs/utils.yml"
     log:
         ref_master_log_dir / "index_ref.log",
     shell:
@@ -50,11 +50,11 @@ rule get_genome:
     output:
         ref_inter_dir / "genome.txt",
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     log:
         ref_log_dir / "get_genome.log",
     script:
-        config.python_script("bedtools/ref/get_genome.py")
+        "../scripts/python/bedtools/ref/get_genome.py"
 
 
 rule genome_to_bed:
@@ -73,7 +73,7 @@ rule filter_sort_ref:
     output:
         ref_inter_dir / "ref_filtered.fa",
     conda:
-        config.env_path("utils")
+        "../envs/utils.yml"
     log:
         ref_log_dir / "filter_sort_ref.log",
     shell:
@@ -98,9 +98,9 @@ rule merge_gaps:
     output:
         ref_inter_dir / "gaps_merged.bed",
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     script:
-        scripts_path("python/bedtools/ref/filter_sort_gaps.py")
+        "../scripts/python/bedtools/ref/filter_sort_gaps.py"
 
 
 # This is super convoluted since many rules use the gap file, but I only want
@@ -124,7 +124,7 @@ rule get_gapless:
         auto=ref_inter_dir / "genome_gapless.bed",
         parY=ref_inter_dir / "genome_gapless_parY.bed",
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     params:
         hasgaps=lambda _, input: 1 if "gaps" in input else 0,
     shell:

@@ -421,8 +421,9 @@ class GiabStrats(BaseModel):
     # because smk doesn't check these for existence yet:
     # https://github.com/snakemake/snakemake/issues/1657
     def _workflow_path(self, components: list[str]) -> Path:
-        p = Path("workflow", *components).resolve()
-        assert p.exists(), f"{p} does not exist"
+        p = Path("workflow", *components)
+        # except that it doesn't work too well in subworkflows...
+        # assert p.exists(), f"{p} does not exist"
         return p
 
     def env_path(self, envname: str) -> Path:

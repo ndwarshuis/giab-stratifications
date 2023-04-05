@@ -25,7 +25,7 @@ rule download_gem:
     params:
         url=config.tools.gemlib,
     conda:
-        config.env_path("utils")
+        "../envs/utils.yml"
     shell:
         "curl -sS -L -o {output} {params.url}"
 
@@ -143,7 +143,7 @@ rule wig_to_bed:
     resources:
         mem_mb=8000,
     conda:
-        envs_path("map.yml")
+        "../envs/map.yml"
     shell:
         """
         sed 's/ AC//' {input} | \
@@ -164,7 +164,7 @@ rule get_nonunique:
     output:
         map_final_path("nonunique_l{l}_m{m}_e{e}"),
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     params:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
@@ -211,7 +211,7 @@ rule merge_nonunique:
     output:
         map_final_path("lowmappabilityall"),
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     params:
         n=lambda _, input: len(input.bed),
     shell:
@@ -235,7 +235,7 @@ rule invert_merged_nonunique:
     output:
         map_final_path("notinlowmappabilityall"),
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     params:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,

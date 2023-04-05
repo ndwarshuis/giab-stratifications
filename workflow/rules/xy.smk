@@ -29,11 +29,11 @@ rule filter_XTR_features:
     output:
         xy_final_path("chr{chr}_XTR"),
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     params:
         level="XTR",
     script:
-        config.python_script("bedtools/xy/filter_sort_features.py")
+        "../scripts/python/bedtools/xy/filter_sort_features.py"
 
 
 use rule filter_XTR_features as filter_ampliconic_features with:
@@ -63,7 +63,7 @@ rule invert_PAR:
     output:
         xy_final_path("chr{chr}_nonPAR"),
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     shell:
         """
         complementBed -i {input.bed} -g {input.genome} | \
@@ -80,7 +80,7 @@ rule filter_autosomes:
     output:
         xy_final_path("AllAutosomes"),
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     shell:
         """
         awk -v OFS='\t' {{'print $1,\"0\",$2'}} {input.bed} | \

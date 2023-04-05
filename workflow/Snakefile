@@ -7,39 +7,11 @@ min_version("7.20")
 configfile: "config/static.yml"
 
 
-# required to get a snakemake to properly depickle a pydantic model
+# required to get snakemake to properly depickle a pydantic model
 sys.path.extend(["./workflow/scripts/python"])
 from common.config import GiabStrats
 
 config = GiabStrats.parse_obj(config)
-
-
-################################################################################
-# Paths
-
-# conf_paths = config.paths
-# resources_dir = conf_paths.resources
-# results_dir = conf_paths.results
-scripts_root = Path("workflow/scripts")
-
-# TODO need to restrict wildcards for refkey and build key so underscors don't
-# get mangled
-# builds_dir = results_dir / "builds"
-# log_dir = builds_dir / "log" / "{ref_key}@{build_key}"
-# intermediate_dir = builds_dir / "intermediates" / "{ref_key}@{build_key}"
-# final_dir = builds_dir / "final" / "{ref_key}@{build_key}"
-
-
-def build_abs_path(relpath, basename):
-    return str(relpath.resolve() / basename)
-
-
-envs_path = partial(build_abs_path, Path("workflow/envs"))
-scripts_path = partial(build_abs_path, Path("workflow/scripts"))
-
-
-################################################################################
-# Targets
 
 
 include: "rules/repseq.smk"

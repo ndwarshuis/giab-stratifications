@@ -9,7 +9,7 @@ rule intersect_segdup_and_map:
     output:
         uni_final_path("alllowmapandsegdupregions"),
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     shell:
         """
         multiIntersectBed -i {input} | \
@@ -25,7 +25,7 @@ rule invert_segdup_and_map:
     output:
         uni_final_path("notinalllowmapandsegdupregions"),
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     params:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,

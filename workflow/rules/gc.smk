@@ -60,7 +60,7 @@ rule find_gc_content:
     params:
         args=seqtk_args,
     conda:
-        envs_path("seqtk.yml")
+        "../envs/seqtk.yml"
     shell:
         """
         seqtk gc {params.args} -l 100 {input.ref} | \
@@ -84,7 +84,7 @@ rule subtract_gc_content:
     output:
         gc_final_path("gc{lower_frac,[0-9]+}to{upper_frac,[0-9]+}_slop50"),
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     shell:
         """
         subtractBed -a {input.bed_a} -b {input.bed_b} | \
@@ -114,7 +114,7 @@ rule intersect_gc_ranges:
     output:
         gc_final_path("gclt{lower,[0-9]+}orgt{upper,[0-9]+}_slop50"),
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     shell:
         """
         multiIntersectBed -i {input} | \

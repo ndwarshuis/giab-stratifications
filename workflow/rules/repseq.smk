@@ -4,7 +4,7 @@ rule download_repseq:
     params:
         url=config.tools.repseq,
     conda:
-        config.env_path("utils")
+        "../envs/utils.yml"
     shell:
         "curl -sS -L -o {output} {params.url}"
 
@@ -27,7 +27,7 @@ rule build_repseq:
     output:
         config.tools_bin_dir / "repseq",
     conda:
-        config.env_path("build")
+        "../envs/build.yml"
     log:
         config.log_root_dir / "tools" / "repseq_build.log",
     shell:

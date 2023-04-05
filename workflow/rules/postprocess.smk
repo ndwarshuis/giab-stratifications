@@ -46,9 +46,9 @@ rule list_all_strats:
     output:
         post_inter_dir / "all_strats.txt",
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     script:
-        config.python_script("bedtools/postprocess/list_strats.py")
+        "../scripts/python/bedtools/postprocess/list_strats.py"
 
 
 # TODO don't hardcode version
@@ -58,9 +58,9 @@ rule generate_md5sums:
     output:
         config.final_build_dir / "v3.1-genome-stratifications-{ref_key}-md5s.txt",
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     script:
-        config.python_script("bedtools/postprocess/list_md5.py")
+        "../scripts/python/bedtools/postprocess/list_md5.py"
 
 
 rule generate_tsv_list:
@@ -69,7 +69,7 @@ rule generate_tsv_list:
     output:
         config.final_build_dir / "v3.1-{ref_key}-all-stratifications.tsv",
     script:
-        config.python_script("bedtools/postprocess/generate_tsv.py")
+        "../scripts/python/bedtools/postprocess/generate_tsv.py"
 
 
 rule unit_test_strats:
@@ -82,9 +82,9 @@ rule unit_test_strats:
     log:
         post_inter_dir / "unit_tests.log",
     conda:
-        config.env_path("bedtools")
+        "../envs/bedtools.yml"
     script:
-        config.python_script("bedtools/postprocess/run_unit_tests.py")
+        "../scripts/python/bedtools/postprocess/run_unit_tests.py"
 
 
 rule validate_strats:
@@ -97,6 +97,6 @@ rule validate_strats:
     output:
         config.final_build_dir / "validation.html",
     conda:
-        config.env_path("rmarkdown")
+        "../envs/rmarkdown.yml"
     script:
-        config.rmd_script("rmarkdown/validate.Rmd")
+        "../scripts/rmarkdown/rmarkdown/validate.Rmd"
