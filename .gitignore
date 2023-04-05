@@ -1,0 +1,14 @@
+/*
+__pycache__
+
+!/workflow
+!/config
+!/test
+
+!README.md
+!env.yml
+!lint.sh
+!.flake8
+!mypy.ini
+!.gitlab-ci.yml
+!setup_dev.sh

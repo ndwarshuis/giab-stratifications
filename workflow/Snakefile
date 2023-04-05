@@ -1,0 +1,23 @@
+from snakemake.utils import min_version
+
+min_version("7.22")
+
+
+configfile: "config/static.yml"
+
+
+# hack to get pydantic to work (one level down)
+sys.path.extend(["../giab-stratifications/workflow/scripts/python"])
+from common.config import GiabStrats
+
+config = GiabStrats.parse_obj(config)
+
+
+module strats_base:
+    snakefile:
+        "../../giab-stratifications/workflow/Snakefile"
+    config:
+        config
+
+
+use rule * from strats_base

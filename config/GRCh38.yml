@@ -1,0 +1,69 @@
+stratifications:
+  GRCh38:
+    ref:
+      src:
+        url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/references/GRCh38/GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta.gz
+      chr_prefix: chr
+    gap:
+      src: 
+        url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
+      bed_cols: {chr: 1, start: 2, end: 3}
+
+    low_complexity:
+      rmsk:
+        src:
+          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
+        bed_cols: {chr: 5, start: 6, end: 7}
+        class_col: 11
+
+      satellites: null
+
+      simreps:
+        src: 
+          url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
+        bed_cols: {chr: 1, start: 2, end: 3}
+
+    xy:
+      features: 
+        x_bed:
+          src: 
+            url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed
+          level_col: 3
+        y_bed:
+          src: 
+            url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
+          level_col: 3
+        xtr: true
+        ampliconic: true
+      x_par:
+        start: [0, 2781479]
+        end: [155701383, 156030895]
+      y_par:
+        start: [10001, 2781479]
+        end: [56887902, 57217415]
+
+    segdups:
+      superdups:
+        src:
+          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/genomicSuperDups.txt.gz
+        bed_cols: {chr: 1, start: 2, end: 3}
+
+    functional:
+      ftbl_src:
+        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_feature_table.txt.gz
+      gff_src:
+        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gff.gz
+
+    builds:
+      test_autosome:
+        chr_filter: []
+        include:
+          low_complexity: true
+          xy: true
+          gc: true
+          functional: true
+          segdups: true
+          union: true
+          mappability:
+            - {length: 250, mismatches: 0, indels: 0}
+            - {length: 100, mismatches: 2, indels: 1}
