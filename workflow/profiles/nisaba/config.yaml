@@ -22,6 +22,7 @@ set-resources:
   - get_nonunique:mem_mb=4000
   - subtract_uniform_repeats:mem_mb=4000
   - filter_sort_rmsk:mem_mb=4000
+  - filter_TRs:mem_mb=4000
 set-threads:
   - gem_index=32
   - gem_mappability=32
