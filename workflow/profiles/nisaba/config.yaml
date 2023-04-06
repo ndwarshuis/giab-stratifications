@@ -14,9 +14,14 @@ default-resources:
   - mem_mb=1000
   - time="8:0:0"
 set-resources:
+  # gem is totally ravenous
   - gem_index:mem_mb=32000
   - gem_mappability:mem_mb=32000
   - gem_to_wig:mem_mb=32000
+  # some rules involve large files, so more memory
+  - get_nonunique:mem_mb=4000
+  - subtract_uniform_repeats:mem_mb=4000
+  - filter_sort_rmsk:mem_mb=4000
 set-threads:
   - gem_index=32
   - gem_mappability=32
