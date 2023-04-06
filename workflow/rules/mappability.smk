@@ -175,6 +175,8 @@ rule get_nonunique:
     params:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
+    benchmark:
+        map_bench_dir / "nonunique_l{l}_m{m}_e{e}.txt"
     shell:
         """
         complementBed -i {input} -g {params.genome} | \

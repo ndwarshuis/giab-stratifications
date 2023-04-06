@@ -5,6 +5,7 @@ from functools import partial
 lc_src_dir = config.ref_src_dir / "low_complexity"
 lc_inter_dir = config.intermediate_build_dir / "LowComplexity"
 lc_log_dir = config.log_build_dir / "LowComplexity"
+lc_bench_dir = config.bench_build_dir / "LowComplexity"
 
 
 def lc_final_path(name):
@@ -80,6 +81,8 @@ rule subtract_uniform_repeats:
         lc_inter_dir / "uniform_repeat_range_{unit_name}_{total_lenA}to{total_lenB}.bed",
     conda:
         "../envs/bedtools.yml"
+    benchmark:
+        lc_bench_dir / "subtract_uniform_repeats.txt"
     shell:
         "subtractBed -a {input.a} -b {input.b} > {output}"
 
@@ -255,6 +258,8 @@ rule filter_sort_rmsk:
         lc_inter_dir / "rmsk.txt.gz",
     conda:
         "../envs/bedtools.yml"
+    benchmark:
+        lc_bench_dir / "filter_sort_rmsk.txt"
     script:
         "../scripts/python/bedtools/low_complexity/filter_sort_rmsk.py"
 
