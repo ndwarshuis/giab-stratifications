@@ -100,7 +100,7 @@ rule gem_mappability:
         fa=rules.gem_index.output,
         bin=rules.unpack_gem.output.mappability,
     output:
-        map_inter_dir / "GRCh38_unique_l{l}_m{m}_e{e}.mappability",
+        map_inter_dir / "unique_l{l}_m{m}_e{e}.mappability",
     params:
         base=lambda wildcards, output: splitext(output[0])[0],
     threads: 8
@@ -126,7 +126,7 @@ rule gem_to_wig:
         map=rules.gem_mappability.output,
         bin=rules.unpack_gem.output.gem2wig,
     output:
-        map_inter_dir / "GRCh38_unique_l{l}_m{m}_e{e}.wig",
+        map_inter_dir / "unique_l{l}_m{m}_e{e}.wig",
     params:
         base=lambda wildcards, output: splitext(output[0])[0],
     log:

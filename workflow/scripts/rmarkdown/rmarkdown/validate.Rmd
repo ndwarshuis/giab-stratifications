@@ -197,7 +197,7 @@ coverage_plots(df_coverage, "Union")
 
 ## Ancestry
 
-Regions with inferred patterns of local ancestry in GRCh38.
+Regions with inferred patterns of local ancestry.
 
 ```{r, echo = FALSE, results = "asis"}
 coverage_plots(df_coverage, "ancestry")

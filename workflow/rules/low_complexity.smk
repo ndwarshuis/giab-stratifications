@@ -319,7 +319,7 @@ rule merge_censat_satellites:
         bed=rules.filter_sort_censat.output,
         genome=rules.get_genome.output,
     output:
-        lc_inter_dir / "GRCh38_censat_satellites_slop5.bed.gz",
+        lc_inter_dir / "censat_satellites_slop5.bed.gz",
     conda:
         "../envs/bedtools.yml"
     shell:
@@ -338,7 +338,7 @@ rule merge_rmsk_satellites:
         bed=rules.all_rmsk_classes.input.Satellite,
         genome=rules.get_genome.output,
     output:
-        lc_inter_dir / "GRCh38_rmsk_satellites_slop5.bed.gz",
+        lc_inter_dir / "rmsk_satellites_slop5.bed.gz",
     conda:
         "../envs/bedtools.yml"
     shell:
