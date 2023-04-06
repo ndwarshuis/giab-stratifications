@@ -56,11 +56,13 @@ rule find_gc_content:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        gc_inter_dir / "gc{frac,[0-9]+}.bed.gz",
+        gc_inter_dir / "gc{frac}.bed.gz",
     params:
         args=seqtk_args,
     conda:
         "../envs/seqtk.yml"
+    wildcard_constraints:
+        frac="\d+",
     shell:
         """
         seqtk gc {params.args} -l 100 {input.ref} | \
@@ -75,16 +77,19 @@ rule find_gc_content:
 
 use rule find_gc_content as find_gc_content_final with:
     output:
-        gc_final_path("gc{frac,[0-9]+}"),
+        gc_final_path("gc{frac}"),
 
 
 rule subtract_gc_content:
     input:
         unpack(subtract_inputs),
     output:
-        gc_final_path("gc{lower_frac,[0-9]+}to{upper_frac,[0-9]+}_slop50"),
+        gc_final_path("gc{lower_frac}to{upper_frac}_slop50"),
     conda:
         "../envs/bedtools.yml"
+    wildcard_constraints:
+        lower_frac="\d+",
+        upper_frac="\d+",
     shell:
         """
         subtractBed -a {input.bed_a} -b {input.bed_b} | \

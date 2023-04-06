@@ -8,17 +8,18 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     rk = cfg.RefKey(smk.wildcards["ref_key"])
     bk = cfg.BuildKey(smk.wildcards["build_key"])
     level = smk.params["level"]
-    i = cfg.ChrIndex.from_name(smk.wildcards["chr"])
+    i = cfg.ChrIndex.from_name(smk.wildcards["sex_chr"])
 
     assert i in [cfg.ChrIndex.CHRX, cfg.ChrIndex.CHRY], "invalid sex chr"
 
     fs = sconf.refkey_to_strat(rk).xy.features
     bedfile = fs.x_bed if i is cfg.ChrIndex.CHRX else fs.y_bed
+    ps = bedfile.params
 
     level_col = bedfile.level_col
-    conv = sconf.buildkey_to_chr_conversion(rk, bk, bedfile.chr_prefix)
+    conv = sconf.buildkey_to_chr_conversion(rk, bk, ps.chr_prefix)
 
-    df = read_bed(smk.input["bed"], bedfile, [level_col])
+    df = read_bed(smk.input["bed"], ps, [level_col])
     filtsort = filter_sort_bed(conv, df)
     filtsort = filtsort[filtsort[level_col].str.contains(level)].drop(
         columns=[level_col]

@@ -24,6 +24,8 @@ uniform_repeats = {
     "quadTR": URep(4, 3, [19, 50, 200]),
 }
 
+unit_name_constraint = f"({'|'.join(uniform_repeats)})"
+
 
 rule find_perfect_uniform_repeats:
     input:
@@ -33,6 +35,9 @@ rule find_perfect_uniform_repeats:
         lc_inter_dir / "uniform_repeats_R{unit_len}_T{total_len}.bed",
     log:
         lc_log_dir / "uniform_repeats_R{unit_len}_T{total_len}.log",
+    wildcard_constraints:
+        unit_len="\d+",
+        total_len="\d+",
     conda:
         "../envs/bedtools.yml"
     shell:
@@ -82,7 +87,11 @@ rule subtract_uniform_repeats:
     conda:
         "../envs/bedtools.yml"
     benchmark:
-        lc_bench_dir / "subtract_uniform_repeats.txt"
+        lc_bench_dir / "subtract_uniform_repeats_{unit_name}_{total_lenA}to{total_lenB}.txt"
+    wildcard_constraints:
+        unit_name=unit_name_constraint,
+        total_lenA="\d+",
+        total_lenb="\d+",
     shell:
         "subtractBed -a {input.a} -b {input.b} > {output}"
 
@@ -100,6 +109,9 @@ rule slop_uniform_repeats:
         lc_final_path("SimpleRepeat_{unit_name}_ge{total_len}_slop5"),
     conda:
         "../envs/bedtools.yml"
+    wildcard_constraints:
+        unit_name=unit_name_constraint,
+        total_len="\d+",
     shell:
         """
         slopBed -i {input.bed} -b 5 -g {input.genome} | \
@@ -133,6 +145,8 @@ rule merge_perfect_uniform_repeats:
         lc_inter_dir / "repeats_imp_hp_T{merged_len}_B{base}.bed",
     conda:
         "../envs/bedtools.yml"
+    wildcard_constraints:
+        merged_len="\d+",
     shell:
         """
         grep 'unit={wildcards.base}' {input} | \
@@ -154,6 +168,8 @@ rule merge_imperfect_uniform_repeats:
         lc_final_path("SimpleRepeat_imperfecthomopolge{merged_len}_slop5"),
     conda:
         "../envs/bedtools.yml"
+    wildcard_constraints:
+        merged_len="\d+",
     shell:
         """
         multiIntersectBed -i {input.beds} | \
@@ -268,9 +284,11 @@ rule merge_rmsk_class:
     input:
         rmsk=rules.filter_sort_rmsk.output,
     output:
-        lc_inter_dir / "rmsk_{rmsk_class}.bed.gz",
+        lc_inter_dir / "rmsk_class_{rmsk_class}.bed.gz",
     conda:
         "../envs/bedtools.yml"
+    wildcard_constraints:
+        rmsk_class="\w+",
     shell:
         """
         gunzip -c {input.rmsk} | \
@@ -466,6 +484,8 @@ rule filter_TRs:
         upper=lambda w: tr_bounds[w.tr_bound]["upper"],
     conda:
         "../envs/bedtools.yml"
+    wildcard_constraints:
+        tr_bound=f"({'|'.join(tr_bounds)})",
     # NOTE +10 since this is processing a bed file that had 5bp slop added
     shell:
         """

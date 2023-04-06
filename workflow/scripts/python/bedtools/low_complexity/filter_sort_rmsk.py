@@ -10,7 +10,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         sconf,
         smk.input[0],
         smk.output[0],
-        sconf.refkey_to_strat(rk).low_complexity.rmsk,
+        sconf.refkey_to_strat(rk).low_complexity.rmsk.params,
         rk,
         bk,
         [sconf.stratifications[rk].low_complexity.rmsk.class_col],

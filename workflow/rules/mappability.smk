@@ -19,6 +19,12 @@ def map_final_path(name):
 
 gemlib_bin = Path("GEM-binaries-Linux-x86_64-core_i3-20130406-045632/bin")
 
+gem_wc_constraints = {
+    "l": "\d+",
+    "m": "\d+",
+    "e": "\d+",
+}
+
 
 rule download_gem:
     output:
@@ -108,6 +114,8 @@ rule gem_mappability:
         map_log_dir / "mappability_l{l}_m{m}_e{e}.log",
     benchmark:
         map_bench_dir / "mappability_l{l}_m{m}_e{e}.txt"
+    wildcard_constraints:
+        **gem_wc_constraints,
     shell:
         """
         {input.bin} \
@@ -133,6 +141,8 @@ rule gem_to_wig:
         map_log_dir / "gem2wig_l{l}_m{m}_e{e}.log",
     benchmark:
         map_bench_dir / "gem2wig_l{l}_m{m}_e{e}.txt"
+    wildcard_constraints:
+        **gem_wc_constraints,
     shell:
         """
         {input.bin} \
@@ -142,25 +152,40 @@ rule gem_to_wig:
         """
 
 
+# NOTE: -d option to not sort and save some speed/memory (we shall sort later,
+# because this command does not do it the way I want)
 rule wig_to_bed:
     input:
         rules.gem_to_wig.output,
     output:
-        map_inter_dir / "GRCh38_unique_l{l}_m{m}_e{e}.bed.gz",
-    # arbitrary default, will likely need to override this on clusters
-    resources:
-        mem_mb=8000,
+        map_inter_dir / "unique_l{l}_m{m}_e{e}.bed.gz",
     conda:
         "../envs/map.yml"
+    wildcard_constraints:
+        **gem_wc_constraints,
     shell:
         """
         sed 's/ AC//' {input} | \
-        wig2bed -m {resources.mem_mb}M | \
+        wig2bed -d | \
         awk '$5>0.9' | \
         cut -f1-3 | \
         gzip -c > \
         {output}
         """
+
+
+# wig2bed "makes no guarantees about sort ordering"
+rule sort_unique:
+    input:
+        rules.wig_to_bed.output,
+    output:
+        map_inter_dir / "unique_l{l}_m{m}_e{e}_sorted.bed.gz",
+    wildcard_constraints:
+        **gem_wc_constraints,
+    conda:
+        "../envs/bedtools.yml"
+    script:
+        "../scripts/python/bedtools/mappability/sort_unique.py"
 
 
 ################################################################################
@@ -169,7 +194,7 @@ rule wig_to_bed:
 
 rule get_nonunique:
     input:
-        rules.wig_to_bed.output,
+        rules.sort_unique.output,
     output:
         map_final_path("nonunique_l{l}_m{m}_e{e}"),
     conda:

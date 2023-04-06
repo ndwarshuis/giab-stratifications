@@ -14,6 +14,16 @@ from common.config import GiabStrats
 config = GiabStrats.parse_obj(config)
 
 
+wildcard_constraints:
+    # permit alphanumerics and dashes only, underscores will be used for
+    # separation in filepaths; this convention makes it impossible for
+    # wildcards to be ambiguous
+    ref_key="[A-Za-z0-9-]+",
+    build_key="[A-Za-z0-9-]+",
+    # this appears way too often, so define constraint here
+    sex_chr="[XY]",
+
+
 include: "rules/repseq.smk"
 include: "rules/ref.smk"
 include: "rules/xy.smk"

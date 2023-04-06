@@ -8,18 +8,18 @@ def xy_final_path(name):
 
 use rule download_ref as download_genome_features_bed with:
     output:
-        xy_src_dir / "genome_features_{chr}.bed.gz",
+        xy_src_dir / "genome_features_{sex_chr}.bed.gz",
     params:
         src=lambda w: (
             config.refkey_to_y_features_src
-            if w.chr == "Y"
+            if w.sex_chr == "Y"
             else config.refkey_to_x_features_src
         )(w.ref_key),
 
 
 use rule write_PAR_intermediate as write_PAR_final with:
     output:
-        xy_inter_dir / "chr{chr}_PAR.bed.gz",
+        xy_inter_dir / "chr{sex_chr}_PAR.bed.gz",
 
 
 rule filter_XTR_features:
@@ -28,7 +28,7 @@ rule filter_XTR_features:
         gapless=rules.get_gapless.output.auto,
         genome=rules.get_genome.output,
     output:
-        xy_final_path("chr{chr}_XTR"),
+        xy_final_path("chr{sex_chr}_XTR"),
     conda:
         "../envs/bedtools.yml"
     params:
@@ -43,13 +43,13 @@ use rule filter_XTR_features as filter_ampliconic_features with:
         gapless=rules.get_gapless.output.auto,
         genome=rules.get_genome.output,
     output:
-        xy_final_path("chr{chr}_ampliconic"),
+        xy_final_path("chr{sex_chr}_ampliconic"),
     params:
         level="Ampliconic",
 
 
 def par_input(wildcards):
-    test_fun = config.want_xy_y if wildcards.chr == "Y" else config.want_xy_x
+    test_fun = config.want_xy_y if wildcards.sex_chr == "Y" else config.want_xy_x
     return (
         rules.write_PAR_final.output
         if test_fun(wildcards.ref_key, wildcards.build_key)
@@ -63,13 +63,13 @@ rule invert_PAR:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        xy_final_path("chr{chr}_nonPAR"),
+        xy_final_path("chr{sex_chr}_nonPAR"),
     conda:
         "../envs/bedtools.yml"
     shell:
         """
         complementBed -i {input.bed} -g {input.genome} | \
-        grep {wildcards.chr} | \
+        grep {wildcards.sex_chr} | \
         intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c > {output}
         """
@@ -108,7 +108,10 @@ def all_xy_features(wildcards):
     ]
     cns = config.wanted_xy_chr_names(rk, bk)
     return [
-        t for p, f in targets if f(rk) for t in expand(p, allow_missing=True, chr=cns)
+        t
+        for p, f in targets
+        if f(rk)
+        for t in expand(p, allow_missing=True, sex_chr=cns)
     ]
 
 
@@ -116,5 +119,5 @@ def all_xy_PAR(wildcards):
     return expand(
         rules.invert_PAR.output,
         allow_missing=True,
-        chr=config.wanted_xy_chr_names(wildcards.ref_key, wildcards.build_key),
+        sex_chr=config.wanted_xy_chr_names(wildcards.ref_key, wildcards.build_key),
     )

@@ -10,10 +10,11 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     bedfile = sconf.stratifications[rk].gap
     assert bedfile is not None, "this should not happen"
+    ps = bedfile.params
 
-    df = read_bed(smk.input[0], bedfile)
+    df = read_bed(smk.input[0], ps)
 
-    conv = sconf.buildkey_to_chr_conversion(rk, bk, bedfile.chr_prefix)
+    conv = sconf.buildkey_to_chr_conversion(rk, bk, ps.chr_prefix)
 
     filtered = filter_sort_bed(conv, df)
     merged = bt.from_dataframe(filtered).merge(d=100).to_dataframe()

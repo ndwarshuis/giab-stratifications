@@ -8,7 +8,7 @@ ref_log_dir = config.log_build_dir / "ref"
 # lots of things depend on PAR so move this out of the XY ruleset
 rule write_PAR_intermediate:
     output:
-        ref_inter_dir / "chr{chr}_PAR.bed.gz",
+        ref_inter_dir / "chr{sex_chr}_PAR.bed.gz",
     conda:
         "../envs/bedtools.yml"
     script:
@@ -113,7 +113,7 @@ rule get_gapless:
                 "parY": expand(
                     rules.write_PAR_intermediate.output,
                     allow_missing=True,
-                    chr="Y",
+                    sex_chr="Y",
                 ),
             }
             if config.refkey_to_gap_src(w.ref_key)

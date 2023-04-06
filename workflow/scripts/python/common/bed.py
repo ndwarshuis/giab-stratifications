@@ -4,7 +4,11 @@ from Bio import bgzf  # type: ignore
 import csv
 
 
-def read_bed(path: str, b: cfg.BedFile, more: list[int] = []) -> pd.DataFrame:
+def read_bed(
+    path: str,
+    b: cfg.BedFileParams = cfg.BedFileParams(),
+    more: list[int] = [],
+) -> pd.DataFrame:
     """Read a bed file as a pandas dataframe.
 
     Return a dataframe where the first three columns are numbered 0, 1, 2 and
@@ -92,13 +96,13 @@ def read_filter_sort_bed(
     sconf: cfg.GiabStrats,
     ipath: str,
     opath: str,
-    bedfile: cfg.BedFile,
+    bp: cfg.BedFileParams,
     rk: cfg.RefKey,
     bk: cfg.BuildKey,
     more: list[int] = [],
 ) -> None:
     """Read a bed file, sort it, and write it in bgzip format."""
-    conv = sconf.buildkey_to_chr_conversion(rk, bk, bedfile.chr_prefix)
-    df = read_bed(ipath, bedfile, more)
+    conv = sconf.buildkey_to_chr_conversion(rk, bk, bp.chr_prefix)
+    df = read_bed(ipath, bp, more)
     df_ = filter_sort_bed(conv, df)
     write_bed(opath, df_)

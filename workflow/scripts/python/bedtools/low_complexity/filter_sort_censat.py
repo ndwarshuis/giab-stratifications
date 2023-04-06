@@ -8,7 +8,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     bk = cfg.BuildKey(smk.wildcards["build_key"])
     bedfile = sconf.refkey_to_strat(rk).low_complexity.satellites
     assert bedfile is not None, "this should not happen"
-    read_filter_sort_bed(sconf, smk.input[0], smk.output[0], bedfile, rk, bk)
+    read_filter_sort_bed(sconf, smk.input[0], smk.output[0], bedfile.params, rk, bk)
 
 
 main(snakemake, snakemake.config)  # type: ignore

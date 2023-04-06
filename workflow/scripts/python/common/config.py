@@ -62,6 +62,12 @@ class ChrConversion(NamedTuple):
     indices: set[ChrIndex]
 
 
+# For instances where we simply need to sort all the chromosomes and they are
+# already named appropriately
+def fullset_conv(prefix: str) -> ChrConversion:
+    return ChrConversion(prefix, prefix, set([i for i in ChrIndex]))
+
+
 def conversion_to_init_mapper(c: ChrConversion) -> dict[str, int]:
     return {i.chr_name_full(c.fromPrefix): i.value for i in c.indices}
 
@@ -183,6 +189,22 @@ RefSrc = RefFileSrc | RefHttpSrc
 BedSrc = BedFileSrc | BedHttpSrc
 
 
+class BedFileParams(BaseModel):
+    """Parameters decribing how to parse a bed-like file.
+
+    Members:
+    chr_prefix - the prefix on the chromosomes
+    bed_cols - the columns for the bed coordinates
+    skip_lines - how many input lines to skip
+    sep - column separator regexp (for "beds" with spaces instead of tabs)
+    """
+
+    chr_prefix: str = "chr"
+    bed_cols: BedColumns = BedColumns()
+    skip_lines: NonNegativeInt = 0
+    sep: str = "\t"
+
+
 class BedFile(BaseModel):
     """Inport specs for a bed-like file.
 
@@ -195,10 +217,7 @@ class BedFile(BaseModel):
     """
 
     src: BedSrc
-    chr_prefix: str = "chr"
-    bed_cols: BedColumns = BedColumns()
-    skip_lines: NonNegativeInt = 0
-    sep: str = "\t"
+    params: BedFileParams = BedFileParams()
 
 
 class RMSKFile(BedFile):
