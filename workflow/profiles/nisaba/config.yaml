@@ -16,9 +16,10 @@ default-resources:
 set-resources:
   - gem_index:mem_mb=32000
   - gem_mappability:mem_mb=32000
+  - gem_to_wig:mem_mb=32000
 set-threads:
-  - gem_index=16
-  - gem_mappability=16
+  - gem_index=32
+  - gem_mappability=32
 restart-times: 0
 max-jobs-per-second: 10
 max-status-checks-per-second: 1
