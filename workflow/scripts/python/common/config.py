@@ -412,8 +412,16 @@ class GiabStrats(BaseModel):
         return self.results_dir / "log"
 
     @property
+    def bench_root_dir(self) -> Path:
+        return self.results_dir / "bench"
+
+    @property
     def log_build_dir(self) -> Path:
         return self.log_root_dir / "{ref_key}@{build_key}"
+
+    @property
+    def bench_build_dir(self) -> Path:
+        return self.bench_root_dir / "{ref_key}@{build_key}"
 
     def build_strat_path(self, level: str, name: str) -> Path:
         return self.final_build_dir / level / f"{{ref_key}}_{name}.bed.gz"

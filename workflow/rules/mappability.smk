@@ -3,6 +3,7 @@ from pathlib import Path
 
 map_inter_dir = config.intermediate_build_dir / "mappability"
 map_log_dir = config.log_build_dir / "mappability"
+map_bench_dir = config.bench_build_dir / "mappability"
 
 
 def map_final_path(name):
@@ -81,6 +82,8 @@ rule gem_index:
     threads: 8
     log:
         map_log_dir / "index.log",
+    benchmark:
+        map_bench_dir / "index.txt"
     shell:
         """
         PATH={config.tools_bin_dir}:$PATH
@@ -103,6 +106,8 @@ rule gem_mappability:
     threads: 8
     log:
         map_log_dir / "mappability_l{l}_m{m}_e{e}.log",
+    benchmark:
+        map_bench_dir / "mappability_l{l}_m{m}_e{e}.txt"
     shell:
         """
         {input.bin} \
@@ -126,6 +131,8 @@ rule gem_to_wig:
         base=lambda wildcards, output: splitext(output[0])[0],
     log:
         map_log_dir / "gem2wig_l{l}_m{m}_e{e}.log",
+    benchmark:
+        map_bench_dir / "gem2wig_l{l}_m{m}_e{e}.txt"
     shell:
         """
         {input.bin} \
