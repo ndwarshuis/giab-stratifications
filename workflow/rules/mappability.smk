@@ -147,6 +147,7 @@ rule wig_to_bed:
         rules.gem_to_wig.output,
     output:
         map_inter_dir / "GRCh38_unique_l{l}_m{m}_e{e}.bed.gz",
+    # arbitrary default, will likely need to override this on clusters
     resources:
         mem_mb=8000,
     conda:
@@ -156,6 +157,7 @@ rule wig_to_bed:
         sed 's/ AC//' {input} | \
         wig2bed -m {resources.mem_mb}M | \
         awk '$5>0.9' | \
+        cut -f1-3 | \
         gzip -c > \
         {output}
         """
