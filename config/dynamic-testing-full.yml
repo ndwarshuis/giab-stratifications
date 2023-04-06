@@ -4,7 +4,7 @@
 # closely match a subset of the v3.1 strats for GRCh38)
 
 stratifications:
-  GRCh38_full:
+  GRCh38-full:
     ref:
       src:
         url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/references/GRCh38/GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta.gz
@@ -19,7 +19,8 @@ stratifications:
       rmsk:
         src:
           url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
-        bed_cols: {chr: 5, start: 6, end: 7}
+        params:
+          bed_cols: {chr: 5, start: 6, end: 7}
         class_col: 11
 
       satellites: null
@@ -27,7 +28,8 @@ stratifications:
       simreps:
         src: 
           url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
-        bed_cols: {chr: 1, start: 2, end: 3}
+        params:
+          bed_cols: {chr: 1, start: 2, end: 3}
 
     xy:
       features: 
@@ -52,7 +54,8 @@ stratifications:
       superdups:
         src:
           url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/genomicSuperDups.txt.gz
-        bed_cols: {chr: 1, start: 2, end: 3}
+        params:
+          bed_cols: {chr: 1, start: 2, end: 3}
 
     functional:
       ftbl_src:
@@ -61,7 +64,7 @@ stratifications:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gff.gz
 
     builds:
-      test_autosome:
+      test-autosome:
         chr_filter: []
         include:
           low_complexity: true
