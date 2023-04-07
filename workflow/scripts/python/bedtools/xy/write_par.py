@@ -4,7 +4,7 @@ import common.config as cfg
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
-    i = cfg.ChrIndex.from_name(smk.wildcards["chr"])
+    i = cfg.ChrIndex.from_name(smk.wildcards["sex_chr"])
     k = cfg.RefKey(smk.wildcards["ref_key"])
     prefix = sconf.refkey_to_final_chr_prefix(k)
     cxy = sconf.stratifications[k].xy
