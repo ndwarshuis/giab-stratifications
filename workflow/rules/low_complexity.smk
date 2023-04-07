@@ -164,6 +164,7 @@ rule merge_imperfect_uniform_repeats:
             base=["A", "C", "G", "T"],
         ),
         genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         lc_final_path("SimpleRepeat_imperfecthomopolge{merged_len}_slop5"),
     conda:
@@ -175,6 +176,7 @@ rule merge_imperfect_uniform_repeats:
         multiIntersectBed -i {input.beds} | \
         slopBed -i stdin -b 5 -g {input.genome} | \
         mergeBed -i stdin | \
+        intersectBed -a stdin -b {input.gapless} -sorted | \
         bgzip -c > {output}
         """
 
