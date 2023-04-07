@@ -7,13 +7,15 @@ stratifications:
     gap:
       src: 
         url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
-      bed_cols: {chr: 1, start: 2, end: 3}
+      params:
+        bed_cols: {chr: 1, start: 2, end: 3}
 
     low_complexity:
       rmsk:
         src:
           url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
-        bed_cols: {chr: 5, start: 6, end: 7}
+        params:
+          bed_cols: {chr: 5, start: 6, end: 7}
         class_col: 11
 
       satellites: null
@@ -21,7 +23,8 @@ stratifications:
       simreps:
         src: 
           url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
-        bed_cols: {chr: 1, start: 2, end: 3}
+        params:
+          bed_cols: {chr: 1, start: 2, end: 3}
 
     xy:
       features: 
@@ -46,7 +49,8 @@ stratifications:
       superdups:
         src:
           url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/genomicSuperDups.txt.gz
-        bed_cols: {chr: 1, start: 2, end: 3}
+        params:
+          bed_cols: {chr: 1, start: 2, end: 3}
 
     functional:
       ftbl_src:
@@ -55,7 +59,7 @@ stratifications:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gff.gz
 
     builds:
-      test_autosome:
+      all:
         chr_filter: []
         include:
           low_complexity: true
