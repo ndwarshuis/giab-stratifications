@@ -123,6 +123,7 @@ rule slop_uniform_repeats:
         """
 
 
+# +1 to lenB since the filename is [X, Y] and not [X, Y)
 use rule slop_uniform_repeats as slop_uniform_repeat_ranges with:
     input:
         bed=lambda wildcards: expand(
@@ -130,7 +131,7 @@ use rule slop_uniform_repeats as slop_uniform_repeat_ranges with:
             allow_missing=True,
             unit_name=wildcards.unit_name,
             total_lenA=int(wildcards.total_lenA),
-            total_lenB=int(wildcards.total_lenB),
+            total_lenB=int(wildcards.total_lenB) + 1,
         ),
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
@@ -197,12 +198,12 @@ rule all_uniform_repeats:
         },
         # Perfect (between X and Y)
         **{
-            f"perfect_{k}_{a}to{b}": expand(
+            f"perfect_{k}_{a}to{b-1}": expand(
                 rules.slop_uniform_repeat_ranges.output,
                 allow_missing=True,
                 unit_name=k,
                 total_lenA=a,
-                total_lenB=b,
+                total_lenB=b - 1,
             )
             for k, v in uniform_repeats.items()
             for a, b in zip(
