@@ -5,7 +5,7 @@ gc_inter_dir = config.intermediate_build_dir / "GCcontent"
 
 
 def gc_final_path(name):
-    return config.build_strat_path("GCContent", name)
+    return config.build_strat_path("GCcontent", name)
 
 
 GC_BEDS = [15, 20, 25, 30, 55, 60, 65, 70, 75, 80, 85]

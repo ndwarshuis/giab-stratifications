@@ -21,6 +21,63 @@ output:
 ```{r, include=FALSE}
 library(tidyverse)
 
+bed_cols <- c("chrom", "start", "end")
+
+knitr::opts_chunk$set(fig.width=25, fig.height=5, fig_caption=TRUE)
+
+df_chr_sizes <- snakemake@input$nonN %>%
+  read_tsv(col_names = bed_cols, col_types = "cii") %>%
+  mutate(region_size = end - start) %>%
+  group_by(chrom) %>%
+  summarise(nonN_ref_len = sum(region_size))
+
+chr_order <- df_chr_sizes %>%
+  pull(chrom) %>%
+  unique()
+
+file_list <- snakemake@input$strats %>%
+  readLines() %>%
+  as.list()
+
+read_strat <- function(path) {
+  read_tsv(path,
+           comment = "#",
+           col_types = "cdd",
+           col_names = bed_cols) %>%
+    mutate(path = path)
+}
+
+read_strats <- function(stype) {
+  fs <- keep(file_list, ~ basename(dirname(.x)) == stype)
+  all <- crossing(chrom = chr_order, path = unlist(fs))
+  if (length(fs) > 0) {
+    map_dfr(fs, read_strat) %>%
+      mutate(region_size = end - start) %>%
+      group_by(path, chrom) %>%
+      summarise(total_region = sum(region_size), .groups = "drop") %>%
+      # join the full cartesian product of all chromosomes and paths, then fill
+      # missing with 0 so that we get an empty space on the graphs indicating
+      # zero coverage
+      full_join(all, by = c("chrom", "path")) %>%
+      replace_na(list(total_region = 0)) %>%
+      right_join(df_chr_sizes, by = "chrom") %>%
+      mutate(strat_type = stype,
+             strat_filename = basename(path),
+             genome = str_extract(strat_filename, "^[^_]+_(HG[0-9]+)_.bed.gz", 1),
+             ## reference = str_extract(strat_filename, "^([^_])_.*.bed.gz", 1),
+             strat_level = str_extract(strat_filename, 
+                                       if_else(is.na(genome),
+                                               "^[^_]+_(.*).bed.gz",
+                                               "^[^_]+_HG[0-9]+_(.*).bed.gz"),
+                                       1),
+             coverage = total_region / nonN_ref_len) %>%
+      select(-path) %>%
+      mutate(chrom = factor(chrom, levels = chr_order))
+  } else {
+    NULL
+  }
+}
+
 coverage_plot <- function(df, level) {
   cat(sprintf("#### %s\n\n", level))
   p <- df %>%
@@ -31,70 +88,44 @@ coverage_plot <- function(df, level) {
           text = element_text(size = 30),
           axis.text.x = element_text(angle = 90),
           strip.text.y = element_text(angle = 0),
-          panel.spacing.y = unit(2, "lines"))
+          panel.spacing.y = unit(2, "lines")) +
+    xlab(NULL)
   print(p)
   cat("\n\n")
 }
 
-coverage_plots <- function(df, type) {
-  .df <- df %>% filter(strat_type == type)
-  if (nrow(.df) == 0) {
+coverage_plots <- function(stype) {
+  df <- read_strats(stype)
+  if (is.null(df)) {
     cat("None\n\n")
   } else {
-    .df %>%
+    df %>%
       group_by(strat_level) %>%
       group_walk(coverage_plot)
   }
 }
 
-read_gapless <- function(path) {
-  read_tsv(path, col_names = bed_cols, col_types = "cii") %>%
-    mutate(region_size = end - start) %>%
-    group_by(chrom) %>%
-    summarise(nonN_ref_len = sum(region_size))
-}
-
-knitr::opts_chunk$set(fig.width=25, fig.height=5, fig_caption=TRUE)
-
-bed_cols <- c("chrom", "start", "end")
-
-df_chr_sizes <- snakemake@input$nonN %>%
-  read_tsv(col_names = bed_cols, col_types = "cii") %>%
-  mutate(region_size = end - start) %>%
-  group_by(chrom) %>%
-  summarise(nonN_ref_len = sum(region_size))
-
-read_strat <- function(path) {
-  read_tsv(path,
-           comment = "#",
-           col_types = "cdd",
-           col_names = bed_cols) %>%
-    mutate(path = path)
-}
-
-df_coverage <- snakemake@input$strats %>%
-  readLines() %>%
-  as.list() %>%
-  map_dfr(read_strat) %>%
-  mutate(region_size = end - start) %>%
-  group_by(path, chrom) %>%
-  summarise(total_region = sum(region_size)) %>%
-  # right join since we assume size df will have all desired chromosomes
-  right_join(df_chr_sizes, by = "chrom") %>%
-  mutate(strat_type = basename(dirname(path)),
-         strat_filename = basename(path),
-         genome = str_extract(strat_filename, "^[^_]+_(HG[0-9]+)_.bed.gz", 1),
-         ## reference = str_extract(strat_filename, "^([^_])_.*.bed.gz", 1),
-         strat_level = str_extract(strat_filename, 
-                                   if_else(is.na(genome),
-                                           "^[^_]+_(.*).bed.gz",
-                                           "^[^_]+_HG[0-9]+_(.*).bed.gz"),
-                                   1),
-         coverage = total_region / nonN_ref_len) %>%
-  select(-path)
-
-included_chroms <- unique(df_coverage$chrom)
-expected_chroms <- snakemake@params$expected_chroms
+## df_coverage <- snakemake@input$strats %>%
+##   readLines() %>%
+##   as.list() %>%
+##   map_dfr(read_strat) %>%
+##   mutate(region_size = end - start) %>%
+##   group_by(path, chrom) %>%
+##   summarise(total_region = sum(region_size)) %>%
+##   # right join since we assume size df will have all desired chromosomes
+##   right_join(df_chr_sizes, by = "chrom") %>%
+##   mutate(strat_type = basename(dirname(path)),
+##          strat_filename = basename(path),
+##          genome = str_extract(strat_filename, "^[^_]+_(HG[0-9]+)_.bed.gz", 1),
+##          ## reference = str_extract(strat_filename, "^([^_])_.*.bed.gz", 1),
+##          strat_level = str_extract(strat_filename, 
+##                                    if_else(is.na(genome),
+##                                            "^[^_]+_(.*).bed.gz",
+##                                            "^[^_]+_HG[0-9]+_(.*).bed.gz"),
+##                                    1),
+##          coverage = total_region / nonN_ref_len) %>%
+##   select(-path) %>%
+##   mutate(chrom = factor(chrom, levels = chr_order))
 
 ```
 
@@ -119,7 +150,6 @@ files. These files can be assumed to:
 * have only valid chromosomes
 * not intersect with gaps in the reference
 
-
 # Coverage Plots
 
 <!-- TODO these little panels can be grouped by "genome specific" and "everything" -->
@@ -131,7 +161,7 @@ Regions with different types and sizes of low complexity sequence (e.g.,
 homopolymers, STRs, VNTRs, other locally repetitive sequences).
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plots(df_coverage, "LowComplexity")
+coverage_plots("LowComplexity")
 ```
 
 ## Functional Technically Difficult
@@ -140,7 +170,7 @@ Different functional, or potentially functional, regions that are also likely to
 be technically difficult to sequence.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plots(df_coverage, "FunctionalTechnicallyDifficult")
+coverage_plots("FunctionalTechnicallyDifficult")
 ```
 
 ## Functional Regions
@@ -148,7 +178,7 @@ coverage_plots(df_coverage, "FunctionalTechnicallyDifficult")
 Regions to stratify variants inside and outside of coding regions.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plots(df_coverage, "FunctionalRegions")
+coverage_plots("FunctionalRegions")
 ```
 
 ## GC Content
@@ -156,7 +186,7 @@ coverage_plots(df_coverage, "FunctionalRegions")
 Regions with different ranges(%) of GC content.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plots(df_coverage, "GCcontent")
+coverage_plots("GCcontent")
 ```
 
 ## Mappability
@@ -164,7 +194,7 @@ coverage_plots(df_coverage, "GCcontent")
 Regions where short read mappability can be challenging.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plots(df_coverage, "mappability")
+coverage_plots("mappability")
 ```
 
 ## Other Difficult
@@ -173,7 +203,7 @@ Highly variable regions like the VDJ and MHC, near gaps in the reference, or
 errors in the reference.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plots(df_coverage, "OtherDifficult")
+coverage_plots("OtherDifficult")
 ```
 
 ## Segmental Duplications
@@ -182,7 +212,7 @@ Regions with segmental duplications or regions with non-trivial self-chain
 alignments.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plots(df_coverage, "SegmentalDuplications")
+coverage_plots("SegmentalDuplications")
 ```
 
 ## Union
@@ -192,7 +222,7 @@ difficult region or complex variant. For example, performance can be measured in
 just the "easy" regions of the genome.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plots(df_coverage, "Union")
+coverage_plots("Union")
 ```
 
 ## Ancestry
@@ -200,7 +230,7 @@ coverage_plots(df_coverage, "Union")
 Regions with inferred patterns of local ancestry.
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plots(df_coverage, "ancestry")
+coverage_plots("ancestry")
 ```
 
 ## XY
@@ -208,7 +238,7 @@ coverage_plots(df_coverage, "ancestry")
 Regions in chromosomes X and Y
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plots(df_coverage, "XY")
+coverage_plots("XY")
 ```
 
 ## Genome Specific (benchmark v4.2.1)
@@ -222,5 +252,5 @@ sample, including:
 
 ```{r, echo = FALSE, results = "asis"}
 # TODO this will need to be broken out by specific genomes in the plot
-coverage_plots(df_coverage, "GenomeSpecific")
+coverage_plots("GenomeSpecific")
 ```
