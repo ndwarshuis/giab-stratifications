@@ -19,7 +19,7 @@ use rule download_ref as download_genome_features_bed with:
 
 use rule write_PAR_intermediate as write_PAR_final with:
     output:
-        xy_inter_dir / "chr{sex_chr}_PAR.bed.gz",
+        xy_final_path("chr{sex_chr}_PAR"),
 
 
 rule filter_XTR_features:
