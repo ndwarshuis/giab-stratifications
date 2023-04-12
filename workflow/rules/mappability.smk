@@ -1,13 +1,14 @@
 from os.path import splitext, basename
 from pathlib import Path
 
-map_inter_dir = config.intermediate_build_dir / "mappability"
-map_log_dir = config.log_build_dir / "mappability"
-map_bench_dir = config.bench_build_dir / "mappability"
+map_dir = "mappability"
+map_inter_dir = config.intermediate_build_dir / map_dir
+map_log_dir = config.log_build_dir / map_dir
+map_bench_dir = config.bench_build_dir / map_dir
 
 
 def map_final_path(name):
-    return config.build_strat_path("mappability", name)
+    return config.build_strat_path(map_dir, name)
 
 
 ################################################################################
@@ -174,70 +175,15 @@ rule wig_to_bed:
         """
 
 
-# wig2bed "makes no guarantees about sort ordering"
-rule sort_unique:
-    input:
-        rules.wig_to_bed.output,
-    output:
-        map_inter_dir / "unique_l{l}_m{m}_e{e}_sorted.bed.gz",
-    wildcard_constraints:
-        **gem_wc_constraints,
-    conda:
-        "../envs/bedtools.yml"
-    script:
-        "../scripts/python/bedtools/mappability/sort_unique.py"
-
-
 ################################################################################
 # create stratifications
 
 
-rule get_nonunique:
-    input:
-        rules.sort_unique.output,
-    output:
-        map_final_path("nonunique_l{l}_m{m}_e{e}"),
-    conda:
-        "../envs/bedtools.yml"
-    params:
-        genome=rules.get_genome.output,
-        gapless=rules.get_gapless.output.auto,
-    benchmark:
-        map_bench_dir / "nonunique_l{l}_m{m}_e{e}.txt"
-    shell:
-        """
-        complementBed -i {input} -g {params.genome} | \
-        mergeBed -d 100 -i stdin | \
-        intersectBed -a stdin -b {params.gapless} -sorted -g {params.genome} | \
-        bgzip -c > \
-        {output}
-        """
-
-
-# same as above but don't put the file in the final directory
-use rule get_nonunique as get_nonunique_single with:
-    output:
-        map_inter_dir / "nonunique_l{l}_m{m}_e{e}",
-
-
-# This rule is complicated because we need to deal with the case of single vs
-# multiple parameter specifications. If there is only one, we only need the
-# "lowmappabilityall" all bed file as it includes all the data we want. If
-# multiple, we need multiple bed files for each individual spec (eg
-# "nonunique_lx_my_ez") plus the "lowmappabilityall". This hacky script handles
-# this logic.
 def nonunique_inputs(wildcards):
     rk = wildcards.ref_key
     bk = wildcards.build_key
     l, m, e = config.buildkey_to_mappability(rk, bk)
-    n = len(l)
-    if n == 0:
-        assert False, "this should not happen"
-    elif n == 1:
-        path = rules.get_nonunique_single.output
-    else:
-        path = rules.get_nonunique.output
-    return expand(path, zip, allow_missing=True, l=l, m=m, e=e)
+    return expand(rules.wig_to_bed.output, zip, allow_missing=True, l=l, m=m, e=e)
 
 
 rule merge_nonunique:
@@ -246,24 +192,15 @@ rule merge_nonunique:
         gapless=rules.get_gapless.output.auto,
         genome=rules.get_genome.output,
     output:
+        # if there are multiple inputs, there will be other outputs
+        # corresponding to each input besides this one
         map_final_path("lowmappabilityall"),
+    params:
+        map_dir=map_dir,
     conda:
         "../envs/bedtools.yml"
-    params:
-        n=lambda _, input: len(input.bed),
-    shell:
-        """
-        n={params.n}
-        if [ $n == 1 ]; then 
-            cp {input.bed} {output}
-        else
-            multiIntersectBed -i {input.bed} | \
-            mergeBed -d 100 -i stdin | \
-            intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
-            bgzip -c > \
-            {output}
-        fi
-        """
+    script:
+        "../scripts/python/bedtools/mappability/merge_nonunique.py"
 
 
 rule invert_merged_nonunique:

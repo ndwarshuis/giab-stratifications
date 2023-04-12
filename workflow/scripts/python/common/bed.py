@@ -1,11 +1,12 @@
 import pandas as pd
+from pathlib import Path
 import common.config as cfg
 from Bio import bgzf  # type: ignore
 import csv
 
 
 def read_bed(
-    path: str,
+    path: Path,
     b: cfg.BedFileParams = cfg.BedFileParams(),
     more: list[int] = [],
 ) -> pd.DataFrame:
@@ -31,7 +32,7 @@ def read_bed(
     return df
 
 
-def write_bed(path: str, df: pd.DataFrame) -> None:
+def write_bed(path: Path, df: pd.DataFrame) -> None:
     """Write a bed file in bgzip format from a dataframe.
 
     Dataframe is not checked to make sure it is a "real" bed file.
@@ -94,8 +95,8 @@ def filter_sort_bed(
 
 def read_filter_sort_bed(
     sconf: cfg.GiabStrats,
-    ipath: str,
-    opath: str,
+    ipath: Path,
+    opath: Path,
     bp: cfg.BedFileParams,
     rk: cfg.RefKey,
     bk: cfg.BuildKey,
