@@ -17,15 +17,26 @@ use rule download_ref as download_genome_features_bed with:
         )(w.ref_key),
 
 
-use rule write_PAR_intermediate as write_PAR_final with:
+rule write_PAR_final:
+    input:
+        bed=rules.write_PAR_intermediate.output,
+        gapless=rules.get_gapless.output.parY,
+        genome=rules.get_genome.output,
     output:
         xy_final_path("chr{sex_chr}_PAR"),
+    conda:
+        "../envs/bedtools.yml"
+    shell:
+        """
+        intersectBed -a {input.bed} -b {input.gapless} -sorted -g {input.genome} | \
+        bgzip -c > {output}
+        """
 
 
 rule filter_XTR_features:
     input:
         bed=rules.download_genome_features_bed.output[0],
-        gapless=rules.get_gapless.output.auto,
+        gapless=rules.get_gapless.output.parY,
         genome=rules.get_genome.output,
     output:
         xy_final_path("chr{sex_chr}_XTR"),
@@ -40,7 +51,7 @@ rule filter_XTR_features:
 use rule filter_XTR_features as filter_ampliconic_features with:
     input:
         bed=rules.download_genome_features_bed.output[0],
-        gapless=rules.get_gapless.output.auto,
+        gapless=rules.get_gapless.output.parY,
         genome=rules.get_genome.output,
     output:
         xy_final_path("chr{sex_chr}_ampliconic"),
@@ -61,7 +72,7 @@ rule invert_PAR:
     input:
         bed=par_input,
         genome=rules.get_genome.output,
-        gapless=rules.get_gapless.output.auto,
+        gapless=rules.get_gapless.output.parY,
     output:
         xy_final_path("chr{sex_chr}_nonPAR"),
     conda:
