@@ -77,7 +77,7 @@ rule find_gc_content:
 
 use rule find_gc_content as find_gc_content_final with:
     output:
-        gc_final_path("gc{frac}"),
+        gc_final_path("gc{frac}_slop50"),
 
 
 rule subtract_gc_content:
@@ -138,5 +138,5 @@ rule all_gc:
                 lower=lwr,
                 upper=upr,
             )
-            for key, lwr, upr in [("wide", 25, 65), ("narrow", 30, 50)]
+            for key, lwr, upr in [("wide", 25, 65), ("narrow", 30, 55)]
         },
