@@ -467,7 +467,7 @@ rule merge_repeats:
 # NOTE: this is pre-slop
 tr_bounds = {
     "lt51": {"lower": 0, "upper": 51},
-    "51to200": {"lower": 51, "upper": 200},
+    "51to200": {"lower": 51, "upper": 201},
     "201to10000": {"lower": 201, "upper": 10000},
     "ge10000": {"lower": 10000, "upper": 1e10},  # NOTE 1e10 ~ Inf
     "ge100": {"lower": 100, "upper": 1e10},
@@ -492,7 +492,7 @@ rule filter_TRs:
     # NOTE +10 since this is processing a bed file that had 5bp slop added
     shell:
         """
-        awk '($3-$2)+10>={params.lower} && ($3-$2)+10<{params.upper}' {input.tr} | \
+        awk '({params.lower}+10)<=($3-$2) && ($3-$2)<({params.upper}+10)' {input.tr} | \
         subtractBed -a stdin -b {input.hp} | \
         intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c > {output}
