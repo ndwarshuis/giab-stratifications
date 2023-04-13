@@ -218,7 +218,7 @@ rule all_uniform_repeats:
                 allow_missing=True,
                 merged_len=x,
             )
-            for x in [10, 20]
+            for x in [11, 21]
         },
 
 
@@ -416,12 +416,12 @@ rule invert_satellites:
 
 rule merge_all_uniform_repeats:
     input:
-        imperfect=rules.all_uniform_repeats.input.imperfect_ge10,
+        imperfect=rules.all_uniform_repeats.input.imperfect_ge11,
         perfect=rules.all_perfect_uniform_repeats.input.R1_T7,
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        lc_final_path("AllHomopolymers_ge7bp_imperfectge10bp_slop5"),
+        lc_final_path("AllHomopolymers_ge7bp_imperfectge11bp_slop5"),
     conda:
         "../envs/bedtools.yml"
     shell:
@@ -440,7 +440,7 @@ use rule invert_satellites as invert_all_uniform_repeats with:
     input:
         bed=rules.merge_all_uniform_repeats.output,
     output:
-        lc_final_path("notinAllHomopolymers_ge7bp_imperfectge10bp_slop5"),
+        lc_final_path("notinAllHomopolymers_ge7bp_imperfectge11bp_slop5"),
 
 
 rule merge_repeats:
