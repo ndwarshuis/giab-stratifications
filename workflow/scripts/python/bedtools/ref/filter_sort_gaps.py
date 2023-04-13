@@ -12,13 +12,13 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     assert bedfile is not None, "this should not happen"
     ps = bedfile.params
 
-    df = read_bed(smk.input[0], ps)
-
     conv = sconf.buildkey_to_chr_conversion(rk, bk, ps.chr_prefix)
 
-    filtered = filter_sort_bed(conv, df)
-    merged = bt.from_dataframe(filtered).merge(d=100).to_dataframe()
-    write_bed(smk.output[0], merged)
+    df = read_bed(smk.input[0], ps, [bedfile.class_col])
+    df = filter_sort_bed(conv, df)
+    df = df[df[3].isin(["clone", "contig", "scaffold", "short_arm"])]
+    df = bt.from_dataframe(df).merge(d=100).to_dataframe()
+    write_bed(smk.output[0], df)
 
 
 main(snakemake, snakemake.config)  # type: ignore

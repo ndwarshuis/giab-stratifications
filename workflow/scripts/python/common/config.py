@@ -356,11 +356,22 @@ class Functional(BaseModel):
     gff_src: BedSrc
 
 
+class GapFile(BedFile):
+    """Configuration for gap file, as host on UCSC.
+
+    members:
+    class_col - index for column containing the classification name (eg
+      "scaffold", "telemere", etc)
+    """
+
+    class_col: int
+
+
 class Stratification(BaseModel):
     """Configuration for stratifications for a given reference."""
 
     ref: RefFile
-    gap: BedFile | None
+    gap: GapFile | None
     low_complexity: LowComplexity
     xy: XY
     segdups: SegDups

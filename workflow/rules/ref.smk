@@ -90,7 +90,6 @@ use rule download_ref as download_gaps with:
         src=lambda w: config.refkey_to_gap_src(w.ref_key),
 
 
-# TODO don't use filt here
 rule merge_gaps:
     input:
         gaps=rules.download_gaps.output,
