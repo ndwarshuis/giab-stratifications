@@ -335,7 +335,7 @@ rule filter_sort_censat:
         "../scripts/python/bedtools/low_complexity/filter_sort_censat.py"
 
 
-rule merge_censat_satellites:
+rule filter_censat_satellites:
     input:
         bed=rules.filter_sort_censat.output,
         genome=rules.get_genome.output,
@@ -347,35 +347,28 @@ rule merge_censat_satellites:
         """
         gunzip -c {input.bed} | \
         grep -v "ct_" | \
-        mergeBed -i stdin | \
-        slopBed -i stdin -b 5 -g {input.genome} | \
-        mergeBed -i stdin | \
         bgzip -c > {output}
         """
 
 
-rule merge_rmsk_satellites:
+# split this from the final rule since other rules depend on the satellites
+# bed file but add slop of their own, so this avoids adding slop twice
+rule merge_satellites_intermediate:
     input:
-        bed=rules.all_rmsk_classes.input.Satellite,
-        genome=rules.get_genome.output,
+        lambda w: rules.filter_censat_satellites.output
+        if config.want_low_complexity_censat(w.ref_key)
+        else rules.all_rmsk_classes.input.Satellite,
     output:
-        lc_inter_dir / "rmsk_satellites_slop5.bed.gz",
+        lc_inter_dir / "merged_satellites.bed.gz",
     conda:
         "../envs/bedtools.yml"
     shell:
-        """
-        slopBed -i {input.bed} -b 5 -g {input.genome} | \
-        mergeBed -i stdin | \
-        bgzip -c > {output}
-        """
+        "mergeBed -i {input} | bgzip -c > {output}"
 
 
-# TODO is this really the best way to handle a collider?
 rule merge_satellites:
     input:
-        bed=lambda w: rules.merge_censat_satellites.output
-        if config.want_low_complexity_censat(w.ref_key)
-        else rules.merge_rmsk_satellites.output,
+        bed=rules.merge_satellites_intermediate.output,
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
@@ -384,12 +377,13 @@ rule merge_satellites:
         "../envs/bedtools.yml"
     shell:
         """
-        intersectBed -a {input.bed} -b {input.gapless} -sorted -g {input.genome} | \
+        slopBed -i {input.bed} -b 5 -g {input.genome} | \
+        mergeBed -i stdin | \
+        intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c > {output}
         """
 
 
-# TODO the previous version of this had chrM in it? (seems like a mistake)
 rule invert_satellites:
     input:
         bed=rules.merge_satellites.output,
@@ -450,7 +444,7 @@ rule merge_repeats:
         + rules.all_perfect_uniform_repeats.input.R2_T10
         + rules.all_perfect_uniform_repeats.input.R3_T14
         + rules.all_perfect_uniform_repeats.input.R4_T19
-        + rules.merge_satellites.output,
+        + rules.merge_satellites_intermediate.output,
         genome=rules.get_genome.output,
     output:
         lc_inter_dir / "AllTandemRepeats_intermediate.bed",
