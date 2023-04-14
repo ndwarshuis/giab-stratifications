@@ -104,12 +104,16 @@ def range_inputs(wildcards):
             subset_fractions(wildcards["lower"]) + subset_fractions(wildcards["upper"])
         ),
     )
-    return expand(
-        rules.subtract_gc_content.output,
-        zip,
-        allow_missing=True,
-        lower_frac=lower,
-        upper_frac=upper,
+    return (
+        expand(
+            rules.subtract_gc_content.output,
+            zip,
+            allow_missing=True,
+            lower_frac=lower,
+            upper_frac=upper,
+        )
+        + expand_frac(lower)
+        + expand_frac(upper)
     )
 
 
