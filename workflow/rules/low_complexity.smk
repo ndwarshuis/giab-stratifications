@@ -460,11 +460,11 @@ rule merge_repeats:
 
 # NOTE: this is pre-slop
 tr_bounds = {
-    "lt51": {"lower": 0, "upper": 51},
+    "le50": {"lower": 0, "upper": 51},
     "51to200": {"lower": 51, "upper": 201},
-    "201to10000": {"lower": 201, "upper": 10000},
-    "ge10000": {"lower": 10000, "upper": 1e10},  # NOTE 1e10 ~ Inf
-    "ge100": {"lower": 100, "upper": 1e10},
+    "201to10000": {"lower": 201, "upper": 10001},
+    "ge10001": {"lower": 10001, "upper": 1e10},  # NOTE 1e10 ~ Inf
+    "ge101": {"lower": 101, "upper": 1e10},
 }
 
 
@@ -508,10 +508,10 @@ rule all_TRs:
 
 rule merge_filtered_TRs:
     input:
-        rules.all_TRs.input._lt51,
+        rules.all_TRs.input._le50,
         rules.all_TRs.input._51to200,
         rules.all_TRs.input._201to10000,
-        rules.all_TRs.input._ge10000,
+        rules.all_TRs.input._ge10001,
     output:
         lc_final_path("AllTandemRepeats"),
     conda:
