@@ -43,15 +43,18 @@ def write_bed(path: Path, df: pd.DataFrame) -> None:
             w.writerow(r)
 
 
-def sort_bed_numerically(df: pd.DataFrame) -> pd.DataFrame:
+def sort_bed_numerically(df: pd.DataFrame, n: int) -> pd.DataFrame:
     """Sort a bed file encoded by a dataframe.
 
-    Assumes the first three columns correspond to coordinates, and that
-    all are integer typed.
+    Assumes the first three columns correspond to coordinates, and that all are
+    integer typed. Use 'n = 2' to sort only by chr/start, and 'n=1' to sort only
+    by chr.
+
     """
     cols = df.columns.tolist()
+    bycols = [cols[i] for i in range(0, n)]
     return df.sort_values(
-        by=[cols[0], cols[1], cols[2]],
+        by=bycols,
         axis=0,
         ignore_index=True,
     )
@@ -61,6 +64,7 @@ def filter_sort_bed_inner(
     from_map: dict[str, int],
     to_map: dict[int, str],
     df: pd.DataFrame,
+    n: int = 3,
 ) -> pd.DataFrame:
     """Filter and sort a bed file.
 
@@ -78,7 +82,7 @@ def filter_sort_bed_inner(
     """
     chr_col = df.columns.tolist()[0]
     df[chr_col] = df[chr_col].map(from_map)
-    df = sort_bed_numerically(df.dropna(subset=[chr_col]))
+    df = sort_bed_numerically(df.dropna(subset=[chr_col]), n)
     df[chr_col] = df[chr_col].map(to_map)
     return df
 

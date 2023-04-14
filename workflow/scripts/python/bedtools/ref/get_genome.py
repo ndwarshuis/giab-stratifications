@@ -14,9 +14,14 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     from_map = {v: k for k, v in to_map.items()}
 
     # ASSUME the input for this is a .fa.fai file (columns = chr, length)
-    df = pd.read_table(smk.input[0], header=None, dtype={0: str, 1: int})
+    df = pd.read_table(
+        smk.input[0],
+        header=None,
+        dtype={0: str, 1: int},
+        usecols=[0, 1],
+    )
 
-    filtered = filter_sort_bed_inner(from_map, to_map, df)
+    filtered = filter_sort_bed_inner(from_map, to_map, df, 2)
     filtered.to_csv(smk.output[0], sep="\t", header=False, index=False)
 
 

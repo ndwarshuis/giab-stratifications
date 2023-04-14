@@ -57,15 +57,6 @@ rule get_genome:
         "../scripts/python/bedtools/ref/get_genome.py"
 
 
-rule genome_to_bed:
-    input:
-        rules.get_genome.output,
-    output:
-        ref_inter_dir / "genome.bed",
-    shell:
-        "awk 'BEGIN {{ FS = OFS = \"\t\"}} {{ print $1, 0, $2 }}' {input} > {output}"
-
-
 rule filter_sort_ref:
     input:
         fa=rules.download_ref.output,
@@ -90,50 +81,25 @@ use rule download_ref as download_gaps with:
         src=lambda w: config.refkey_to_gap_src(w.ref_key),
 
 
-rule merge_gaps:
-    input:
-        gaps=rules.download_gaps.output,
-        genome=rules.get_genome.output,
-    output:
-        ref_inter_dir / "gaps_merged.bed",
-    conda:
-        "../envs/bedtools.yml"
-    script:
-        "../scripts/python/bedtools/ref/filter_sort_gaps.py"
-
-
-# This is super convoluted since many rules use the gap file, but I only want
-# to do all this logic once. Shell script it is...I guess this works
 rule get_gapless:
     input:
         unpack(
             lambda w: {
-                "gaps": rules.merge_gaps.output[0],
+                "gaps": rules.download_gaps.output[0],
                 "parY": expand(
-                    rules.write_PAR_intermediate.output,
+                    rules.write_PAR_intermediate.output[0],
                     allow_missing=True,
                     sex_chr="Y",
-                ),
+                )[0],
             }
             if config.refkey_to_gap_src(w.ref_key)
-            else {"gaps": [], "parY": []}
+            else {}
         ),
-        genome=rules.genome_to_bed.output,
+        genome=rules.get_genome.output[0],
     output:
         auto=ref_inter_dir / "genome_gapless.bed",
         parY=ref_inter_dir / "genome_gapless_parY.bed",
     conda:
         "../envs/bedtools.yml"
-    params:
-        hasgaps=lambda _, input: 1 if "gaps" in input else 0,
-    shell:
-        """
-        gapfile="{input.gaps}"
-        if [[ -z "$gapfile" ]]; then
-            ln -sfr {input.genome} {output.auto}
-            ln -sfr {input.genome} {output.parY}
-        else
-            bedtools subtract -a {input.genome} -b {input.gaps} > {output.parY}
-            bedtools subtract -a {output.parY} -b {input.parY} > {output.auto}
-        fi
-        """
+    script:
+        "../scripts/python/bedtools/ref/get_gapless.py"
