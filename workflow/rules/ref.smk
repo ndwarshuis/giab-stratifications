@@ -22,6 +22,7 @@ rule download_ref:
         src=lambda w: config.refkey_to_ref_src(w.ref_key),
     conda:
         "../envs/bedtools.yml"
+    localrule: True
     script:
         "../scripts/python/bedtools/misc/get_file.py"
 
