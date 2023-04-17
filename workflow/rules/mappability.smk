@@ -34,6 +34,7 @@ rule download_gem:
         url=config.tools.gemlib,
     conda:
         "../envs/utils.yml"
+    localrule: True
     shell:
         "curl -sS -L -o {output} {params.url}"
 

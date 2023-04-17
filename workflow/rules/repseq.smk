@@ -5,6 +5,7 @@ rule download_repseq:
         url=config.tools.repseq,
     conda:
         "../envs/utils.yml"
+    localrule: True
     shell:
         "curl -sS -L -o {output} {params.url}"
 
