@@ -41,9 +41,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         gaps_src = Path(inputs["gaps"])
         parY_src = Path(inputs["parY"])
 
-        gaps = read_bed(gaps_src, ps, [bedfile.class_col])
+        gaps = read_bed(gaps_src, ps)
         gaps = filter_sort_bed(conv, gaps)
-        # df = df[df[3].isin(["clone", "contig", "scaffold", "short_arm"])]
         gaps = bt.from_dataframe(gaps).merge(d=100).to_dataframe()
 
         gaps_parY = bt().from_dataframe(genome_bed).subtract(bt().from_dataframe(gaps))
