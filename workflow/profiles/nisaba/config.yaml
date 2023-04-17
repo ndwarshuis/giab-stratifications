@@ -23,6 +23,8 @@ set-resources:
   - subtract_uniform_repeats:mem_mb=4000
   - filter_sort_rmsk:mem_mb=4000
   - filter_TRs:mem_mb=4000
+  - unit_test_strats:mem_mb=4000
+  - validate_strats:mem_mb=12000
 set-threads:
   - gem_index=32
   - gem_mappability=32
