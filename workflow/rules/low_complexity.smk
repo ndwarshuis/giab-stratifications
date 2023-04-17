@@ -231,6 +231,7 @@ use rule download_ref as download_trf with:
         lc_src_dir / "trf_simreps.txt.gz",
     params:
         src=lambda w: config.refkey_to_simreps_src(w.ref_key),
+    localrule: True
 
 
 rule filter_sort_trf:
@@ -268,6 +269,7 @@ use rule download_ref as download_rmsk with:
         lc_src_dir / "rmsk.txt.gz",
     params:
         src=lambda w: config.refkey_to_rmsk_src(w.ref_key),
+    localrule: True
 
 
 rule filter_sort_rmsk:
@@ -322,6 +324,7 @@ use rule download_ref as download_censat with:
         lc_src_dir / "censat.txt.gz",
     params:
         src=lambda w: config.refkey_to_satellite_src(w.ref_key),
+    localrule: True
 
 
 rule filter_sort_censat:

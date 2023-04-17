@@ -15,6 +15,7 @@ use rule download_ref as download_genome_features_bed with:
             if w.sex_chr == "Y"
             else config.refkey_to_x_features_src
         )(w.ref_key),
+    localrule: True
 
 
 rule write_PAR_final:

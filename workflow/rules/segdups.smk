@@ -11,6 +11,7 @@ use rule download_ref as download_superdups with:
         segdup_src_dir / "selfChain.txt.gz",
     params:
         src=lambda w: config.refkey_to_superdups_src(w.ref_key),
+    localrule: True
 
 
 rule filter_sort_superdups:

@@ -80,6 +80,7 @@ use rule download_ref as download_gaps with:
         config.ref_src_dir / "gap.bed.gz",
     params:
         src=lambda w: config.refkey_to_gap_src(w.ref_key),
+    localrule: True
 
 
 rule get_gapless:

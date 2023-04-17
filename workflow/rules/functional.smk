@@ -11,6 +11,7 @@ use rule download_ref as download_ftbl with:
         func_src_dir / "ftbl.txt.gz",
     params:
         src=lambda w: config.refkey_to_functional_ftbl_src(w.ref_key),
+    localrule: True
 
 
 use rule download_ref as download_gff with:
@@ -18,6 +19,7 @@ use rule download_ref as download_gff with:
         func_src_dir / "func.gff.gz",
     params:
         src=lambda w: config.refkey_to_functional_gff_src(w.ref_key),
+    localrule: True
 
 
 rule combine_ftbl_and_gff:
