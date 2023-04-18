@@ -27,7 +27,6 @@ rule download_ref:
         "../scripts/python/bedtools/misc/get_file.py"
 
 
-# TODO is this only used for getting the genome? if so combine with rule 'get_genome'
 rule index_ref:
     input:
         rules.download_ref.output,

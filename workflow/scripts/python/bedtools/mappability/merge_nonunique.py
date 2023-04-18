@@ -22,7 +22,9 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     def read_sort_bed(p: Path) -> bt:
         df = read_bed(p)
-        # sort here because we can't assume wig2bed sorts its output
+        # Sort here because we can't assume wig2bed sorts its output. Also,
+        # filtering is necessary because the output should have unplaced contigs
+        # in it that we don't want.
         return bt().from_dataframe(filter_sort_bed(conv, df))
 
     def merge_bed(bed: bt, out: Path) -> None:

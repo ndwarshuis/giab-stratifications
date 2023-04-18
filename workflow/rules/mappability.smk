@@ -69,19 +69,21 @@ rule unpack_gem:
 # index/align
 
 
-# this seems to be the only place that requires the fa to be unzipped
-rule unzip_ref:
+rule filter_mappability_ref:
     input:
-        rules.filter_sort_ref.output,
+        fa=rules.download_ref.output[0],
+        idx=rules.index_ref.output[0],
     output:
         map_inter_dir / "ref.fa",
-    shell:
-        "gunzip -c {input} > {output}"
+    conda:
+        "../envs/bedtools.yml"
+    script:
+        "../scripts/python/bedtools/mappability/filter_ref.py"
 
 
 rule gem_index:
     input:
-        fa=rules.unzip_ref.output,
+        fa=rules.filter_mappability_ref.output,
         bin=rules.unpack_gem.output.indexer,
     output:
         map_inter_dir / "index.gem",

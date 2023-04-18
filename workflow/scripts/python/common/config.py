@@ -47,6 +47,13 @@ class ChrIndex(Enum):
     def chr_name_full(self, prefix: str) -> str:
         return f"{prefix}{self.chr_name}"
 
+    def matches(self, prefix: str, query: str) -> bool:
+        return query.startswith(self.chr_name_full(prefix))
+
+
+def chr_is_unknown(prefix: str, query: str) -> bool:
+    return query.startswith(f"{prefix}Un")
+
 
 class ChrConversion(NamedTuple):
     """Data to filter, sort, and standardize chromosome names.
