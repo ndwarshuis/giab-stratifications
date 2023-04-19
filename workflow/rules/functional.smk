@@ -1,5 +1,6 @@
 func_src_dir = config.ref_src_dir / "FunctionalRegions"
 func_inter_dir = config.intermediate_build_dir / "FunctionalRegions"
+func_log_build_dir = config.log_src_dir / "FunctionalRegions"
 
 
 def func_final_path(name):
@@ -12,14 +13,18 @@ use rule download_ref as download_ftbl with:
     params:
         src=lambda w: config.refkey_to_functional_ftbl_src(w.ref_key),
     localrule: True
+    log:
+        func_log_build_dir / "ftbl.log",
 
 
 use rule download_ref as download_gff with:
     output:
-        func_src_dir / "func.gff.gz",
+        func_src_dir / "gff.txt.gz",
     params:
         src=lambda w: config.refkey_to_functional_gff_src(w.ref_key),
     localrule: True
+    log:
+        func_log_build_dir / "gff.log",
 
 
 rule combine_ftbl_and_gff:

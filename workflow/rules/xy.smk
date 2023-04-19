@@ -1,5 +1,6 @@
 xy_src_dir = config.ref_src_dir / "XY"
 xy_inter_dir = config.intermediate_build_dir / "XY"
+xy_log_src_dir = config.log_src_dir / "XY"
 
 
 def xy_final_path(name):
@@ -9,6 +10,8 @@ def xy_final_path(name):
 use rule download_ref as download_genome_features_bed with:
     output:
         xy_src_dir / "genome_features_{sex_chr}.bed.gz",
+    log:
+        xy_log_src_dir / "genome_features_{sex_chr}.log",
     params:
         src=lambda w: (
             config.refkey_to_y_features_src

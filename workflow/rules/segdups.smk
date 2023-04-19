@@ -1,5 +1,6 @@
 segdup_src_dir = config.ref_src_dir / "SegmentalDuplications"
 segdup_inter_dir = config.intermediate_build_dir / "SegmentalDuplications"
+segdup_log_src_dir = config.log_src_dir / "SegmentalDuplications"
 
 
 def segdup_final_path(name):
@@ -8,7 +9,9 @@ def segdup_final_path(name):
 
 use rule download_ref as download_superdups with:
     output:
-        segdup_src_dir / "selfChain.txt.gz",
+        segdup_src_dir / "superdups.txt.gz",
+    log:
+        segdup_log_src_dir / "superdups.log",
     params:
         src=lambda w: config.refkey_to_superdups_src(w.ref_key),
     localrule: True

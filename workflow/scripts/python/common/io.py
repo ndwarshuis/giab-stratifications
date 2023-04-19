@@ -1,3 +1,4 @@
+import hashlib
 from typing import TypeVar
 from logging import Logger
 from pathlib import Path
@@ -5,6 +6,14 @@ from Bio import bgzf  # type: ignore
 import gzip
 
 X = TypeVar("X")
+
+
+def get_md5(path: str) -> str:
+    h = hashlib.md5()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def setup_logging(path: str, console: bool = False) -> Logger:

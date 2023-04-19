@@ -147,7 +147,11 @@ class BedColumns(BaseModel):
         return {self.chr: str, self.start: int, self.end: int}
 
 
-class FileSrc_(BaseModel):
+class HashedSrc_(BaseModel):
+    md5: str | None = None
+
+
+class FileSrc_(HashedSrc_):
     """Base class for local src files."""
 
     filepath: FilePath
@@ -171,7 +175,7 @@ class RefFileSrc(FileSrc_):
         return v
 
 
-class HttpSrc_(BaseModel):
+class HttpSrc_(HashedSrc_):
     """Base class for downloaded src files."""
 
     url: HttpUrl
@@ -442,6 +446,10 @@ class GiabStrats(BaseModel):
         return self.results_dir / "bench"
 
     @property
+    def log_src_dir(self) -> Path:
+        return self.log_root_dir / "{ref_key}"
+
+    @property
     def log_build_dir(self) -> Path:
         return self.log_root_dir / "{ref_key}@{build_key}"
 
@@ -526,6 +534,11 @@ class GiabStrats(BaseModel):
 
     def refkey_to_functional_gff_src(self, k: RefKey) -> BedSrc:
         return self.stratifications[k].functional.gff_src
+
+    # checksum getters (for use in ensuring inputs are correct)
+
+    def refkey_to_ref_checksum(self, k: RefKey) -> str | None:
+        return self.refkey_to_ref_src(k).md5
 
     # chromosome standardization
 

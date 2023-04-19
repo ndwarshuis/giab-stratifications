@@ -4,7 +4,8 @@ from functools import partial
 
 lc_src_dir = config.ref_src_dir / "low_complexity"
 lc_inter_dir = config.intermediate_build_dir / "LowComplexity"
-lc_log_dir = config.log_build_dir / "LowComplexity"
+lc_log_src_dir = config.log_src_dir / "LogComplexity"
+lc_log_build_dir = config.log_build_dir / "LowComplexity"
 lc_bench_dir = config.bench_build_dir / "LowComplexity"
 
 
@@ -34,7 +35,7 @@ rule find_perfect_uniform_repeats:
     output:
         lc_inter_dir / "uniform_repeats_R{unit_len}_T{total_len}.bed",
     log:
-        lc_log_dir / "uniform_repeats_R{unit_len}_T{total_len}.log",
+        lc_log_build_dir / "uniform_repeats_R{unit_len}_T{total_len}.log",
     wildcard_constraints:
         unit_len="\d+",
         total_len="\d+",
@@ -229,6 +230,8 @@ rule all_uniform_repeats:
 use rule download_ref as download_trf with:
     output:
         lc_src_dir / "trf_simreps.txt.gz",
+    log:
+        lc_log_src_dir / "trf_simreps.log",
     params:
         src=lambda w: config.refkey_to_simreps_src(w.ref_key),
     localrule: True
@@ -267,6 +270,8 @@ rule merge_trf:
 use rule download_ref as download_rmsk with:
     output:
         lc_src_dir / "rmsk.txt.gz",
+    log:
+        lc_log_src_dir / "rmsk.log",
     params:
         src=lambda w: config.refkey_to_rmsk_src(w.ref_key),
     localrule: True
@@ -322,6 +327,8 @@ rule all_rmsk_classes:
 use rule download_ref as download_censat with:
     output:
         lc_src_dir / "censat.txt.gz",
+    log:
+        lc_log_src_dir / "censat.log",
     params:
         src=lambda w: config.refkey_to_satellite_src(w.ref_key),
     localrule: True

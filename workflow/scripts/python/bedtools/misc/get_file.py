@@ -5,10 +5,14 @@ from typing_extensions import assert_never
 from tempfile import NamedTemporaryFile as Tmp
 from common.io import is_bgzip, is_gzip
 import common.config as cfg
+from common.io import get_md5, setup_logging
 
 # hacky curl/gzip wrapper; this exists because I got tired of writing
 # specialized rules to convert gzip/nozip files to bgzip and back :/
 # Solution: force bgzip for references and gzip for bed
+
+
+log = setup_logging(snakemake.log[0])  # type: ignore
 
 GUNZIP = ["gunzip", "-c"]
 BGZIP = ["bgzip", "-c"]
@@ -70,6 +74,10 @@ def main(opath: str, src: cfg.BedSrc | cfg.RefSrc | None) -> None:
         assert False, "file src is null; this should not happen"
     else:
         assert_never(src)
+
+    if src.md5 is not None and src.md5 != (actual := get_md5(opath)):
+        log.error("md5s don't match; wanted %s, actual %s", src.md5, actual)
+        exit(1)
 
 
 main(snakemake.output[0], snakemake.params.src)  # type: ignore

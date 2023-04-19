@@ -22,12 +22,23 @@ stratifications:
     ref:
       src:
         # Location of the fasta (either url or filepath). Note that if this is
-        # a local file, the pipeline will raise an error if a) the file does
-        # not exist and b) it is not in bgzip format.
+        # a local file, the pipeline will raise an error if the file does
+        # not exist. If the file is not bgzipped, it will be bgzipped on the
+        # fly when downloaded
         #
         # filepath: path/to/local/file
         # url: https://url/to/file
         url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/references/GRCh38/GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta.gz
+
+        # MD5 checksum of the file. This is optional, and if not given the
+        # checksum could be anything. Recommended to be used after one has
+        # committed to using a particular set of inputs, and in particular if
+        # one suspects that the sources of said inputs might not be good
+        # stewards (eg, they change files without warning).
+        #
+        # NOTE: if the file is not bgzipped in the source url, the checksum will
+        # be calculated after it has been bgzipped and saved locally
+        md5: 3a3347eae0893f96ecf495d1c39e2284
 
       # The prefix of each chromosome. This must match the fasta exactly or
       # weird things will happen. The final stratification beds will also have
@@ -49,6 +60,10 @@ stratifications:
         # filepath: path/to/local/file
         # url: https://url/to/file
         url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
+
+        # Analogous for that in 'ref' except the checksum is calculated after
+        # gzipping the file if it is not already compressed
+        md5: ab378d85a7f7d2c6a82c635e2a1147f0
 
       # Params for the bed file
       params:
@@ -83,6 +98,7 @@ stratifications:
       rmsk:
         src:
           url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
+          md5: 748c3ba3af01720ffc979ce2cea2c6c1
 
         # the column index of the repeat masker class (eg LINE, SINE, etc)
         class_col: 11
@@ -98,6 +114,7 @@ stratifications:
       simreps:
         src: 
           url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
+          md5: 1269c9fad0881f4309f0cec1ca8a23ff
         params:
           bed_cols: {chr: 1, start: 2, end: 3}
 
@@ -109,11 +126,13 @@ stratifications:
         x_bed:
           src: 
             url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed
+            md5: d3ae5a80022907587fd62f9d6b9f2724
           # Column index for the feature level (eg XTR, Ampliconic, etc)
           level_col: 3
         y_bed:
           src: 
             url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
+            md5: 3d9b9c70d4b67052168ace62e4b4693d
           level_col: 3
         # Set to true if XTR regions are desired
         xtr: true
@@ -135,6 +154,7 @@ stratifications:
       superdups:
         src:
           url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/genomicSuperDups.txt.gz
+          md5: c04291127b3c7e0bdb88a82193c0f404
         params:
           bed_cols: {chr: 1, start: 2, end: 3}
 
@@ -143,9 +163,11 @@ stratifications:
       # Source for the FTBL file. Analogous to gaps src (see above)
       ftbl_src:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_feature_table.txt.gz
+        md5: ebc000ea91144e48c8989ebff2219d99
       # Source for the GFF file. Analogous to gaps src (see above)
       gff_src:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gff.gz
+        md5: 7468a1ca4285bbf1b09c27d723902291
 
     # Builds for this stratification. In this example we have two builds (named
     # 'test_autosome' and 'test_xy') which have difference directives for what
@@ -207,16 +229,19 @@ stratifications:
     ref:
       src:
         url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/references/GRCh37/hs37d5.fa.gz
+        md5: d10eebe06c0dbbcb04253e3294d63efc
       chr_prefix: ''
     gap:
       src: 
         url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/gap.txt.gz
+        md5: a24a8e1761a9375497e0853278d34854
       params:
         bed_cols: {chr: 1, start: 2, end: 3}
     low_complexity:
       rmsk:
         src:
           url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/rmsk.txt.gz
+          md5: bfed7e64af68efec90b9d419d98a2379
         class_col: 11
         params:
           bed_cols: {chr: 5, start: 6, end: 7}
@@ -224,6 +249,7 @@ stratifications:
       simreps:
         src: 
           url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/simpleRepeat.txt.gz
+          md5: 51a26869c10434312c51a20d07c9e963
         params:
           bed_cols: {chr: 1, start: 2, end: 3}
     xy:
@@ -231,12 +257,14 @@ stratifications:
         x_bed:
           src: 
             url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/hg19/chrX_genomic_features_hg19.bed
+            md5: bbe9bf0948e1c87d9aaf22aca432b52e
           level_col: 3
           params:
             sep: "\\s+"
         y_bed:
           src: 
             url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/hg19/chrY_genomic_features_hg19.bed
+            md5: d22c3c3c73c9671fc1bcf5914af867ce
           level_col: 3
           params:
             sep: "\\s+"
@@ -252,13 +280,16 @@ stratifications:
       superdups:
         src:
           url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/genomicSuperDups.txt.gz
+          md5: 7359c7e369589f0e87781c0ec89e0b05
         params:
           bed_cols: {chr: 1, start: 2, end: 3}
     functional:
       ftbl_src:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.25_GRCh37.p13/GCF_000001405.25_GRCh37.p13_feature_table.txt.gz
+        md5: 382b9c2fb7835d42808bc1cf79a29131
       gff_src:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.25_GRCh37.p13/GCF_000001405.25_GRCh37.p13_genomic.gff.gz
+        md5: b3f379fc76cd11abf0511f1ec1633251
     builds:
       test-autosome:
         chr_filter: [21, 22]
@@ -285,20 +316,24 @@ stratifications:
     ref:
       src:
         url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/analysis_set/chm13v2.0.fa.gz
+        md5: 06caded0055ec647a69acb708e13beff
       chr_prefix: chr
     low_complexity:
       rmsk:
         src:
           url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/annotation/chm13v2.0_RepeatMasker_4.1.2p1.bed
+          md5: 49febeac68668680cab16b4537497d77
         class_col: 6
       simreps:
         src:
           # from here: https://app.globus.org/file-manager?origin_id=9db1f0a6-a05a-11ea-8f06-0a21f750d19b&origin_path=%2Fteam-segdups%2FAssembly_analysis%2FMasked%2F/T2T_CHM13v2_trf.bed
           filepath: test/data/CHM13/LowComplexity/trf21and22.bed.gz
+          md5: 3566037b466797f049279ce9e3f1d439
       # https://t2t-consortium.slack.com/files/ULT7E06GL/F039A96RY84/t2t_censat_chm13v2.0_trackv2.0.bed
       satellites:
         src:
           filepath: test/data/CHM13/LowComplexity/censat21and22.bed.gz
+          md5: d46e97d9bb84203c0bc897de0126ef07
         params:
           skip_lines: 1
     xy:
@@ -307,10 +342,12 @@ stratifications:
         x_bed:
           src:
             url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/T2T/chrX_genomic_features_CHM13.bed
+            md5: 4a49d47fff4a3fac778ec66aff5c19b1
           level_col: 3
         y_bed:
           src: 
             url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/T2T/chrY_genomic_features_HG002.bed
+            md5: 5b78ffe218c11c18b6a0eaeb0c7fdf76
           level_col: 3
         xtr: true
         ampliconic: false # not present in these files
@@ -325,8 +362,10 @@ stratifications:
     functional:
       ftbl_src:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_feature_table.txt.gz
+        md5: d4da94d0c801fb8d7db8cb398d29528e
       gff_src:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_genomic.gff.gz
+        md5: c6ff30d9e98d4b0c7929021bd8d0fed5
     builds:
       test-autosome:
         chr_filter: [21, 22]

@@ -1,14 +1,6 @@
-import hashlib
 from typing import Any
 from os.path import dirname
-
-
-def get_md5(path: str) -> str:
-    h = hashlib.md5()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            h.update(chunk)
-    return h.hexdigest()
+from common.io import get_md5
 
 
 def strat_files(path: str) -> list[str]:

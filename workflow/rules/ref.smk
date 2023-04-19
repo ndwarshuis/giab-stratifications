@@ -2,7 +2,9 @@ ref_master_dir = config.intermediate_root_dir / "ref" / "{ref_key}"
 ref_master_log_dir = config.log_root_dir / "ref" / "{ref_key}"
 
 ref_inter_dir = config.intermediate_build_dir / "ref"
-ref_log_dir = config.log_build_dir / "ref"
+
+ref_log_src_dir = config.log_src_dir / "ref"
+ref_log_build_dir = config.log_build_dir / "ref"
 
 
 # lots of things depend on PAR so move this out of the XY ruleset
@@ -20,6 +22,8 @@ rule download_ref:
         config.ref_src_dir / "ref.fna.gz",
     params:
         src=lambda w: config.refkey_to_ref_src(w.ref_key),
+    log:
+        ref_log_src_dir / "index_ref.log",
     conda:
         "../envs/bedtools.yml"
     localrule: True
@@ -52,7 +56,7 @@ rule get_genome:
     conda:
         "../envs/bedtools.yml"
     log:
-        ref_log_dir / "get_genome.log",
+        ref_log_build_dir / "get_genome.log",
     script:
         "../scripts/python/bedtools/ref/get_genome.py"
 
@@ -66,7 +70,7 @@ rule filter_sort_ref:
     conda:
         "../envs/utils.yml"
     log:
-        ref_log_dir / "filter_sort_ref.log",
+        ref_log_build_dir / "filter_sort_ref.log",
     shell:
         """
         samtools faidx {input.fa} $(cut -f1 {input.genome} | tr '\n' ' ') 2> {log} | \
