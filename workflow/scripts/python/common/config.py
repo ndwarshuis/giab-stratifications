@@ -55,6 +55,10 @@ def chr_is_unknown(prefix: str, query: str) -> bool:
     return query.startswith(f"{prefix}Un")
 
 
+def chr_is_mito(prefix: str, query: str) -> bool:
+    return query.startswith(f"{prefix}M")
+
+
 class ChrConversion(NamedTuple):
     """Data to filter, sort, and standardize chromosome names.
 

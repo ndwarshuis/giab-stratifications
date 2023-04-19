@@ -27,7 +27,9 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     chrs = [
         c
         for c in idx[0].tolist()
-        if any([i.matches(prefix, c) for i in cis]) or cfg.chr_is_unknown(prefix, c)
+        if any([i.matches(prefix, c) for i in cis])
+        or cfg.chr_is_unknown(prefix, c)
+        or cfg.chr_is_mito(prefix, c)
     ]
     with open(Path(smk.output[0]), "w") as f:
         # ASSUME sort order doesn't matter
