@@ -1,0 +1,67 @@
+stratifications:
+  CHM13:
+    ref:
+      src:
+        url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/analysis_set/chm13v2.0.fa.gz
+        md5: 06caded0055ec647a69acb708e13beff
+      chr_prefix: chr
+    low_complexity:
+      rmsk:
+        src:
+          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/annotation/chm13v2.0_RepeatMasker_4.1.2p1.bed
+          md5: 49febeac68668680cab16b4537497d77
+        class_col: 6
+      simreps:
+        src:
+          # from here: https://app.globus.org/file-manager?origin_id=9db1f0a6-a05a-11ea-8f06-0a21f750d19b&origin_path=%2Fteam-segdups%2FAssembly_analysis%2FMasked%2F/T2T_CHM13v2_trf.bed
+          filepath: data/CHM13/LowComplexity/trf.bed.gz
+          md5: 548a415b4f45aab0b117b5e2d40f7705
+      # https://t2t-consortium.slack.com/files/ULT7E06GL/F039A96RY84/t2t_censat_chm13v2.0_trackv2.0.bed
+      satellites:
+        src:
+          filepath: data/CHM13/LowComplexity/censat.bed.gz
+          md5: 3d6e6aea2a0001806a19218277261578
+        params:
+          skip_lines: 1
+    xy:
+      features:
+        x_bed:
+          src:
+            url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/T2T/chrX_genomic_features_CHM13.bed
+            md5: 4a49d47fff4a3fac778ec66aff5c19b1
+          level_col: 3
+        y_bed:
+          src: 
+            url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/T2T/chrY_genomic_features_HG002.bed
+            md5: 5b78ffe218c11c18b6a0eaeb0c7fdf76
+          level_col: 3
+        xtr: true
+        ampliconic: false # not present in these files
+      x_par:
+        start: [0, 2394410]
+        end: [153925834, 154259566]
+      y_par:
+        start: [0, 2458320]
+        end: [62122809, 62460029]
+    segdups:
+      superdups: null
+    functional:
+      ftbl_src:
+        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_feature_table.txt.gz
+        md5: d4da94d0c801fb8d7db8cb398d29528e
+      gff_src:
+        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_genomic.gff.gz
+        md5: c6ff30d9e98d4b0c7929021bd8d0fed5
+    builds:
+      all:
+        chr_filter: []
+        include:
+          low_complexity: true
+          xy: true
+          gc: true
+          functional: true
+          segdups: true
+          union: true
+          mappability:
+            - {length: 250, mismatches: 0, indels: 0}
+            - {length: 100, mismatches: 2, indels: 1}
