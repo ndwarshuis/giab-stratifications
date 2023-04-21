@@ -336,6 +336,8 @@ stratifications:
           md5: d46e97d9bb84203c0bc897de0126ef07
         params:
           skip_lines: 1
+        # the column with the type of satellite in it (for filtering)
+        sat_col: 3
     xy:
       # from a slack thread w/ Melissa Wilson
       features:

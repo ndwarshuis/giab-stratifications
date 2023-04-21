@@ -253,12 +253,18 @@ class RMSKFile(BedFile):
         return v
 
 
+class SatFile(BedFile):
+    """Configuration for a satellites file."""
+
+    sat_col: NonNegativeInt
+
+
 class LowComplexity(BaseModel):
     """Configuration for low complexity stratification."""
 
     rmsk: RMSKFile
     simreps: BedFile
-    satellites: BedFile | None
+    satellites: SatFile | None
 
 
 class XYFile(BedFile):

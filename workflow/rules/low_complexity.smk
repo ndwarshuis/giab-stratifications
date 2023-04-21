@@ -345,27 +345,11 @@ rule filter_sort_censat:
         "../scripts/python/bedtools/low_complexity/filter_sort_censat.py"
 
 
-rule filter_censat_satellites:
-    input:
-        bed=rules.filter_sort_censat.output,
-        genome=rules.get_genome.output,
-    output:
-        lc_inter_dir / "censat_satellites_slop5.bed.gz",
-    conda:
-        "../envs/bedtools.yml"
-    shell:
-        """
-        gunzip -c {input.bed} | \
-        grep -v "ct_" | \
-        bgzip -c > {output}
-        """
-
-
 # split this from the final rule since other rules depend on the satellites
 # bed file but add slop of their own, so this avoids adding slop twice
 rule merge_satellites_intermediate:
     input:
-        lambda w: rules.filter_censat_satellites.output
+        lambda w: rules.filter_sort_censat.output
         if config.want_low_complexity_censat(w.ref_key)
         else rules.all_rmsk_classes.input.Satellite,
     output:
