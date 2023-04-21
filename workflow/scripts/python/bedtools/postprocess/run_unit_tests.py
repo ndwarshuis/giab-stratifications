@@ -29,7 +29,10 @@ def test_bed(
     # Phase 1: try to import the dataframe (with almost no assumptions except
     # that it has no header)
     try:
-        df = pd.read_table(strat_file, header=0)
+        # no low mem since we don't want to assume what dtypes each column has,
+        # and by default pandas will chunk the input which could lead to mixed
+        # types
+        df = pd.read_table(strat_file, header=0, low_memory=False)
     except pd.errors.EmptyDataError:
         # if df is empty, nothing to do
         return []
