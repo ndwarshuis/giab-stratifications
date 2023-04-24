@@ -169,6 +169,15 @@ stratifications:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gff.gz
         md5: 7468a1ca4285bbf1b09c27d723902291
 
+    # Mappability parameters for this reference
+    mappability:
+      # A list of patterns to specifify which chromosomes in the reference
+      # should be considered as "unplaced." One would normally want to include
+      # these chromosomes when assessing hard-to-map regions, as unplaced
+      # contigs by definition are hard-to-map. Note that these unplaced contigs
+      # will not be included in the final bed files.
+      unplaced_chr_patterns: ["^chrM$", "^chr.+_.+$"]
+
     # Builds for this stratification. In this example we have two builds (named
     # 'test_autosome' and 'test_xy') which have difference directives for what
     # to include.
@@ -290,6 +299,8 @@ stratifications:
       gff_src:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.25_GRCh37.p13/GCF_000001405.25_GRCh37.p13_genomic.gff.gz
         md5: b3f379fc76cd11abf0511f1ec1633251
+    mappability:
+      unplaced_chr_patterns: ["^chrMT$", "^GL.+$", "^hs37d5$"]
     builds:
       test-autosome:
         chr_filter: [21, 22]
@@ -368,6 +379,8 @@ stratifications:
       gff_src:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_genomic.gff.gz
         md5: c6ff30d9e98d4b0c7929021bd8d0fed5
+    mappability:
+      unplaced_chr_patterns: ["^chrM$"]
     builds:
       test-autosome:
         chr_filter: [21, 22]

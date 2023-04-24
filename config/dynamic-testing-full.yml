@@ -72,6 +72,9 @@ stratifications:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gff.gz
         md5: 7468a1ca4285bbf1b09c27d723902291
 
+    mappability:
+      unplaced_chr_patterns: ["^chrM$", "^chr[^_]+_[^_]+$"]
+
     builds:
       test-autosome:
         chr_filter: []

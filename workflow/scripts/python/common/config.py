@@ -47,17 +47,6 @@ class ChrIndex(Enum):
     def chr_name_full(self, prefix: str) -> str:
         return f"{prefix}{self.chr_name}"
 
-    def matches(self, prefix: str, query: str) -> bool:
-        return query.startswith(self.chr_name_full(prefix))
-
-
-def chr_is_unknown(prefix: str, query: str) -> bool:
-    return query.startswith(f"{prefix}Un")
-
-
-def chr_is_mito(prefix: str, query: str) -> bool:
-    return query.startswith(f"{prefix}M")
-
 
 class ChrConversion(NamedTuple):
     """Data to filter, sort, and standardize chromosome names.
@@ -330,6 +319,18 @@ class XY(BaseModel):
         return self.y_par.fmt(ChrIndex.CHRY, prefix)
 
 
+class Mappability(BaseModel):
+    """Configuration for Mappability stratification.
+
+    members:
+    - unplaced_chr_patterns: a list of regexps that will be used to identify
+      non-primary chromosomes in the reference to be included in mappability
+      evaluation.
+    """
+
+    unplaced_chr_patterns: list[str]
+
+
 class SegDups(BaseModel):
     """Configuration for Segdup stratifications."""
 
@@ -384,6 +385,7 @@ class Stratification(BaseModel):
     gap: BedFile | None
     low_complexity: LowComplexity
     xy: XY
+    mappability: Mappability | None
     segdups: SegDups
     functional: Functional
     builds: dict[BuildKey, Build]
@@ -495,6 +497,12 @@ class GiabStrats(BaseModel):
     def refkey_to_strat(self, k: RefKey) -> Stratification:
         return self.stratifications[k]
 
+    def refkey_to_mappability_patterns(self, k: RefKey) -> list[str]:
+        if (m := self.refkey_to_strat(k).mappability) is None:
+            return []
+        else:
+            return m.unplaced_chr_patterns
+
     def buildkey_to_build(self, rk: RefKey, bk: BuildKey) -> Build:
         return self.stratifications[rk].builds[bk]
 
@@ -544,11 +552,6 @@ class GiabStrats(BaseModel):
 
     def refkey_to_functional_gff_src(self, k: RefKey) -> BedSrc:
         return self.stratifications[k].functional.gff_src
-
-    # checksum getters (for use in ensuring inputs are correct)
-
-    def refkey_to_ref_checksum(self, k: RefKey) -> str | None:
-        return self.refkey_to_ref_src(k).md5
 
     # chromosome standardization
 
@@ -630,13 +633,19 @@ class GiabStrats(BaseModel):
         return self.buildkey_to_include(rk, bk).functional
 
     def want_segdups(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_include(rk, bk).segdups
+        return (
+            self.refkey_to_superdups_src(rk) is not None
+            and self.buildkey_to_include(rk, bk).segdups
+        )
 
     def _want_union(self, rk: RefKey, bk: BuildKey) -> bool:
         return self.buildkey_to_include(rk, bk).union
 
     def want_mappability(self, rk: RefKey, bk: BuildKey) -> bool:
-        return len(self.buildkey_to_include(rk, bk).mappability) > 0
+        return (
+            self.refkey_to_strat(rk).mappability is not None
+            and len(self.buildkey_to_include(rk, bk).mappability) > 0
+        )
 
     def want_segdup_and_map(self, rk: RefKey, bk: BuildKey) -> bool:
         return (
