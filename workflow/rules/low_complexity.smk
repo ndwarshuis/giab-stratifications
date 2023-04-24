@@ -310,16 +310,14 @@ rule merge_rmsk_class:
         """
 
 
-rule all_rmsk_classes:
-    input:
-        **{
-            c: expand(
-                rules.merge_rmsk_class.output,
-                allow_missing=True,
-                rmsk_class=c,
-            )
-            for c in ["Low_complexity", "Simple_repeat", "Satellite"]
-        },
+all_rmsk_classes = {
+    c: expand(
+        rules.merge_rmsk_class.output,
+        allow_missing=True,
+        rmsk_class=c,
+    )
+    for c in ["Low_complexity", "Simple_repeat", "Satellite"]
+}
 
 
 ################################################################################
@@ -353,7 +351,7 @@ rule merge_satellites_intermediate:
     input:
         lambda w: rules.filter_sort_censat.output
         if config.want_low_complexity_censat(w.ref_key)
-        else rules.all_rmsk_classes.input.Satellite,
+        else all_rmsk_classes["Satellite"],
     output:
         lc_inter_dir / "merged_satellites.bed.gz",
     conda:
@@ -435,7 +433,8 @@ use rule invert_satellites as invert_all_uniform_repeats with:
 
 rule merge_repeats:
     input:
-        beds=rules.all_rmsk_classes.input
+        beds=all_rmsk_classes["Low_complexity"]
+        + all_rmsk_classes["Simple_repeat"]
         + rules.merge_trf.output
         + rules.all_perfect_uniform_repeats.input.R2_T10
         + rules.all_perfect_uniform_repeats.input.R3_T14
