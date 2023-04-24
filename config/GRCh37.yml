@@ -64,6 +64,8 @@ stratifications:
       gff_src:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.25_GRCh37.p13/GCF_000001405.25_GRCh37.p13_genomic.gff.gz
         md5: b3f379fc76cd11abf0511f1ec1633251
+    mappability:
+      unplaced_chr_patterns: ["^chrMT$", "^GL.+$", "^hs37d5$"]
     builds:
       all:
         chr_filter: []
