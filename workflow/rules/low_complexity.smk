@@ -28,6 +28,8 @@ uniform_repeats = {
 unit_name_constraint = f"({'|'.join(uniform_repeats)})"
 
 
+# NOTE: weird sed command ensures all bases are capitalized, otherwise for some
+# refs we might miss a repeat like "AAaa"
 rule find_perfect_uniform_repeats:
     input:
         ref=rules.filter_sort_ref.output,
@@ -44,8 +46,8 @@ rule find_perfect_uniform_repeats:
     shell:
         """
         gunzip -c {input.ref} | \
-        {input.bin} {wildcards.unit_len} {wildcards.total_len} - 2> {log} | \
-        sed 's/unit=\(.\)/unit=\\U\\1/' \
+        sed 's/^[A-Za-z]\\+$/\\U&/' | \
+        {input.bin} {wildcards.unit_len} {wildcards.total_len} - 2> {log} \
         > {output} 
         """
 
