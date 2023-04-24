@@ -23,6 +23,7 @@ stratifications:
           md5: 3d6e6aea2a0001806a19218277261578
         params:
           skip_lines: 1
+        sat_col: 3
     xy:
       features:
         x_bed:
@@ -60,7 +61,7 @@ stratifications:
           xy: true
           gc: true
           functional: true
-          segdups: true
+          segdups: false
           union: true
           mappability:
             - {length: 250, mismatches: 0, indels: 0}
