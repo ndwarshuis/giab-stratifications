@@ -102,8 +102,8 @@ rule get_gapless:
         ),
         genome=rules.get_genome.output[0],
     output:
-        auto=ref_inter_dir / "genome_gapless.bed",
-        parY=ref_inter_dir / "genome_gapless_parY.bed",
+        auto=ref_inter_dir / "genome_gapless.bed.gz",
+        parY=ref_inter_dir / "genome_gapless_parY.bed.gz",
     conda:
         "../envs/bedtools.yml"
     script:
