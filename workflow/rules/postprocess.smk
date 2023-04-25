@@ -56,7 +56,7 @@ rule generate_md5sums:
     input:
         rules.list_all_strats.output,
     output:
-        config.final_build_dir / "v3.1-genome-stratifications-{ref_key}-md5s.txt",
+        config.final_build_dir / "{ref_key}-genome-stratifications-md5s.txt",
     conda:
         "../envs/bedtools.yml"
     script:
@@ -67,7 +67,7 @@ rule generate_tsv_list:
     input:
         rules.list_all_strats.output,
     output:
-        config.final_build_dir / "v3.1-{ref_key}-all-stratifications.tsv",
+        config.final_build_dir / "{ref_key}-all-stratifications.tsv",
     script:
         "../scripts/python/bedtools/postprocess/generate_tsv.py"
 
@@ -95,7 +95,7 @@ rule validate_strats:
         strats=rules.list_all_strats.output,
         nonN=rules.get_gapless.output.auto,
     output:
-        config.final_build_dir / "validation.html",
+        config.final_build_dir / "coverage_plots.html",
     conda:
         "../envs/rmarkdown.yml"
     script:
