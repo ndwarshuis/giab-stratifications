@@ -459,11 +459,15 @@ class GiabStrats(BaseModel):
 
     @property
     def log_src_dir(self) -> Path:
-        return self.log_root_dir / "{ref_key}"
+        return self.log_root_dir / "resources" / "{ref_key}"
+
+    @property
+    def log_results_dir(self) -> Path:
+        return self.log_root_dir / "results"
 
     @property
     def log_build_dir(self) -> Path:
-        return self.log_root_dir / "{ref_key}@{build_key}"
+        return self.log_results_dir / "builds" / "{ref_key}@{build_key}"
 
     @property
     def bench_build_dir(self) -> Path:

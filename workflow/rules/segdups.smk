@@ -1,6 +1,7 @@
-segdup_src_dir = config.ref_src_dir / "SegmentalDuplications"
-segdup_inter_dir = config.intermediate_build_dir / "SegmentalDuplications"
-segdup_log_src_dir = config.log_src_dir / "SegmentalDuplications"
+segdup_dir = "SegmentalDuplications"
+segdup_src_dir = config.ref_src_dir / segdup_dir
+segdup_inter_dir = config.intermediate_build_dir / segdup_dir
+segdup_log_src_dir = config.log_src_dir / segdup_dir
 
 
 def segdup_final_path(name):

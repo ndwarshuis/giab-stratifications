@@ -1,10 +1,11 @@
-ref_master_dir = config.intermediate_root_dir / "ref" / "{ref_key}"
-ref_master_log_dir = config.log_root_dir / "ref" / "{ref_key}"
+ref_dir = "ref"
+ref_inter_dir = config.intermediate_build_dir / ref_dir
+ref_log_src_dir = config.log_src_dir / ref_dir
+ref_log_build_dir = config.log_build_dir / ref_dir
 
-ref_inter_dir = config.intermediate_build_dir / "ref"
-
-ref_log_src_dir = config.log_src_dir / "ref"
-ref_log_build_dir = config.log_build_dir / "ref"
+ref_master_dir = ref_dir / "{ref_key}"
+ref_master_dir = config.intermediate_root_dir / ref_master_dir
+ref_master_log_dir = config.log_results_dir / ref_master_dir
 
 
 # lots of things depend on PAR so move this out of the XY ruleset
@@ -23,7 +24,7 @@ rule download_ref:
     params:
         src=lambda w: config.refkey_to_ref_src(w.ref_key),
     log:
-        ref_log_src_dir / "index_ref.log",
+        ref_log_src_dir / "download_ref.log",
     conda:
         "../envs/bedtools.yml"
     localrule: True
