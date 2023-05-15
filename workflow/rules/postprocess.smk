@@ -2,8 +2,6 @@ from os.path import dirname, basename
 from more_itertools import unique_everseen
 from os import scandir
 
-# TODO add a nice header to the top informing user that "these are strats"?
-
 post_inter_dir = config.intermediate_build_dir / "postprocess"
 
 
@@ -11,8 +9,8 @@ post_inter_dir = config.intermediate_build_dir / "postprocess"
 # level types. Because of the way snakemake works, it is not practical or
 # maintainable to specify every single stratification file; therefore we only
 # use the "toplevel" targets which will pull in all others. In downstream rules
-# from this, it is much easier to use condense this to a list of parent
-# directories then manually iterate all strat files in these directories.
+# from this, it is much easier to condense this to a list of parent directories
+# then manually iterate all strat files in these directories.
 def expand_strat_targets(wildcards):
     rk = wildcards.ref_key
     bk = wildcards.build_key
@@ -51,12 +49,11 @@ rule list_all_strats:
         "../scripts/python/bedtools/postprocess/list_strats.py"
 
 
-# TODO don't hardcode version
 rule generate_md5sums:
     input:
         rules.list_all_strats.output,
     output:
-        config.final_build_dir / "v3.1-genome-stratifications-{ref_key}-md5s.txt",
+        config.final_build_dir / "{ref_key}-genome-stratifications-md5s.txt",
     conda:
         "../envs/bedtools.yml"
     script:
@@ -67,7 +64,7 @@ rule generate_tsv_list:
     input:
         rules.list_all_strats.output,
     output:
-        config.final_build_dir / "v3.1-{ref_key}-all-stratifications.tsv",
+        config.final_build_dir / "{ref_key}-all-stratifications.tsv",
     script:
         "../scripts/python/bedtools/postprocess/generate_tsv.py"
 
@@ -95,7 +92,7 @@ rule validate_strats:
         strats=rules.list_all_strats.output,
         nonN=rules.get_gapless.output.auto,
     output:
-        config.final_build_dir / "validation.html",
+        config.final_build_dir / "coverage_plots.html",
     conda:
         "../envs/rmarkdown.yml"
     script:

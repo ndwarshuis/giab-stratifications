@@ -2,15 +2,16 @@ from more_itertools import unzip
 from collections import namedtuple
 from functools import partial
 
-lc_src_dir = config.ref_src_dir / "low_complexity"
-lc_inter_dir = config.intermediate_build_dir / "LowComplexity"
-lc_log_src_dir = config.log_src_dir / "LogComplexity"
-lc_log_build_dir = config.log_build_dir / "LowComplexity"
-lc_bench_dir = config.bench_build_dir / "LowComplexity"
+lc_dir = "LowComplexity"
+lc_src_dir = config.ref_src_dir / lc_dir
+lc_inter_dir = config.intermediate_build_dir / lc_dir
+lc_log_src_dir = config.log_src_dir / lc_dir
+lc_log_build_dir = config.log_build_dir / lc_dir
+lc_bench_dir = config.bench_build_dir / lc_dir
 
 
 def lc_final_path(name):
-    return config.build_strat_path("LowComplexity", name)
+    return config.build_strat_path(lc_dir, name)
 
 
 ################################################################################

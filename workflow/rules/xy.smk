@@ -1,10 +1,11 @@
-xy_src_dir = config.ref_src_dir / "XY"
-xy_inter_dir = config.intermediate_build_dir / "XY"
-xy_log_src_dir = config.log_src_dir / "XY"
+xy_dir = "XY"
+xy_src_dir = config.ref_src_dir / xy_dir
+xy_inter_dir = config.intermediate_build_dir / xy_dir
+xy_log_src_dir = config.log_src_dir / xy_dir
 
 
 def xy_final_path(name):
-    return config.build_strat_path("XY", name)
+    return config.build_strat_path(xy_dir, name)
 
 
 use rule download_ref as download_genome_features_bed with:

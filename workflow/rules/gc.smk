@@ -1,11 +1,12 @@
 from functools import partial
 from more_itertools import unzip
 
-gc_inter_dir = config.intermediate_build_dir / "GCcontent"
+gc_dir = "GCcontent"
+gc_inter_dir = config.intermediate_build_dir / gc_dir
 
 
 def gc_final_path(name):
-    return config.build_strat_path("GCcontent", name)
+    return config.build_strat_path(gc_dir, name)
 
 
 GC_BEDS = [15, 20, 25, 30, 55, 60, 65, 70, 75, 80, 85]

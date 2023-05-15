@@ -1,10 +1,11 @@
-func_src_dir = config.ref_src_dir / "FunctionalRegions"
-func_inter_dir = config.intermediate_build_dir / "FunctionalRegions"
-func_log_build_dir = config.log_src_dir / "FunctionalRegions"
+func_dir = "FunctionalRegions"
+func_src_dir = config.ref_src_dir / func_dir
+func_inter_dir = config.intermediate_build_dir / func_dir
+func_log_build_dir = config.log_src_dir / func_dir
 
 
 def func_final_path(name):
-    return config.build_strat_path("FunctionalRegions", name)
+    return config.build_strat_path(func_dir, name)
 
 
 use rule download_ref as download_ftbl with:
