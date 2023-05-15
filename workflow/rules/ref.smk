@@ -8,7 +8,7 @@ ref_master_dir = config.intermediate_root_dir / ref_master_dir
 ref_master_log_dir = config.log_results_dir / ref_master_dir
 
 
-# lots of things depend on PAR so move this out of the XY ruleset
+# lots of things depend on PAR which is why this isn't part of the XY module
 rule write_PAR_intermediate:
     output:
         ref_inter_dir / "chr{sex_chr}_PAR.bed.gz",

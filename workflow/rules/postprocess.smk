@@ -2,8 +2,6 @@ from os.path import dirname, basename
 from more_itertools import unique_everseen
 from os import scandir
 
-# TODO add a nice header to the top informing user that "these are strats"?
-
 post_inter_dir = config.intermediate_build_dir / "postprocess"
 
 
@@ -11,8 +9,8 @@ post_inter_dir = config.intermediate_build_dir / "postprocess"
 # level types. Because of the way snakemake works, it is not practical or
 # maintainable to specify every single stratification file; therefore we only
 # use the "toplevel" targets which will pull in all others. In downstream rules
-# from this, it is much easier to use condense this to a list of parent
-# directories then manually iterate all strat files in these directories.
+# from this, it is much easier to condense this to a list of parent directories
+# then manually iterate all strat files in these directories.
 def expand_strat_targets(wildcards):
     rk = wildcards.ref_key
     bk = wildcards.build_key
@@ -51,7 +49,6 @@ rule list_all_strats:
         "../scripts/python/bedtools/postprocess/list_strats.py"
 
 
-# TODO don't hardcode version
 rule generate_md5sums:
     input:
         rules.list_all_strats.output,
