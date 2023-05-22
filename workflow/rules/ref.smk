@@ -1,4 +1,4 @@
-ref_dir = "ref"
+ref_dir = Path("ref")
 ref_inter_dir = config.intermediate_build_dir / ref_dir
 ref_log_src_dir = config.log_src_dir / ref_dir
 ref_log_build_dir = config.log_build_dir / ref_dir
