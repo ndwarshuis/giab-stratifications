@@ -394,6 +394,19 @@ class Stratification(BaseModel):
 class GiabStrats(BaseModel):
     """Top level stratification object."""
 
+    strat_levels: list[str] = [
+        "ancestry",
+        "FunctionalRegions",
+        "FunctionalTechnicallyDifficultRegions",
+        "GenomeSpecific",
+        "GCcontent",
+        "LowComplexity",
+        "OtherDifficult",
+        "mappability",
+        "SegmentalDuplications",
+        "Union",
+        "XY",
+    ]
     paths: Paths
     tools: Tools
     stratifications: dict[RefKey, Stratification]
@@ -474,6 +487,7 @@ class GiabStrats(BaseModel):
         return self.bench_root_dir / "{ref_key}@{build_key}"
 
     def build_strat_path(self, level: str, name: str) -> Path:
+        assert level in self.strat_levels, f"not a valid level: {level}"
         return self.final_build_dir / level / f"{{ref_key}}_{name}.bed.gz"
 
     # because smk doesn't check these for existence yet:
