@@ -1,10 +1,11 @@
 from os.path import splitext, basename
 from pathlib import Path
+from common.config import CoreLevel
 
-map_dir = "mappability"
-map_inter_dir = config.intermediate_build_dir / map_dir
-map_log_dir = config.log_build_dir / map_dir
-map_bench_dir = config.bench_build_dir / map_dir
+map_dir = CoreLevel.MAPPABILITY
+map_inter_dir = config.intermediate_build_dir / map_dir.value
+map_log_dir = config.log_build_dir / map_dir.value
+map_bench_dir = config.bench_build_dir / map_dir.value
 
 
 def map_final_path(name):

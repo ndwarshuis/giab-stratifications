@@ -188,6 +188,11 @@ stratifications:
         # chromosomes.
         chr_filter: [21, 22]
         # Directive for which stratification types to include
+        other_strats:
+          OtherDifficult:
+            KIR:
+              src:
+                url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_KIR.bed.gz
         include:
           # Include all low complexity regions if true
           low_complexity: true

@@ -1,7 +1,9 @@
-xy_dir = "XY"
-xy_src_dir = config.ref_src_dir / xy_dir
-xy_inter_dir = config.intermediate_build_dir / xy_dir
-xy_log_src_dir = config.log_src_dir / xy_dir
+from common.config import CoreLevel
+
+xy_dir = CoreLevel.XY
+xy_src_dir = config.ref_src_dir / xy_dir.value
+xy_inter_dir = config.intermediate_build_dir / xy_dir.value
+xy_log_src_dir = config.log_src_dir / xy_dir.value
 
 
 def xy_final_path(name):

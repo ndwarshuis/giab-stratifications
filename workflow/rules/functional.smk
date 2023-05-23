@@ -1,7 +1,9 @@
-func_dir = "FunctionalRegions"
-func_src_dir = config.ref_src_dir / func_dir
-func_inter_dir = config.intermediate_build_dir / func_dir
-func_log_build_dir = config.log_src_dir / func_dir
+from common.config import CoreLevel
+
+func_dir = CoreLevel.FUNCTIONAL
+func_src_dir = config.ref_src_dir / func_dir.value
+func_inter_dir = config.intermediate_build_dir / func_dir.value
+func_log_build_dir = config.log_src_dir / func_dir.value
 
 
 def func_final_path(name):

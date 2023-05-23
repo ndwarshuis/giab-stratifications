@@ -2,7 +2,7 @@ from pathlib import Path
 from pydantic import BaseModel as BaseModel_
 from pydantic import validator, HttpUrl, FilePath, NonNegativeInt
 from enum import Enum, unique
-from typing import NewType, Any, Callable, TypeVar, Type, NamedTuple
+from typing import NewType, Any, Callable, TypeVar, Type, NamedTuple, cast
 from typing_extensions import Self
 from more_itertools import unzip, unique_everseen
 from common.io import is_gzip, is_bgzip
@@ -13,6 +13,8 @@ Y = TypeVar("Y")
 
 BuildKey = NewType("BuildKey", str)
 RefKey = NewType("RefKey", str)
+OtherLevelKey = NewType("OtherLevelKey", str)
+OtherStratKey = NewType("OtherStratKey", str)
 
 
 def fmap_maybe(f: Callable[[X], Y], x: X | None) -> None | Y:
@@ -46,6 +48,24 @@ class ChrIndex(Enum):
 
     def chr_name_full(self, prefix: str) -> str:
         return f"{prefix}{self.chr_name}"
+
+
+@unique
+class CoreLevel(Enum):
+    """A stratification level (eg "GCcontent" or "mappability")
+
+    These are the only "built-in" levels contained within the pipeline.
+    Users may add other levels if they wish to include other source
+    files, but these must be specified manually (see below).
+    """
+
+    FUNCTIONAL = "Functional"
+    LOWCOMPLEXITY = "LowComplexity"
+    GC = "GCcontent"
+    MAPPABILITY = "Mappability"
+    SEGDUPS = "SegmentalDuplications"
+    UNION = "Union"
+    XY = "XY"
 
 
 class ChrConversion(NamedTuple):
@@ -357,11 +377,15 @@ class Include(BaseModel):
     mappability: set[LowMapParams]
 
 
+OtherStrats = dict[OtherLevelKey, dict[OtherStratKey, BedFile]]
+
+
 class Build(BaseModel):
     """Spec for a stratification build."""
 
     chr_filter: set[ChrIndex]
     include: Include
+    other_strats: OtherStrats = {}
 
 
 class RefFile(BaseModel):
@@ -394,22 +418,43 @@ class Stratification(BaseModel):
 class GiabStrats(BaseModel):
     """Top level stratification object."""
 
-    strat_levels: list[str] = [
-        "ancestry",
-        "FunctionalRegions",
-        "FunctionalTechnicallyDifficultRegions",
-        "GenomeSpecific",
-        "GCcontent",
-        "LowComplexity",
-        "OtherDifficult",
-        "mappability",
-        "SegmentalDuplications",
-        "Union",
-        "XY",
+    other_levels: list[OtherLevelKey] = [
+        OtherLevelKey("Ancestry"),
+        OtherLevelKey("FunctionalTechnicallyDifficult"),
+        OtherLevelKey("GenomeSpecific"),
+        OtherLevelKey("OtherDifficult"),
     ]
     paths: Paths
     tools: Tools
     stratifications: dict[RefKey, Stratification]
+
+    @validator("other_levels", each_item=True)
+    def other_level_valid(cls, v: OtherLevelKey) -> OtherLevelKey:
+        core = [c.value for c in CoreLevel]
+        assert v not in core, "other level cannot overlap with built-in level"
+        return v
+
+    @validator("stratifications", each_item=True)
+    def builds_have_valid_existing(
+        cls,
+        v: Stratification,
+        values: dict[str, Any],
+    ) -> Stratification:
+        try:
+            levels = cast(list[OtherLevelKey], values["strat_levels"])
+            bad = [
+                f"invalid level '{lk}' under build key '{bk}'"
+                for bk, b in v.builds.items()
+                for lk in b.other_strats
+                if lk not in levels
+            ]
+            if len(bad) > 0:
+                assert (
+                    False
+                ), f"existing bed files with invalid levels: {', '.join(bad)}"
+        except KeyError:
+            pass
+        return v
 
     # hack to make rmd scripts work with this (note this will totally kill
     # the config as it passes into an rmd script)
@@ -486,9 +531,11 @@ class GiabStrats(BaseModel):
     def bench_build_dir(self) -> Path:
         return self.bench_root_dir / "{ref_key}@{build_key}"
 
-    def build_strat_path(self, level: str, name: str) -> Path:
-        assert level in self.strat_levels, f"not a valid level: {level}"
+    def build_final_strat_path(self, level: str, name: str) -> Path:
         return self.final_build_dir / level / f"{{ref_key}}_{name}.bed.gz"
+
+    def build_strat_path(self, level: CoreLevel, name: str) -> Path:
+        return self.build_final_strat_path(level.value, name)
 
     # because smk doesn't check these for existence yet:
     # https://github.com/snakemake/snakemake/issues/1657
@@ -531,6 +578,15 @@ class GiabStrats(BaseModel):
         cs = self.stratifications[rk].builds[bk].chr_filter
         return set([x for x in ChrIndex]) if len(cs) == 0 else cs
 
+    def otherkey_to_bed(
+        self,
+        rk: RefKey,
+        bk: BuildKey,
+        lk: OtherLevelKey,
+        sk: OtherStratKey,
+    ) -> BedFile:
+        return self.buildkey_to_build(rk, bk).other_strats[lk][sk]
+
     # src getters (for use in downloading inputs)
 
     def refkey_to_ref_src(self, k: RefKey) -> RefSrc:
@@ -570,6 +626,15 @@ class GiabStrats(BaseModel):
 
     def refkey_to_functional_gff_src(self, k: RefKey) -> BedSrc:
         return self.stratifications[k].functional.gff_src
+
+    def otherkey_to_src(
+        self,
+        rk: RefKey,
+        bk: BuildKey,
+        lk: OtherLevelKey,
+        sk: OtherStratKey,
+    ) -> BedSrc:
+        return self.otherkey_to_bed(rk, bk, lk, sk).src
 
     # chromosome standardization
 
