@@ -190,9 +190,9 @@ stratifications:
         # Directive for which stratification types to include
         other_strats:
           OtherDifficult:
-            KIR:
+            VDJ:
               src:
-                url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_KIR.bed.gz
+                url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_VDJ.bed.gz
         include:
           # Include all low complexity regions if true
           low_complexity: true
