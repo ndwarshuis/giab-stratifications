@@ -493,7 +493,7 @@ class GiabStrats(BaseModel):
 
     @property
     def final_build_dir(self) -> Path:
-        return self.results_dir / "final" / "{ref_key}@{build_key}"
+        return self.final_root_dir / "{ref_key}@{build_key}"
 
     @property
     def intermediate_root_dir(self) -> Path:
@@ -641,11 +641,6 @@ class GiabStrats(BaseModel):
     def refkey_to_final_chr_prefix(self, k: RefKey) -> str:
         return self.stratifications[k].ref.chr_prefix
 
-    def buildkey_to_final_chr_mapping(self, rk: RefKey, bk: BuildKey) -> dict[int, str]:
-        p = self.refkey_to_final_chr_prefix(rk)
-        cs = self.buildkey_to_chr_indices(rk, bk)
-        return {c.value: c.chr_name_full(p) for c in cs}
-
     def buildkey_to_chr_conversion(
         self,
         rk: RefKey,
@@ -655,6 +650,11 @@ class GiabStrats(BaseModel):
         toChr = self.refkey_to_final_chr_prefix(rk)
         cis = self.buildkey_to_chr_indices(rk, bk)
         return ChrConversion(fromChr, toChr, cis)
+
+    def buildkey_to_final_chr_mapping(self, rk: RefKey, bk: BuildKey) -> dict[int, str]:
+        p = self.refkey_to_final_chr_prefix(rk)
+        cs = self.buildkey_to_chr_indices(rk, bk)
+        return {c.value: c.chr_name_full(p) for c in cs}
 
     def buildkey_to_mappability(
         self,

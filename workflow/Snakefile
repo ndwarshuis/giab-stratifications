@@ -57,11 +57,10 @@ rule all_resources:
 
 rule all:
     input:
+        rules.validate_strats.output,
         [
             expand(
-                rules.validate_strats.output
-                + rules.generate_md5sums.output
-                + rules.generate_tsv_list.output,
+                rules.generate_md5sums.output + rules.generate_tsv_list.output,
                 ref_key=rk,
                 build_key=bk,
             )

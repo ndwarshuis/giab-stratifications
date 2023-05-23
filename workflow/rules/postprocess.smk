@@ -1,6 +1,7 @@
 from os.path import dirname, basename
-from more_itertools import unique_everseen
+from more_itertools import unique_everseen, unzip
 from os import scandir
+from common.config import CoreLevel
 
 post_inter_dir = config.intermediate_build_dir / "postprocess"
 
@@ -85,16 +86,51 @@ rule unit_test_strats:
         "../scripts/python/bedtools/postprocess/run_unit_tests.py"
 
 
+rks, bks = map(
+    list,
+    unzip([(rk, bk) for rk, r in config.stratifications.items() for bk in r.builds]),
+)
+
+
 rule validate_strats:
     input:
-        # this input isn't actually used, but ensures the unit tests pass
+        # this first input isn't actually used, but ensures the unit tests pass
         # before running the rmd script
-        _test=rules.unit_test_strats.output,
-        strats=rules.list_all_strats.output,
-        nonN=rules.get_gapless.output.auto,
+        **{
+            "_test": expand(
+                rules.unit_test_strats.output,
+                zip,
+                ref_key=rks,
+                build_key=bks,
+            ),
+            "strats": expand(
+                rules.list_all_strats.output,
+                zip,
+                ref_key=rks,
+                build_key=bks,
+            ),
+            "nonN": expand(
+                rules.get_gapless.output.auto,
+                zip,
+                ref_key=rks,
+                build_key=bks,
+            ),
+        },
     output:
-        config.final_build_dir / "coverage_plots.html",
+        config.final_root_dir / "coverage_plots.html",
     conda:
         "../envs/rmarkdown.yml"
+    params:
+        core_levels=[c.value for c in CoreLevel],
+        other_levels=config.other_levels,
+        chr_mapper=[
+            [
+                i.chr_name_full(config.refkey_to_final_chr_prefix(ref_key)),
+                i.chr_name,
+                f"{ref_key}@{build_key}",
+            ]
+            for ref_key, build_key in zip(rks, bks)
+            for i in config.buildkey_to_chr_indices(ref_key, build_key)
+        ],
     script:
         "../scripts/rmarkdown/rmarkdown/validate.Rmd"
