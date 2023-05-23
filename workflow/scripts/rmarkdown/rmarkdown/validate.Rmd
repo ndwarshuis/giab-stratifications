@@ -12,6 +12,8 @@ output:
 ```{r, include=FALSE}
 library(tidyverse)
 
+knitr::opts_chunk$set(fig.width=25, fig.height=6, fig_caption=TRUE)
+
 chr_mapper <- snakemake@params$chr_mapper %>%
   unlist() %>%
   # snakemake will flatten this list when feeding it as a param...oh well :/
@@ -50,8 +52,6 @@ read_strat <- function(path) {
     left_join(chr_mapper, by = c("chrom", "build_key")) %>%
     select(-chrom)
 }
-
-knitr::opts_chunk$set(fig.width=25, fig.height=5, fig_caption=TRUE)
 
 df_chr_sizes <- snakemake@input$nonN %>%
   map_dfr(read_nonN) %>%
@@ -103,7 +103,8 @@ coverage_plot <- function(df, level) {
           axis.text.x = element_text(angle = 90),
           strip.text.y = element_text(angle = 0),
           panel.spacing.y = unit(2, "lines")) +
-    xlab(NULL)
+    labs(x = NULL,
+         fill = "build")
   print(p)
   cat("\n\n")
 }
