@@ -1,8 +1,9 @@
 from functools import partial
+from common.config import CoreLevel
 from more_itertools import unzip
 
-gc_dir = "GCcontent"
-gc_inter_dir = config.intermediate_build_dir / gc_dir
+gc_dir = CoreLevel.GC
+gc_inter_dir = config.intermediate_build_dir / gc_dir.value
 
 
 def gc_final_path(name):

@@ -27,12 +27,13 @@ def expand_strat_targets(wildcards):
         (rules.invert_alldifficult.output, config.want_alldifficult),
     ]
     auto = [t for tgt, test in targets if test(rk, bk) for t in tgt]
+    other = all_other(rk, bk)
 
     # xy (expand target depending on which chromosomes we have selected)
     sex = all_xy_features(wildcards) + all_xy_PAR(wildcards)
 
     # combine and ensure that all "targets" refer to final bed files
-    all_targets = auto + sex
+    all_targets = auto + sex + other
     invalid = [f for f in all_targets if not f.startswith(str(config.final_root_dir))]
     assert len(invalid) == 0, f"invalid targets: {invalid}"
     return all_targets

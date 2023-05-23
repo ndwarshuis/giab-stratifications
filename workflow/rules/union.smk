@@ -1,5 +1,8 @@
+from common.config import CoreLevel
+
+
 def uni_final_path(name):
-    return config.build_strat_path("Union", name)
+    return config.build_strat_path(CoreLevel.UNION, name)
 
 
 rule intersect_segdup_and_map:

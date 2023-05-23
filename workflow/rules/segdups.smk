@@ -1,11 +1,13 @@
-segdup_dir = "SegmentalDuplications"
-segdup_src_dir = config.ref_src_dir / segdup_dir
-segdup_inter_dir = config.intermediate_build_dir / segdup_dir
-segdup_log_src_dir = config.log_src_dir / segdup_dir
+from common.config import CoreLevel
+
+segdup_dir = CoreLevel.SEGDUPS
+segdup_src_dir = config.ref_src_dir / segdup_dir.value
+segdup_inter_dir = config.intermediate_build_dir / segdup_dir.value
+segdup_log_src_dir = config.log_src_dir / segdup_dir.value
 
 
 def segdup_final_path(name):
-    return config.build_strat_path("SegmentalDuplications", name)
+    return config.build_strat_path(segdup_dir, name)
 
 
 use rule download_ref as download_superdups with:
