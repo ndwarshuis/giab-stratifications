@@ -4,7 +4,7 @@ output:
   html_document:
     code_folding: hide
     toc: true
-    toc_depth: 2
+    toc_depth: 3
     toc_float: true
     df_print: paged
 ---

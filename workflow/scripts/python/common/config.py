@@ -65,6 +65,7 @@ class CoreLevel(Enum):
     MAPPABILITY = "Mappability"
     SEGDUPS = "SegmentalDuplications"
     UNION = "Union"
+    TELOMERES = "Telomere"
     XY = "XY"
 
 
@@ -373,6 +374,7 @@ class Include(BaseModel):
     functional: bool
     segdups: bool
     union: bool
+    telomeres: bool
     mappability: set[LowMapParams]
 
 
@@ -747,6 +749,9 @@ class GiabStrats(BaseModel):
 
     def want_functional(self, rk: RefKey, bk: BuildKey) -> bool:
         return self.buildkey_to_include(rk, bk).functional
+
+    def want_telomeres(self, rk: RefKey, bk: BuildKey) -> bool:
+        return self.buildkey_to_include(rk, bk).telomeres
 
     def want_segdups(self, rk: RefKey, bk: BuildKey) -> bool:
         return (

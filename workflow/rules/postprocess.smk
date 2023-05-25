@@ -25,6 +25,7 @@ def expand_strat_targets(wildcards):
         ([rules.all_gc.input.wide[0], rules.all_gc.input.narrow[0]], config.want_gc),
         (rules.all_functional.input, config.want_functional),
         (rules.all_segdups.input, config.want_segdups),
+        (rules.find_telomeres.output, config.want_telomeres),
         (rules.invert_segdup_and_map.output, config.want_segdup_and_map),
         (rules.invert_alldifficult.output, config.want_alldifficult),
     ]

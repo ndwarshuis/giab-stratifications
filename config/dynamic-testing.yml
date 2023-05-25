@@ -228,6 +228,9 @@ stratifications:
           gc: true
           # Include functional regions if true
           functional: true
+          # Include telomeres if true (for references without telomeres this
+          # will be deflatingly boring)
+          telomeres: false
           # Include segmental duplications if true
           segdups: true
           # Include union if true. Note, since union actually unifies the GC,
@@ -250,6 +253,7 @@ stratifications:
           xy: true
           gc: true
           functional: true
+          telomeres: false
           segdups: true
           union: true
           mappability: []
@@ -260,6 +264,7 @@ stratifications:
           xy: false
           gc: false
           functional: false
+          telomeres: false
           segdups: true
           union: true
           mappability:
@@ -352,6 +357,7 @@ stratifications:
           xy: false
           gc: true
           functional: true
+          telomeres: false
           segdups: true
           union: true
           mappability: []
@@ -361,6 +367,7 @@ stratifications:
           low_complexity: false
           xy: true
           gc: true
+          telomeres: false
           functional: true
           segdups: true
           union: false
@@ -432,6 +439,7 @@ stratifications:
           xy: false
           gc: true
           functional: true
+          telomeres: true
           segdups: false
           union: true
           mappability: []
@@ -442,6 +450,7 @@ stratifications:
           low_complexity: false
           xy: true
           gc: true
+          telomeres: true
           functional: true
           segdups: false
           union: true
