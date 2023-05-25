@@ -14,12 +14,18 @@ library(tidyverse)
 
 knitr::opts_chunk$set(fig.width=25, fig.height=6, fig_caption=TRUE)
 
-chr_mapper <- snakemake@params$chr_mapper %>%
-  unlist() %>%
-  # snakemake will flatten this list when feeding it as a param...oh well :/
-  matrix(ncol = 3, byrow = TRUE) %>%
-  as_tibble() %>%
-  set_names(c("chrom", "chrom_std", "build_key"))
+## chr_mapper <- snakemake@params$chr_mapper %>%
+##   unlist() %>%
+##   # snakemake will flatten this list when feeding it as a param...oh well :/
+##   matrix(ncol = 3, byrow = TRUE) %>%
+##   as_tibble() %>%
+##   set_names(c("chrom", "chrom_std", "build_key"))
+
+chr_mapper <- readr::read_tsv(
+  snakemake@input$chr_mapper,
+  col_names = c("chrom", "chrom_std", "build_key"),
+  col_types = "ccc"
+)
 
 bed_cols <- c("chrom", "start", "end")
 

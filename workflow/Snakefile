@@ -58,6 +58,7 @@ rule all_resources:
 rule all:
     input:
         rules.validate_strats.output,
+        rules.summarize_happy.output,
         [
             expand(
                 rules.generate_md5sums.output + rules.generate_tsv_list.output,
