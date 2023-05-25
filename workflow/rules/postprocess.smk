@@ -1,8 +1,10 @@
 from os.path import dirname, basename
-from more_itertools import unique_everseen
+from more_itertools import unique_everseen, unzip
 from os import scandir
+from common.config import CoreLevel
 
 post_inter_dir = config.intermediate_build_dir / "postprocess"
+post_log_dir = config.log_build_dir / "postprocess"
 
 
 # NOTE This will only give a limited set of "targets" from each of the strat
@@ -78,23 +80,133 @@ rule unit_test_strats:
     output:
         touch(post_inter_dir / "unit_tests.done"),
     log:
-        post_inter_dir / "unit_tests.log",
+        post_log_dir / "unit_tests.log",
     conda:
         "../envs/bedtools.yml"
     script:
         "../scripts/python/bedtools/postprocess/run_unit_tests.py"
 
 
+rks, bks = map(
+    list,
+    unzip([(rk, bk) for rk, r in config.stratifications.items() for bk in r.builds]),
+)
+
+
+# Silly rule to make a dataframe which maps chromosome names to a common
+# nomenclature (for the validation markdown). The only reason this exists is
+# because snakemake apparently mangles this elegant list of tuples when I pass
+# it as a param to the rmd script...dataframe in IO monad it is :/
+rule write_chr_name_mapper:
+    output:
+        config.final_root_dir / ".validation" / "chr_mapper.tsv",
+    run:
+        with open(output[0], "w") as f:
+            for ref_key, build_key in zip(rks, bks):
+                for i in config.buildkey_to_chr_indices(ref_key, build_key):
+                    prefix = config.refkey_to_final_chr_prefix(ref_key)
+                    line = [
+                        i.chr_name_full(prefix),
+                        i.chr_name,
+                        f"{ref_key}@{build_key}",
+                    ]
+                    f.write("\t".join(line) + "\n")
+
+
 rule validate_strats:
     input:
-        # this input isn't actually used, but ensures the unit tests pass
+        # this first input isn't actually used, but ensures the unit tests pass
         # before running the rmd script
-        _test=rules.unit_test_strats.output,
-        strats=rules.list_all_strats.output,
-        nonN=rules.get_gapless.output.auto,
+        **{
+            "_test": expand(
+                rules.unit_test_strats.output,
+                zip,
+                ref_key=rks,
+                build_key=bks,
+            ),
+            "strats": expand(
+                rules.list_all_strats.output,
+                zip,
+                ref_key=rks,
+                build_key=bks,
+            ),
+            "nonN": expand(
+                rules.get_gapless.output.auto,
+                zip,
+                ref_key=rks,
+                build_key=bks,
+            ),
+        },
+        chr_mapper=rules.write_chr_name_mapper.output,
     output:
-        config.final_build_dir / "coverage_plots.html",
+        config.final_root_dir / ".validation" / "coverage_plots.html",
+    conda:
+        "../envs/rmarkdown.yml"
+    params:
+        core_levels=[c.value for c in CoreLevel],
+        other_levels=config.other_levels,
+    script:
+        "../scripts/rmarkdown/rmarkdown/validate.Rmd"
+
+
+rule unzip_ref:
+    input:
+        rules.filter_sort_ref.output,
+    output:
+        post_log_dir / "happy" / "ref.fa",
+    shell:
+        "gunzip -c {input} > {output}"
+
+
+rule index_unzipped_ref:
+    input:
+        rules.unzip_ref.output,
+    output:
+        rules.unzip_ref.output[0] + ".fai",
+    conda:
+        "../envs/bedtools.yml"
+    shell:
+        """
+        samtools faidx {input}
+        """
+
+
+rule run_happy:
+    input:
+        refi=rules.index_unzipped_ref.output,
+        ref=rules.unzip_ref.output,
+        bench_vcf=rules.download_bench_vcf.output,
+        bench_bed=rules.filter_sort_bench_bed.output,
+        query_vcf=rules.download_query_vcf.output,
+        # query_bed=rules.run_dipcall.output.bed,
+        strats=rules.generate_tsv_list.output,
+    output:
+        post_inter_dir / "happy" / "happy.extended.csv",
+    params:
+        prefix=lambda _, output: str(output[0]).replace(".extended.csv", ""),
+    conda:
+        "../envs/happy.yml"
+    log:
+        post_log_dir / "happy" / "happy.log",
+    threads: 8
+    script:
+        "../scripts/python/bedtools/postprocess/run_happy.py"
+
+
+rule summarize_happy:
+    input:
+        [
+            expand(
+                rules.run_happy.output,
+                ref_key=rk,
+                build_key=bk,
+            )
+            for rk, bk in zip(rks, bks)
+            if config.want_benchmark(rk, bk)
+        ],
+    output:
+        config.final_root_dir / ".validation" / "benchmark_summary.html",
     conda:
         "../envs/rmarkdown.yml"
     script:
-        "../scripts/rmarkdown/rmarkdown/validate.Rmd"
+        "../scripts/rmarkdown/rmarkdown/benchmark.Rmd"

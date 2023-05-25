@@ -230,18 +230,17 @@ class BedFileParams(BaseModel):
 
 
 class BedFile(BaseModel):
-    """Inport specs for a bed-like file.
-
-    Members:
-    src - how to get the file
-    chr_prefix - the prefix on the chromosomes
-    bed_cols - the columns for the bed coordinates
-    skip_lines - how many input lines to skip
-    sep - column separator regexp (for "beds" with spaces instead of tabs)
-    """
+    """Inport specs for a bed-like file."""
 
     src: BedSrc
     params: BedFileParams = BedFileParams()
+
+
+class VCFFile(BaseModel):
+    """Inport specs for a vcf file."""
+
+    src: BedSrc
+    chr_prefix: str = "chr"
 
 
 class RMSKFile(BedFile):
@@ -380,12 +379,21 @@ class Include(BaseModel):
 OtherStrats = dict[OtherLevelKey, dict[OtherStratKey, BedFile]]
 
 
+class Bench(BaseModel):
+    """Configuration for benchmark to use when validating stratifications."""
+
+    bench_vcf: VCFFile
+    bench_bed: BedFile
+    query_vcf: VCFFile
+
+
 class Build(BaseModel):
     """Spec for a stratification build."""
 
     chr_filter: set[ChrIndex]
     include: Include
     other_strats: OtherStrats = {}
+    bench: Bench | None = None
 
 
 class RefFile(BaseModel):
@@ -493,7 +501,7 @@ class GiabStrats(BaseModel):
 
     @property
     def final_build_dir(self) -> Path:
-        return self.results_dir / "final" / "{ref_key}@{build_key}"
+        return self.final_root_dir / "{ref_key}@{build_key}"
 
     @property
     def intermediate_root_dir(self) -> Path:
@@ -592,6 +600,21 @@ class GiabStrats(BaseModel):
     def refkey_to_ref_src(self, k: RefKey) -> RefSrc:
         return self.refkey_to_strat(k).ref.src
 
+    def refkey_to_bench_vcf_src(self, rk: RefKey, bk: BuildKey) -> BedSrc | None:
+        return fmap_maybe(
+            lambda x: x.bench_vcf.src, self.buildkey_to_build(rk, bk).bench
+        )
+
+    def refkey_to_bench_bed_src(self, rk: RefKey, bk: BuildKey) -> BedSrc | None:
+        return fmap_maybe(
+            lambda x: x.bench_bed.src, self.buildkey_to_build(rk, bk).bench
+        )
+
+    def refkey_to_query_vcf_src(self, rk: RefKey, bk: BuildKey) -> BedSrc | None:
+        return fmap_maybe(
+            lambda x: x.query_vcf.src, self.buildkey_to_build(rk, bk).bench
+        )
+
     def refkey_to_gap_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(lambda x: x.src, self.stratifications[k].gap)
 
@@ -641,10 +664,15 @@ class GiabStrats(BaseModel):
     def refkey_to_final_chr_prefix(self, k: RefKey) -> str:
         return self.stratifications[k].ref.chr_prefix
 
-    def buildkey_to_final_chr_mapping(self, rk: RefKey, bk: BuildKey) -> dict[int, str]:
-        p = self.refkey_to_final_chr_prefix(rk)
-        cs = self.buildkey_to_chr_indices(rk, bk)
-        return {c.value: c.chr_name_full(p) for c in cs}
+    def refkey_to_bench_chr_prefix(self, rk: RefKey, bk: BuildKey) -> str | None:
+        return fmap_maybe(
+            lambda x: x.bench_vcf.chr_prefix, self.buildkey_to_build(rk, bk).bench
+        )
+
+    def refkey_to_query_chr_prefix(self, rk: RefKey, bk: BuildKey) -> str | None:
+        return fmap_maybe(
+            lambda x: x.query_vcf.chr_prefix, self.buildkey_to_build(rk, bk).bench
+        )
 
     def buildkey_to_chr_conversion(
         self,
@@ -655,6 +683,11 @@ class GiabStrats(BaseModel):
         toChr = self.refkey_to_final_chr_prefix(rk)
         cis = self.buildkey_to_chr_indices(rk, bk)
         return ChrConversion(fromChr, toChr, cis)
+
+    def buildkey_to_final_chr_mapping(self, rk: RefKey, bk: BuildKey) -> dict[int, str]:
+        p = self.refkey_to_final_chr_prefix(rk)
+        cs = self.buildkey_to_chr_indices(rk, bk)
+        return {c.value: c.chr_name_full(p) for c in cs}
 
     def buildkey_to_mappability(
         self,
@@ -743,6 +776,9 @@ class GiabStrats(BaseModel):
             and self.want_low_complexity(rk, bk)
             and self.want_gc(rk, bk)
         )
+
+    def want_benchmark(self, rk: RefKey, bk: BuildKey) -> bool:
+        return self.buildkey_to_build(rk, bk).bench is not None
 
     # key lists for downloading resources
 

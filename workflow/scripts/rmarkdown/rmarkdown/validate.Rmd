@@ -8,71 +8,91 @@ output:
     toc_float: true
     df_print: paged
 ---
-
-<!-- # Purpose -->
-
-<!-- This markdown will be used to validate stratification BED files for the -->
-<!-- v3.1-stratification release. Validation includes: -->
-
-<!-- 1. Perform sanity checks for each stratification file. -->
-<!-- 2. Confirm expected chromosomes are covered and coverage of individual -->
-<!--    chromosomes is as expected. -->
     
 ```{r, include=FALSE}
 library(tidyverse)
 
+knitr::opts_chunk$set(fig.width=25, fig.height=6, fig_caption=TRUE)
+
+## chr_mapper <- snakemake@params$chr_mapper %>%
+##   unlist() %>%
+##   # snakemake will flatten this list when feeding it as a param...oh well :/
+##   matrix(ncol = 3, byrow = TRUE) %>%
+##   as_tibble() %>%
+##   set_names(c("chrom", "chrom_std", "build_key"))
+
+chr_mapper <- readr::read_tsv(
+  snakemake@input$chr_mapper,
+  col_names = c("chrom", "chrom_std", "build_key"),
+  col_types = "ccc"
+)
+
 bed_cols <- c("chrom", "start", "end")
 
-knitr::opts_chunk$set(fig.width=25, fig.height=5, fig_caption=TRUE)
+read_bed <- function(path) {
+  readr::read_tsv(path,
+                  comment = "#",
+                  col_types = "cii",
+                  col_names = bed_cols) %>%
+  mutate(region_size = end - start)
+}
 
-df_chr_sizes <- snakemake@input$nonN %>%
-  read_tsv(col_names = bed_cols, col_types = "cii") %>%
-  mutate(region_size = end - start) %>%
-  group_by(chrom) %>%
-  summarise(nonN_ref_len = sum(region_size))
-
-chr_order <- df_chr_sizes %>%
-  pull(chrom) %>%
-  unique()
-
-file_list <- snakemake@input$strats %>%
-  readLines() %>%
-  as.list()
+read_nonN <- function(path) {
+  read_bed(path) %>%
+    mutate(build_key = path %>% dirname() %>% dirname() %>% basename()) %>%
+    left_join(chr_mapper, by = c("chrom", "build_key")) %>%
+    select(-chrom)
+}
 
 read_strat <- function(path) {
-  read_tsv(path,
-           comment = "#",
-           col_types = "cdd",
-           col_names = bed_cols) %>%
-    mutate(path = path)
+  strat_filename <- basename(path)
+  read_bed(path) %>%
+    mutate(build_key = path %>% dirname() %>% dirname() %>% basename(),
+           ## genome = str_extract(strat_filename, "^[^_]+_(HG[0-9]+)_.bed.gz", 1),
+           ## strat_level = str_extract(strat_filename, 
+           ##                           if_else(is.na(genome),
+           ##                                   "^[^_]+_(.*).bed.gz",
+           ##                                   "^[^_]+_HG[0-9]+_(.*).bed.gz"),
+           ##                           1),
+           strat_name = str_extract(strat_filename, "^[^_]+_(.*).bed.gz", 1)) %>%
+    left_join(chr_mapper, by = c("chrom", "build_key")) %>%
+    select(-chrom)
 }
+
+df_chr_sizes <- snakemake@input$nonN %>%
+  map_dfr(read_nonN) %>%
+  group_by(chrom_std, build_key) %>%
+  summarise(nonN_ref_len = sum(region_size), .groups = "drop")
+
+chr_order <- df_chr_sizes %>%
+  pull(chrom_std) %>%
+  unique()
+
+chr_build_combinations <- chr_mapper %>%
+  expand(build_key, chrom_std = chr_order)
+
+file_list <- snakemake@input$strats %>%
+  map(readLines) %>%
+  flatten()
 
 read_strats <- function(stype) {
   fs <- keep(file_list, ~ basename(dirname(.x)) == stype)
-  all <- crossing(chrom = chr_order, path = unlist(fs))
   if (length(fs) > 0) {
-    map_dfr(fs, read_strat) %>%
-      mutate(region_size = end - start) %>%
-      group_by(path, chrom) %>%
+    df <- map_dfr(fs, read_strat)
+    all_combos <- chr_build_combinations %>%
+      expand(nesting(chrom_std, build_key), strat_name = df$strat_name)
+    df %>%
+      group_by(build_key, strat_name, chrom_std) %>%
       summarise(total_region = sum(region_size), .groups = "drop") %>%
       # join the full cartesian product of all chromosomes and paths, then fill
       # missing with 0 so that we get an empty space on the graphs indicating
       # zero coverage
-      full_join(all, by = c("chrom", "path")) %>%
-      replace_na(list(total_region = 0)) %>%
-      right_join(df_chr_sizes, by = "chrom") %>%
+      full_join(all_combos, by = c("chrom_std", "strat_name", "build_key")) %>%
+      left_join(df_chr_sizes, by = c("chrom_std", "build_key")) %>%
       mutate(strat_type = stype,
-             strat_filename = basename(path),
-             genome = str_extract(strat_filename, "^[^_]+_(HG[0-9]+)_.bed.gz", 1),
-             ## reference = str_extract(strat_filename, "^([^_])_.*.bed.gz", 1),
-             strat_level = str_extract(strat_filename, 
-                                       if_else(is.na(genome),
-                                               "^[^_]+_(.*).bed.gz",
-                                               "^[^_]+_HG[0-9]+_(.*).bed.gz"),
-                                       1),
-             coverage = total_region / nonN_ref_len) %>%
-      select(-path) %>%
-      mutate(chrom = factor(chrom, levels = chr_order))
+             coverage = total_region / nonN_ref_len,
+             chrom_std = factor(chrom_std, levels = chr_order)) %>%
+      replace_na(list(coverage = 0))
   } else {
     NULL
   }
@@ -81,61 +101,31 @@ read_strats <- function(stype) {
 coverage_plot <- function(df, level) {
   cat(sprintf("#### %s\n\n", level))
   p <- df %>%
-    ggplot(aes(chrom, coverage)) +
-    geom_col() +
+    ggplot(aes(chrom_std, coverage, fill = build_key)) +
+    geom_col(position = "dodge") +
     scale_y_continuous(labels = scales::percent) +
     theme(legend.position = "top",
           text = element_text(size = 30),
           axis.text.x = element_text(angle = 90),
           strip.text.y = element_text(angle = 0),
           panel.spacing.y = unit(2, "lines")) +
-    xlab(NULL)
+    labs(x = NULL,
+         fill = "build")
   print(p)
   cat("\n\n")
 }
 
 coverage_plots <- function(stype) {
+  cat(sprintf("### %s\n\n", stype))
   df <- read_strats(stype)
   if (is.null(df)) {
     cat("None\n\n")
   } else {
     df %>%
-      group_by(strat_level) %>%
+      group_by(strat_name) %>%
       group_walk(coverage_plot)
   }
 }
-
-## df_coverage <- snakemake@input$strats %>%
-##   readLines() %>%
-##   as.list() %>%
-##   map_dfr(read_strat) %>%
-##   mutate(region_size = end - start) %>%
-##   group_by(path, chrom) %>%
-##   summarise(total_region = sum(region_size)) %>%
-##   # right join since we assume size df will have all desired chromosomes
-##   right_join(df_chr_sizes, by = "chrom") %>%
-##   mutate(strat_type = basename(dirname(path)),
-##          strat_filename = basename(path),
-##          genome = str_extract(strat_filename, "^[^_]+_(HG[0-9]+)_.bed.gz", 1),
-##          ## reference = str_extract(strat_filename, "^([^_])_.*.bed.gz", 1),
-##          strat_level = str_extract(strat_filename, 
-##                                    if_else(is.na(genome),
-##                                            "^[^_]+_(.*).bed.gz",
-##                                            "^[^_]+_HG[0-9]+_(.*).bed.gz"),
-##                                    1),
-##          coverage = total_region / nonN_ref_len) %>%
-##   select(-path) %>%
-##   mutate(chrom = factor(chrom, levels = chr_order))
-
-```
-
-```{r, echo = FALSE, results = "asis"}
-
-cat(sprintf("Reference: %s\n\n", snakemake@wildcards$ref_key))
-
-cat(sprintf("Build: %s\n\n", snakemake@wildcards$build_key))
-
-# TODO can also print out other build information here if we feel like it
 
 ```
 
@@ -152,105 +142,16 @@ files. These files can be assumed to:
 
 # Coverage Plots
 
-<!-- TODO these little panels can be grouped by "genome specific" and "everything" -->
-<!-- else, and each can be generated in its own code block to keep the rmd DRY -->
-
-## Low Complexity
-
-Regions with different types and sizes of low complexity sequence (e.g.,
-homopolymers, STRs, VNTRs, other locally repetitive sequences).
+## Core
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plots("LowComplexity")
+walk(snakemake@params$core_levels, coverage_plots)
 ```
 
-## Functional Technically Difficult
+## Other
 
-Different functional, or potentially functional, regions that are also likely to
-be technically difficult to sequence.
-
-```{r, echo = FALSE, results = "asis"}
-coverage_plots("FunctionalTechnicallyDifficult")
-```
-
-## Functional Regions
-
-Regions to stratify variants inside and outside of coding regions.
+User-added stratifications
 
 ```{r, echo = FALSE, results = "asis"}
-coverage_plots("FunctionalRegions")
-```
-
-## GC Content
-
-Regions with different ranges(%) of GC content.
-
-```{r, echo = FALSE, results = "asis"}
-coverage_plots("GCcontent")
-```
-
-## Mappability
-
-Regions where short read mappability can be challenging.
-
-```{r, echo = FALSE, results = "asis"}
-coverage_plots("mappability")
-```
-
-## Other Difficult
-
-Highly variable regions like the VDJ and MHC, near gaps in the reference, or
-errors in the reference.
-
-```{r, echo = FALSE, results = "asis"}
-coverage_plots("OtherDifficult")
-```
-
-## Segmental Duplications
-
-Regions with segmental duplications or regions with non-trivial self-chain
-alignments.
-
-```{r, echo = FALSE, results = "asis"}
-coverage_plots("SegmentalDuplications")
-```
-
-## Union
-
-Regions with different general types of difficult regions or any type of
-difficult region or complex variant. For example, performance can be measured in
-just the "easy" regions of the genome.
-
-```{r, echo = FALSE, results = "asis"}
-coverage_plots("Union")
-```
-
-## Ancestry
-
-Regions with inferred patterns of local ancestry.
-
-```{r, echo = FALSE, results = "asis"}
-coverage_plots("ancestry")
-```
-
-## XY
-
-Regions in chromosomes X and Y
-
-```{r, echo = FALSE, results = "asis"}
-coverage_plots("XY")
-```
-
-## Genome Specific (benchmark v4.2.1)
-
-Difficult regions due to potentially difficult variation in the NIST/GIAB
-sample, including:
-
-1. regions containing putative compound heterozygous variants
-2. regions containing multiple variants within 50 bp of each other
-3. regions with potential structural variation and copy number variation
-
-```{r, echo = FALSE, results = "asis"}
-# TODO this will need to be broken out by specific genomes in the plot
-coverage_plots("GenomeSpecific")
+walk(snakemake@params$other_levels, coverage_plots)
 ```
