@@ -8,6 +8,7 @@ output:
 ```{r, include=FALSE}
 library(tidyverse)
 
+# TODO make this configurable
 subsets <- c(
   "AllAutosomes",
   "AllTandemRepeats",
