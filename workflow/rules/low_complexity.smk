@@ -219,7 +219,7 @@ use rule slop_uniform_repeats as slop_uniform_repeats_compliment with:
             w.bases,
         ),
     output:
-        lc_final_path("SimpleRepeat_{bases}_{unit_name}_ge{total_len}_slop5"),
+        lc_final_path("SimpleRepeat_{unit_name}_ge{total_len}_{bases}_slop5"),
     wildcard_constraints:
         unit_name=unit_name_constraint,
         total_len="\d+",
@@ -238,7 +238,7 @@ use rule slop_uniform_repeats as slop_uniform_repeat_ranges_compliment with:
         ),
     output:
         lc_final_path(
-            "SimpleRepeat_{bases}_{unit_name}_{total_lenA}to{total_lenB}_slop5"
+            "SimpleRepeat_{unit_name}_{total_lenA}to{total_lenB}_{bases}_slop5"
         ),
     wildcard_constraints:
         unit_name=unit_name_constraint,
@@ -299,7 +299,7 @@ use rule merge_imperfect_uniform_repeats as merge_imperfect_uniform_repeats_comp
             base=list(w.bases),
         ),
     output:
-        lc_final_path("SimpleRepeat_{bases}_imperfecthomopolge{merged_len}_slop5"),
+        lc_final_path("SimpleRepeat_imperfecthomopolge{merged_len}_{bases}_slop5"),
     wildcard_constraints:
         merged_len="\d+",
         bases=bases_constraint,
