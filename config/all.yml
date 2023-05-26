@@ -82,7 +82,7 @@ stratifications:
             hg38_minimap2_asm20_N10_gt1contig_gt1kb: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hg38_minimap2_asm20_N10_gt1contig_gt1kb.bed.gz }}
             hs37d5_decoy_alignments: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hs37d5_decoy_alignments.bed.gz }}
             missing_and_multiple_alignments_of_GRCh38: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_missing_and_multiple_alignments_of_GRCh38.bed.gz }}
-          FunctionalTechnicallyDifficultRegions:
+          FunctionalTechnicallyDifficult:
             BadPromotors: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/FunctionalTechnicallyDifficultRegions/GRCh37_BadPromoters.bed.gz }}
             CMRGv1.00_duplicationinKMT2C: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/FunctionalTechnicallyDifficultRegions/GRCh37_CMRGv1.00_duplicationinKMT2C.bed.gz }}
             CMRGv1.00_falselyduplicatedgenes: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/FunctionalTechnicallyDifficultRegions/GRCh37_CMRGv1.00_falselyduplicatedgenes.bed.gz }}
@@ -263,7 +263,7 @@ stratifications:
             ancestry_EUR: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/ancestry/GRCh38_ancestry_EUR.bed.gz }}
             ancestry_SAS: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/ancestry/GRCh38_ancestry_SAS.bed.gz }}
             ancestry_Neanderthal: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/ancestry/GRCh38_ancestry_Neanderthal.bed.gz }}
-          FunctionalTechnicallyDifficultRegions:
+          FunctionalTechnicallyDifficult:
             BadPromotors: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/FunctionalTechnicallyDifficultRegions/GRCh38_BadPromoters.bed.gz }}
             CMRGv1.00_duplicationinKMT2C: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/FunctionalTechnicallyDifficultRegions/GRCh38_CMRGv1.00_duplicationinKMT2C.bed.gz }}
             CMRGv1.00_falselyduplicatedgenes: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/FunctionalTechnicallyDifficultRegions/GRCh38_CMRGv1.00_falselyduplicatedgenes.bed.gz }}
