@@ -83,6 +83,7 @@ stratifications:
           xy: true
           gc: true
           functional: true
+          telomeres: false
           segdups: true
           union: true
           mappability:

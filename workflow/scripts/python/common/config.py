@@ -106,15 +106,15 @@ class BaseModel(BaseModel_):
 class Paths(BaseModel):
     """Local build paths for snakemake."""
 
-    resources: Path
-    results: Path
+    resources: Path = Path("resources")
+    results: Path = Path("results")
 
 
 class Tools(BaseModel):
     """Urls for tools to download/build/use in the pipeline."""
 
-    repseq: HttpUrl
-    gemlib: HttpUrl
+    repseq: HttpUrl = "https://github.com/ndwarshuis/repseq/archive/refs/tags/v1.1.0.tar.gz"  # type: ignore
+    gemlib: HttpUrl = "https://sourceforge.net/projects/gemlibrary/files/gem-library/Binary%20pre-release%203/GEM-binaries-Linux-x86_64-core_i3-20130406-045632.tbz2/download"  # type: ignore
 
 
 # TODO non-negative ints which cannot equal each other
@@ -434,8 +434,8 @@ class GiabStrats(BaseModel):
         OtherLevelKey("GenomeSpecific"),
         OtherLevelKey("OtherDifficult"),
     ]
-    paths: Paths
-    tools: Tools
+    paths: Paths = Paths()
+    tools: Tools = Tools()
     stratifications: dict[RefKey, Stratification]
 
     @validator("other_levels", each_item=True)
