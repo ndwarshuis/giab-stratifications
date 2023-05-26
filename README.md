@@ -22,10 +22,14 @@ This repository is primarily for documentation purposes, as the runtime is
 defined in terms of NIST-specific resources.
 
 However, for those wishing to run the pipeline themselves, there are several
-options. Both require cloning this repo with submodules:
+options. Both require cloning this repo with submodules and setting up the
+conda env:
 
 ```
 git clone --recurse-submodules https://github.com/ndwarshuis/giab-stratifications.git
+cd giab-stratifications
+conda env create -f env.yml
+conda activate giab-strats-production
 ```
 
 ### No Cluster Environment
