@@ -51,6 +51,10 @@ Regions with different ranges (%) of GC content.
 
 Regions where short read mapping can be challenging.
 
+### Telomeres
+
+Telomeric regions
+
 ### Union
 
 Regions with different general types of difficult regions or any type of
@@ -59,8 +63,10 @@ just "easy" or "all difficult" regions of the genome.
 
 ### Not yet implemented
 
-These stratifications existed in v3.1 but have yet to be implement in
-the current version.
+These stratifications existed in v3.1 but have yet to be implemented in
+the current version. If these are desired, the configuration allows including
+pre-constructed bed files as stratifications, so these can be obtained from
+previous versions on new builds.
 
 #### Ancestry
 
@@ -82,7 +88,6 @@ technically difficult to sequences.
 
 Highly variable regions like the VDJ and MHC, near gaps in the reference or
 errors in the reference and rDNA (CHM13 only).
-
 
 ## Repository Overview
 
@@ -120,13 +125,10 @@ TODO add cluster requirements
 ### Configuration
 
 An example configuration can be found in `config` (currently used for testing
-and continuous integration). This contains two files: `static.yml` and
-`dynamic.yml` which are combined upon snamemake execution.
-
-For end users running the pipeline themselves, the intention is that they would
-only need to customize `dynamic.yml` to fit their needs. Such users are directed
-to `dynamic.yml`, which is documented so as to explain the effect of each
-parameter.
+and continuous integration). This contains two files: `testing.yml` and
+`testing-full.yml` which are used during integration testing and double as
+example configurations. `testing.yml` is documented such so as to serve as a
+starting point for users who wish to run this pipeline themselves.
 
 Conceptually, the configuration is organized into two levels: `stratifications`
 and `builds`. A `stratification` encodes the reference FASTA file along with
@@ -145,7 +147,7 @@ up):
 snakemake \
     --use-conda \
     -c <number_of_cores> --rerun-incomplete \
-    --configfile=path/to/your/config/dynamic.yml \
+    --configfile=path/to/your/config/config.yml \
     all
 ```
 
@@ -157,7 +159,7 @@ must exist or the pipeline will refuse to run.
 All output will either be in `resources` (downloaded files) or `results`
 (processed files). For most users the only important files will be in
 `results/final`, which in turn has each build and reference specified as
-`reference_key@build_key` (see configuration section and `config/dynamic.yml`
+`reference_key@build_key` (see configuration section and `config/testing.yml`
 for more details on what these mean). Within each of these files are the
 stratification BED files and associated metadata.
 
