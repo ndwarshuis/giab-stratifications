@@ -1,3 +1,7 @@
+# 2.1.0
+
+- make other strat name constraint more permissive
+
 # 2.0.0
 
 - add telomere stratification
