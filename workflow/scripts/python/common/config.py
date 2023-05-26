@@ -451,7 +451,7 @@ class GiabStrats(BaseModel):
         values: dict[str, Any],
     ) -> Stratification:
         try:
-            levels = cast(list[OtherLevelKey], values["strat_levels"])
+            levels = cast(list[OtherLevelKey], values["other_levels"])
             bad = [
                 f"invalid level '{lk}' under build key '{bk}'"
                 for bk, b in v.builds.items()
