@@ -205,7 +205,12 @@ stratifications:
         start: [0, 2458320]
         end: [62122809, 62460029]
     segdups:
-      superdups: null
+      superdups:
+        src:
+          # from here: https://hgdownload.soe.ucsc.edu/gbdb/hs1/sedefSegDups/sedefSegDups.bb
+          # need to convert to a gzipped bed file with bigBedToBed and gzip
+          filepath: data/CHM13/Segdups/sedef.bed.gz
+          md5: 5e52c58b54f2f2cc76e7e2696d0b92dd
     functional:
       ftbl_src:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_feature_table.txt.gz
