@@ -29,8 +29,10 @@ include: "rules/ref.smk"
 include: "rules/xy.smk"
 include: "rules/low_complexity.smk"
 include: "rules/gc.smk"
+include: "rules/telomeres.smk"
 include: "rules/functional.smk"
 include: "rules/segdups.smk"
+include: "rules/other.smk"
 include: "rules/mappability.smk"
 include: "rules/union.smk"
 include: "rules/postprocess.smk"
@@ -56,11 +58,11 @@ rule all_resources:
 
 rule all:
     input:
+        rules.validate_strats.output,
+        rules.summarize_happy.output,
         [
             expand(
-                rules.validate_strats.output
-                + rules.generate_md5sums.output
-                + rules.generate_tsv_list.output,
+                rules.generate_md5sums.output + rules.generate_tsv_list.output,
                 ref_key=rk,
                 build_key=bk,
             )

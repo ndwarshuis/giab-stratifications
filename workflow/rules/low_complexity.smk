@@ -1,13 +1,14 @@
-from more_itertools import unzip
+from more_itertools import unzip, flatten
 from collections import namedtuple
+from common.config import CoreLevel
 from functools import partial
 
-lc_dir = "LowComplexity"
-lc_src_dir = config.ref_src_dir / lc_dir
-lc_inter_dir = config.intermediate_build_dir / lc_dir
-lc_log_src_dir = config.log_src_dir / lc_dir
-lc_log_build_dir = config.log_build_dir / lc_dir
-lc_bench_dir = config.bench_build_dir / lc_dir
+lc_dir = CoreLevel.LOWCOMPLEXITY
+lc_src_dir = config.ref_src_dir / lc_dir.value
+lc_inter_dir = config.intermediate_build_dir / lc_dir.value
+lc_log_src_dir = config.log_src_dir / lc_dir.value
+lc_log_build_dir = config.log_build_dir / lc_dir.value
+lc_bench_dir = config.bench_build_dir / lc_dir.value
 
 
 def lc_final_path(name):
@@ -27,6 +28,11 @@ uniform_repeats = {
 }
 
 unit_name_constraint = f"({'|'.join(uniform_repeats)})"
+
+bases_constraint = "[ATGC]{2}"
+
+COMPLIMENTS = ["AT", "GC"]
+IMPERFECT_LENS = [11, 21]
 
 
 # NOTE: weird sed command ensures all bases are capitalized, otherwise for some
@@ -53,6 +59,21 @@ rule find_perfect_uniform_repeats:
         """
 
 
+rule filter_perfect_uniform_repeats:
+    input:
+        rules.find_perfect_uniform_repeats.output,
+    output:
+        lc_inter_dir / "uniform_repeats_{bases}_R{unit_len}_T{total_len}.bed",
+    log:
+        lc_log_build_dir / "uniform_repeats_{bases}_R{unit_len}_T{total_len}.log",
+    wildcard_constraints:
+        unit_len="\d+",
+        total_len="\d+",
+        bases=bases_constraint,
+    shell:
+        "sed -n '/unit=[{wildcards.bases}]\+/p' {input} > {output}"
+
+
 # bundle all these together in a dummy rule so I can access them later
 rule all_perfect_uniform_repeats:
     input:
@@ -66,11 +87,28 @@ rule all_perfect_uniform_repeats:
             for u in uniform_repeats.values()
             for t in u.total_lens
         },
+        **{
+            f"R{u.unit_len}_T{t}_{bs}": expand(
+                rules.filter_perfect_uniform_repeats.output,
+                allow_missing=True,
+                unit_len=u.unit_len,
+                total_len=t,
+                bases=bs,
+            )
+            for u in uniform_repeats.values()
+            for t in u.total_lens
+            for bs in COMPLIMENTS
+        },
 
 
 def lookup_perfect_uniform_repeat(unit_name, total_len):
     ul = uniform_repeats[unit_name].unit_len
     return rules.all_perfect_uniform_repeats.input[f"R{ul}_T{total_len}"]
+
+
+def lookup_perfect_uniform_repeat_compliment(unit_name, total_len, bases):
+    ul = uniform_repeats[unit_name].unit_len
+    return rules.all_perfect_uniform_repeats.input[f"R{ul}_T{total_len}_{bases}"]
 
 
 def repeat_range_inputs(wildcards):
@@ -100,15 +138,40 @@ rule subtract_uniform_repeats:
         "subtractBed -a {input.a} -b {input.b} > {output}"
 
 
-# NOTE v3.1 doesn't merge here
+def repeat_range_compliment_inputs(wildcards):
+    return {
+        k: lookup_perfect_uniform_repeat_compliment(
+            wildcards.unit_name, t, wildcards.bases
+        )
+        for k, t in zip(
+            "ab",
+            [wildcards.total_lenA, wildcards.total_lenB],
+        )
+    }
+
+
+rule subtract_uniform_repeat_compliment:
+    input:
+        unpack(repeat_range_compliment_inputs),
+    output:
+        lc_inter_dir
+        / "uniform_repeat_range_{bases}_{unit_name}_{total_lenA}to{total_lenB}.bed",
+    conda:
+        "../envs/bedtools.yml"
+    benchmark:
+        lc_bench_dir / "subtract_uniform_repeats_{bases}_{unit_name}_{total_lenA}to{total_lenB}.txt"
+    wildcard_constraints:
+        unit_name=unit_name_constraint,
+        total_lenA="\d+",
+        total_lenb="\d+",
+        bases=bases_constraint,
+    shell:
+        "subtractBed -a {input.a} -b {input.b} > {output}"
+
+
 rule slop_uniform_repeats:
     input:
-        bed=lambda wildcards: lookup_perfect_uniform_repeat(
-            wildcards.unit_name,
-            int(wildcards.total_len),
-        ),
-        genome=rules.get_genome.output,
-        gapless=rules.get_gapless.output.auto,
+        lambda w: lookup_perfect_uniform_repeat(w.unit_name, int(w.total_len)),
     output:
         lc_final_path("SimpleRepeat_{unit_name}_ge{total_len}_slop5"),
     conda:
@@ -116,12 +179,15 @@ rule slop_uniform_repeats:
     wildcard_constraints:
         unit_name=unit_name_constraint,
         total_len="\d+",
+    params:
+        genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output.auto,
     shell:
         """
-        slopBed -i {input.bed} -b 5 -g {input.genome} | \
+        slopBed -i {input} -b 5 -g {params.genome} | \
         cut -f1-3 | \
         mergeBed -i stdin | \
-        intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
+        intersectBed -a stdin -b {params.gapless} -sorted -g {params.genome} | \
         bgzip -c \
         > {output}
         """
@@ -130,17 +196,55 @@ rule slop_uniform_repeats:
 # +1 to lenB since the filename is [X, Y] and not [X, Y)
 use rule slop_uniform_repeats as slop_uniform_repeat_ranges with:
     input:
-        bed=lambda wildcards: expand(
+        lambda w: expand(
             rules.subtract_uniform_repeats.output,
             allow_missing=True,
-            unit_name=wildcards.unit_name,
-            total_lenA=int(wildcards.total_lenA),
-            total_lenB=int(wildcards.total_lenB) + 1,
+            unit_name=w.unit_name,
+            total_lenA=int(w.total_lenA),
+            total_lenB=int(w.total_lenB) + 1,
         ),
-        genome=rules.get_genome.output,
-        gapless=rules.get_gapless.output.auto,
     output:
         lc_final_path("SimpleRepeat_{unit_name}_{total_lenA}to{total_lenB}_slop5"),
+    wildcard_constraints:
+        unit_name=unit_name_constraint,
+        total_lenA="\d+",
+        total_lenB="\d+",
+
+
+use rule slop_uniform_repeats as slop_uniform_repeats_compliment with:
+    input:
+        lambda w: lookup_perfect_uniform_repeat_compliment(
+            w.unit_name,
+            int(w.total_len),
+            w.bases,
+        ),
+    output:
+        lc_final_path("SimpleRepeat_{unit_name}_ge{total_len}_{bases}_slop5"),
+    wildcard_constraints:
+        unit_name=unit_name_constraint,
+        total_len="\d+",
+        bases=bases_constraint,
+
+
+use rule slop_uniform_repeats as slop_uniform_repeat_ranges_compliment with:
+    input:
+        lambda w: expand(
+            rules.subtract_uniform_repeat_compliment.output,
+            allow_missing=True,
+            unit_name=w.unit_name,
+            total_lenA=int(w.total_lenA),
+            total_lenB=int(w.total_lenB) + 1,
+            bases=w.bases,
+        ),
+    output:
+        lc_final_path(
+            "SimpleRepeat_{unit_name}_{total_lenA}to{total_lenB}_{bases}_slop5"
+        ),
+    wildcard_constraints:
+        unit_name=unit_name_constraint,
+        total_lenA="\d+",
+        total_lenB="\d+",
+        bases=bases_constraint,
 
 
 rule merge_perfect_uniform_repeats:
@@ -163,66 +267,103 @@ rule merge_perfect_uniform_repeats:
 
 rule merge_imperfect_uniform_repeats:
     input:
-        beds=expand(
+        expand(
             rules.merge_perfect_uniform_repeats.output,
             allow_missing=True,
             base=["A", "C", "G", "T"],
         ),
-        genome=rules.get_genome.output,
-        gapless=rules.get_gapless.output.auto,
     output:
         lc_final_path("SimpleRepeat_imperfecthomopolge{merged_len}_slop5"),
     conda:
         "../envs/bedtools.yml"
     wildcard_constraints:
         merged_len="\d+",
+    params:
+        genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output.auto,
     shell:
         """
-        multiIntersectBed -i {input.beds} | \
-        slopBed -i stdin -b 5 -g {input.genome} | \
+        multiIntersectBed -i {input} | \
+        slopBed -i stdin -b 5 -g {params.genome} | \
         mergeBed -i stdin | \
-        intersectBed -a stdin -b {input.gapless} -sorted | \
+        intersectBed -a stdin -b {params.gapless} -sorted | \
         bgzip -c > {output}
         """
 
 
-# TODO move this to a pure python module
+use rule merge_imperfect_uniform_repeats as merge_imperfect_uniform_repeats_compliment with:
+    input:
+        lambda w: expand(
+            rules.merge_perfect_uniform_repeats.output,
+            allow_missing=True,
+            base=list(w.bases),
+        ),
+    output:
+        lc_final_path("SimpleRepeat_imperfecthomopolge{merged_len}_{bases}_slop5"),
+    wildcard_constraints:
+        merged_len="\d+",
+        bases=bases_constraint,
+
+
 rule all_uniform_repeats:
     input:
         # Perfect (greater than X)
-        **{
-            f"perfect_{k}_ge{x}": expand(
+        *[
+            p
+            for k, v in uniform_repeats.items()
+            for x in v.total_lens[v.range_indices - 1 :]
+            for p in expand(
                 rules.slop_uniform_repeats.output,
                 allow_missing=True,
                 unit_name=k,
                 total_len=x,
             )
-            for k, v in uniform_repeats.items()
-            for x in v.total_lens[v.range_indices - 1 :]
-        },
+            + expand(
+                rules.slop_uniform_repeats_compliment.output,
+                allow_missing=True,
+                unit_name=k,
+                total_len=x,
+                bases=COMPLIMENTS,
+            )
+        ],
         # Perfect (between X and Y)
-        **{
-            f"perfect_{k}_{a}to{b-1}": expand(
+        *[
+            p
+            for k, v in uniform_repeats.items()
+            for a, b in zip(
+                v.total_lens[0 : v.range_indices - 1],
+                v.total_lens[1 : v.range_indices],
+            )
+            for p in expand(
                 rules.slop_uniform_repeat_ranges.output,
                 allow_missing=True,
                 unit_name=k,
                 total_lenA=a,
                 total_lenB=b - 1,
             )
-            for k, v in uniform_repeats.items()
-            for a, b in zip(
-                v.total_lens[0 : v.range_indices - 1],
-                v.total_lens[1 : v.range_indices],
+            + expand(
+                rules.slop_uniform_repeat_ranges_compliment.output,
+                allow_missing=True,
+                unit_name=k,
+                total_lenA=a,
+                total_lenB=b - 1,
+                bases=COMPLIMENTS,
             )
-        },
+        ],
         # Imperfect (greater than X)
+        expand(
+            rules.merge_imperfect_uniform_repeats_compliment.output,
+            allow_missing=True,
+            merged_len=IMPERFECT_LENS,
+            bases=COMPLIMENTS,
+        ),
         **{
             f"imperfect_ge{x}": expand(
                 rules.merge_imperfect_uniform_repeats.output,
                 allow_missing=True,
                 merged_len=x,
             )
-            for x in [11, 21]
+            for x in IMPERFECT_LENS
         },
 
 

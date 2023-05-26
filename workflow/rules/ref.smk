@@ -1,11 +1,14 @@
-ref_dir = "ref"
+ref_dir = Path("ref")
 ref_inter_dir = config.intermediate_build_dir / ref_dir
 ref_log_src_dir = config.log_src_dir / ref_dir
 ref_log_build_dir = config.log_build_dir / ref_dir
 
-ref_master_dir = ref_dir / "{ref_key}"
-ref_master_dir = config.intermediate_root_dir / ref_master_dir
-ref_master_log_dir = config.log_results_dir / ref_master_dir
+_ref_master_dir = ref_dir / "{ref_key}"
+ref_master_dir = config.intermediate_root_dir / _ref_master_dir
+ref_master_log_dir = config.log_results_dir / _ref_master_dir
+
+bench_src_dir = config.ref_src_dir / "bench"
+bench_src_log_dir = ref_log_src_dir / "bench"
 
 
 # lots of things depend on PAR which is why this isn't part of the XY module
@@ -85,6 +88,8 @@ use rule download_ref as download_gaps with:
     params:
         src=lambda w: config.refkey_to_gap_src(w.ref_key),
     localrule: True
+    log:
+        ref_log_src_dir / "download_gaps.log",
 
 
 rule get_gapless:
@@ -109,3 +114,46 @@ rule get_gapless:
         "../envs/bedtools.yml"
     script:
         "../scripts/python/bedtools/ref/get_gapless.py"
+
+
+use rule download_ref as download_bench_vcf with:
+    output:
+        bench_src_dir / "{build_key}_bench.vcf.gz",
+    params:
+        src=lambda w: config.refkey_to_bench_vcf_src(w.ref_key, w.build_key),
+    localrule: True
+    log:
+        bench_src_log_dir / "{build_key}_download_bench_vcf.log",
+
+
+use rule download_ref as download_bench_bed with:
+    output:
+        bench_src_dir / "{build_key}_bench.bed.gz",
+    params:
+        src=lambda w: config.refkey_to_bench_bed_src(w.ref_key, w.build_key),
+    localrule: True
+    log:
+        bench_src_log_dir / "{build_key}_download_bench_bed.log",
+
+
+use rule download_ref as download_query_vcf with:
+    output:
+        bench_src_dir / "{build_key}_query.vcf.gz",
+    params:
+        src=lambda w: config.refkey_to_query_vcf_src(w.ref_key, w.build_key),
+    localrule: True
+    log:
+        bench_src_log_dir / "{build_key}_download_query_vcf.log",
+
+
+rule filter_sort_bench_bed:
+    input:
+        rules.download_bench_bed.output,
+    output:
+        ref_inter_dir / "bench_filtered.bed.gz",
+    log:
+        ref_log_build_dir / "bench_filtered.bed.gz",
+    conda:
+        "../envs/bedtools.yml"
+    script:
+        "../scripts/python/bedtools/ref/filter_sort_bench_bed.py"

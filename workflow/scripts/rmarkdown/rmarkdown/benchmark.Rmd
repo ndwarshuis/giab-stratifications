@@ -1,0 +1,145 @@
+---
+title: "Benchmark summary"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r, include=FALSE}
+library(tidyverse)
+
+# TODO make this configurable
+subsets <- c(
+  "AllAutosomes",
+  "AllTandemRepeats",
+  "AllHomopolymers_ge7bp_imperfectge11bp_slop5",
+  "SimpleRepeat_diTR_10to49_slop5",
+  "SimpleRepeat_homopolymer_7to11_slop5",
+  "SimpleRepeat_homopolymer_ge21_slop5",
+  "SimpleRepeat_imperfecthomopolge11_slop5",
+  "SimpleRepeat_imperfecthomopolge21_slop5",
+  "alldifficultregions",
+  "alllowmapandsegdupregions",
+  "chrX_PAR",
+  "chrX_XTR",
+  "chrY_XTR",
+  "notinalldifficultregions",
+  "notinAllHomopolymers_ge7bp_imperfectge11bp_slop5",
+  "notinAllTandemRepeatsandHomopolymers_slop5",
+  "segdups"
+)
+
+read_summary <- function(path) {
+  build <- path %>%
+    dirname() %>%
+    dirname() %>%
+    dirname() %>%
+    basename()
+  readr::read_csv(
+    path,
+    col_types = cols(
+      Type = "c",
+      Subtype = "c",
+      Subset = "c",
+      Filter = "c",
+      METRIC.Recall = "d",
+      METRIC.Precision = "d",
+      METRIC.Frac_NA = "d",
+      TRUTH.TP = "d",
+      TRUTH.TP.het = "d",
+      TRUTH.TP.homalt = "d",
+      .default = "-",
+    )
+  ) %>%
+    filter(Filter == "PASS" &
+             Subtype %in% c("*", "I16_PLUS", "D16_PLUS"),
+             Subset %in% subsets)  %>%
+    rename(Recall = METRIC.Recall,
+           Precision = METRIC.Precision,
+           Frac_NA = METRIC.Frac_NA) %>%
+    mutate("-log10(FN_Rate)" = -log10(1 - Recall),
+           "-log10(FP_Rate)" = -log10(1 - Precision),
+           build = build) %>%
+    mutate(across(contains("TRUTH.TP"), log10)) %>%
+    rename_with(~ sprintf("log10(%s)", .x), contains("TRUTH.TP")) %>%
+    select(-Filter, -starts_with("TRUTH.TP")) %>%
+    pivot_longer(cols = c(-Type, -Subtype, -Subset, -build),
+                 names_to = "metric",
+                 values_to = "value") %>%
+    mutate(metric = fct_relevel(
+      factor(metric),
+      "Precision",
+      "Recall",
+      "Frac_NA",
+      after = 0
+    )) %>%
+    filter(!is.na(value))
+}
+
+df <- snakemake@input %>%
+  keep(~ file.size(.x) > 0) %>%
+  map_dfr(read_summary)
+
+nsubs <- df %>%
+  pull(Subset) %>%
+  unique() %>%
+  length()
+
+nbuilds <- df %>%
+  pull(build) %>%
+  unique() %>%
+  length()
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  fig.width=10,
+  fig.height=(3 + nsubs * nbuilds * 0.5)
+)
+
+plot_metric <- function(df, key) {
+  p <- ggplot(df, aes(value, fct_rev(Subset), fill = build)) +
+    geom_col(position = "dodge") +
+    facet_wrap(c("metric"), scales = "free_x", ncol = 2) +
+    labs(x = NULL,
+         y = NULL,
+         fill = "Build") +
+    theme(legend.position = "top")
+  print(p)
+  cat("\n\n")
+}
+
+```
+
+Output from hap.py...in graphical form for humans to enjoy :)
+
+# SNVs
+
+```{r , echo=FALSE, results="asis"}
+df %>%
+  filter(Type == "SNP") %>%
+  plot_metric()
+```
+
+# INDELs (all)
+
+```{r , echo=FALSE, results="asis"}
+df %>%
+  filter(Type == "INDEL" & Subtype == "*") %>%
+  plot_metric()
+```
+
+# Insertions > 16
+
+```{r , echo=FALSE, results="asis"}
+df %>%
+  filter(Type == "INDEL" & Subtype == "I16_PLUS") %>%
+  plot_metric()
+```
+
+# Deletions > 16
+
+```{r , echo=FALSE, results="asis"}
+df %>%
+  filter(Type == "INDEL" & Subtype == "D16_PLUS") %>%
+  plot_metric()
+```

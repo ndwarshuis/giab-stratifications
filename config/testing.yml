@@ -187,6 +187,37 @@ stratifications:
         # 23 and 24 are X and Y respectively). Empty list implies all
         # chromosomes.
         chr_filter: [21, 22]
+
+        # Other bed files to include as stratifications. Useful for the case
+        # where one wants to use old stratifications and/or use bed files that
+        # were generated in some esoteric way that I don't feel like programming
+        # into this pipeline ;) This is a nested dictionary where the first
+        # level is a key corresponding to the "other_strats" key at the toplevel
+        # configuration and the next layer is the name of the stratification.
+        # Here, the file will be named "OtherDifficult/GRCh38_VDJ.bed.gz".
+        other_strats:
+          OtherDifficult:
+            VDJ:
+              src:
+                url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_VDJ.bed.gz
+
+        # Benchmark files for this reference (if desired). Each key will be fed
+        # into corresponding inputs for hap.py using the generated stratifications
+        # to benchmark.
+        #
+        # Default:
+        # bench: null
+        bench:
+          bench_vcf:
+            src:
+              url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG005_NA24631_son/NISTv4.2.1/GRCh38/HG005_GRCh38_1_22_v4.2.1_benchmark.vcf.gz
+          bench_bed:
+            src:
+              url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG005_NA24631_son/NISTv4.2.1/GRCh38/HG005_GRCh38_1_22_v4.2.1_benchmark.bed
+          query_vcf:
+            src:
+              url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG005_NA24631_son/NISTv4.2.1/GRCh38/SupplementaryFiles/inputvcfsandbeds/HG005_GRCh38_1_22_PacBio_HiFi_DeepVariant.vcf.gz
+
         # Directive for which stratification types to include
         include:
           # Include all low complexity regions if true
@@ -197,6 +228,9 @@ stratifications:
           gc: true
           # Include functional regions if true
           functional: true
+          # Include telomeres if true (for references without telomeres this
+          # will be deflatingly boring)
+          telomeres: false
           # Include segmental duplications if true
           segdups: true
           # Include union if true. Note, since union actually unifies the GC,
@@ -219,6 +253,7 @@ stratifications:
           xy: true
           gc: true
           functional: true
+          telomeres: false
           segdups: true
           union: true
           mappability: []
@@ -229,6 +264,7 @@ stratifications:
           xy: false
           gc: false
           functional: false
+          telomeres: false
           segdups: true
           union: true
           mappability:
@@ -304,11 +340,24 @@ stratifications:
     builds:
       test-autosome:
         chr_filter: [21, 22]
+        bench:
+          bench_vcf:
+            src:
+              url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG005_NA24631_son/NISTv4.2.1/GRCh37/HG005_GRCh37_1_22_v4.2.1_benchmark.vcf.gz
+          bench_bed:
+            src:
+              url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG005_NA24631_son/NISTv4.2.1/GRCh37/HG005_GRCh37_1_22_v4.2.1_benchmark.bed
+            params:
+              chr_prefix: ""
+          query_vcf:
+            src:
+              url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG005_NA24631_son/NISTv4.2.1/GRCh37/SupplementaryFiles/inputvcfsandbeds/HG005_GRCh37_1_22_PacBio_HiFi_DeepVariant.vcf.gz
         include:
           low_complexity: true
           xy: false
           gc: true
           functional: true
+          telomeres: false
           segdups: true
           union: true
           mappability: []
@@ -318,6 +367,7 @@ stratifications:
           low_complexity: false
           xy: true
           gc: true
+          telomeres: false
           functional: true
           segdups: true
           union: false
@@ -389,6 +439,7 @@ stratifications:
           xy: false
           gc: true
           functional: true
+          telomeres: true
           segdups: false
           union: true
           mappability: []
@@ -399,7 +450,19 @@ stratifications:
           low_complexity: false
           xy: true
           gc: true
+          telomeres: true
           functional: true
           segdups: false
           union: true
           mappability: []
+
+# Paths in which resources and results will be stored
+# "Resource" = downloaded stuff, "Result" = stuff derived from downloaded stuff
+# paths:
+#   resources: "resources"
+#   results: "results"
+
+# Links to external tools used in the pipeline
+# tools:
+#   repseq: https://github.com/ndwarshuis/repseq/archive/refs/tags/v1.1.0.tar.gz
+#   gemlib: https://sourceforge.net/projects/gemlibrary/files/gem-library/Binary%20pre-release%203/GEM-binaries-Linux-x86_64-core_i3-20130406-045632.tbz2/download
