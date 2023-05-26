@@ -2,7 +2,7 @@ from more_itertools import unzip
 
 other_constraints = {
     "other_level_key": f"({'|'.join(config.other_levels)})",
-    "other_strat_key": "[A-Za-z0-9-]+",
+    "other_strat_key": "[A-Za-z0-9-._]+",
 }
 
 
