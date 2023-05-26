@@ -1,3 +1,7 @@
+# 2.1.1
+
+- fix typo
+
 # 2.1.0
 
 - make other strat name constraint more permissive
