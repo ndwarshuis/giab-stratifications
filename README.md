@@ -21,8 +21,12 @@ pipeline](https://github.com/ndwarshuis/giab-strats-smk).
 This repository is primarily for documentation purposes, as the runtime is
 defined in terms of NIST-specific resources.
 
-However, for those wishing to run the pipeline themselves, here are several
-options:
+However, for those wishing to run the pipeline themselves, there are several
+options. Both require cloning this repo with submodules:
+
+```
+git clone --recurse-submodules https://github.com/ndwarshuis/giab-stratifications.git
+```
 
 ### No Cluster Environment
 
