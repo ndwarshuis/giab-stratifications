@@ -177,6 +177,11 @@ stratifications:
             HG007_v4.2.1_notin_complexandSVs_alldifficultregions: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG007_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz }}
             HG007_v4.2.1_othercomplexwithin10bp_slop50: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG007_v4.2.1_othercomplexwithin10bp_slop50.bed.gz }}
             HG007_v4.2.1_snpswithin10bp_slop50: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG007_v4.2.1_snpswithin10bp_slop50.bed.gz }}
+        bench:
+          query_vcf: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/analysis/PacBio_CCS_15kb_20kb_chemistry2_10312019/GRCh37/deepvariant_HG002_15kb_20kb_52X_SequelII.vcf.gz }}
+          # https://drive.google.com/drive/u/1/folders/1HEpC6iE4STviBhhmibe9RJPLu4qfEi9V
+          bench_vcf: {src: {filepath: data/benchmark/GRCh37/bench.vcf.gz }}
+          bench_bed: {src: {filepath: data/benchmark/GRCh37/bench.bed }}
         include:
           low_complexity: true
           xy: true
@@ -372,6 +377,11 @@ stratifications:
             gaps_slop15kb: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_gaps_slop15kb.bed.gz }}
             gnomAD_InbreedingCoeff_slop1bp_merge1000bp: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_gnomAD_InbreedingCoeff_slop1bp_merge1000bp.bed.gz }}
             population_CNV_FP_regions: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_population_CNV_FP_regions.bed.gz }}
+        bench:
+          query_vcf: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/analysis/PacBio_CCS_15kb_20kb_chemistry2_10312019/GRCh38/deepvariant_HG002_GRCh38_15kb_20kb_53X_SequelII.vcf.gz }}
+          # https://drive.google.com/drive/u/1/folders/18S_lvFGpVi1jzSe8EtIVYt2PLdIKSSG-
+          bench_vcf: {src: {filepath: data/benchmark/GRCh38/bench.vcf.gz }}
+          bench_bed: {src: {filepath: data/benchmark/GRCh38/bench.bed }}
         include:
           low_complexity: true
           xy: true
@@ -451,6 +461,11 @@ stratifications:
         other_strats:
           OtherDifficult:
             rDNA: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/CHM13v2.0/OtherDifficult/CHM13v2.0_rDNA.bed.gz }}
+        bench:
+          query_vcf: {src: {url: https://storage.googleapis.com/brain-genomics/awcarroll/misc/giab/HG002.pacbio.chm13.vcf.gz }}
+          # https://drive.google.com/drive/u/1/folders/11RY2oMMShOuQ0HDBmkwXllBEHrUlwTRg
+          bench_vcf: {src: {filepath: data/benchmark/CHM13/bench.vcf.gz }}
+          bench_bed: {src: {filepath: data/benchmark/CHM13/bench.bed }}
         include:
           low_complexity: true
           xy: true
