@@ -180,8 +180,14 @@ stratifications:
         bench:
           query_vcf: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/analysis/PacBio_CCS_15kb_20kb_chemistry2_10312019/GRCh37/deepvariant_HG002_15kb_20kb_52X_SequelII.vcf.gz }}
           # https://drive.google.com/drive/u/1/folders/1HEpC6iE4STviBhhmibe9RJPLu4qfEi9V
-          bench_vcf: {src: {filepath: data/benchmark/GRCh37/bench.vcf.gz }}
-          bench_bed: {src: {filepath: data/benchmark/GRCh37/bench.bed }}
+          bench_vcf:
+            src:
+              filepath: data/GRCh37/benchmark/truth.vcf.gz
+              md5: 8a6e9dbdd22f26cd04473a375e943a14
+          bench_bed:
+            src:
+              filepath: data/GRCh37/benchmark/truth.bed.gz
+              md5: 34cf570b3de70ab2eef2fe7c54b2f04e
         include:
           low_complexity: true
           xy: true
@@ -380,8 +386,14 @@ stratifications:
         bench:
           query_vcf: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/analysis/PacBio_CCS_15kb_20kb_chemistry2_10312019/GRCh38/deepvariant_HG002_GRCh38_15kb_20kb_53X_SequelII.vcf.gz }}
           # https://drive.google.com/drive/u/1/folders/18S_lvFGpVi1jzSe8EtIVYt2PLdIKSSG-
-          bench_vcf: {src: {filepath: data/benchmark/GRCh38/bench.vcf.gz }}
-          bench_bed: {src: {filepath: data/benchmark/GRCh38/bench.bed }}
+          bench_vcf:
+            src:
+              filepath: data/GRCh38/benchmark/truth.vcf.gz
+              md5: cc8c5a6120f5e1050b81c355ce9a0cd9
+          bench_bed:
+            src:
+              filepath: data/GRCh38/benchmark/truth.bed.gz
+              md5: cc850a6bb4d591ea265fd6e88b04cf75
         include:
           low_complexity: true
           xy: true
@@ -464,8 +476,14 @@ stratifications:
         bench:
           query_vcf: {src: {url: https://storage.googleapis.com/brain-genomics/awcarroll/misc/giab/HG002.pacbio.chm13.vcf.gz }}
           # https://drive.google.com/drive/u/1/folders/11RY2oMMShOuQ0HDBmkwXllBEHrUlwTRg
-          bench_vcf: {src: {filepath: data/benchmark/CHM13/bench.vcf.gz }}
-          bench_bed: {src: {filepath: data/benchmark/CHM13/bench.bed }}
+          bench_vcf:
+            src:
+              filepath: data/CHM13/benchmark/truth.vcf.gz
+              md5: 05dce2d8115c163944bea96f981aaf08
+          bench_bed:
+            src:
+              filepath: data/CHM13/benchmark/truth.bed.gz
+              md5: 2b67f7d4715dc002ae4c7bc82f70fe38
         include:
           low_complexity: true
           xy: true
