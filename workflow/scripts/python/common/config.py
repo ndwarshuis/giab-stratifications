@@ -389,6 +389,16 @@ class Bench(BaseModel):
     query_vcf: VCFFile
 
 
+class Comparison(BaseModel):
+    """Configuration for comparing generated strats to previous versions."""
+
+    previous_tarball: HttpUrl
+    path_mapper: dict[Path, Path] = {}
+    replacements: list[str] = []
+    ignore_previous: list[str] = []
+    ignore_generated: list[str] = []
+
+
 class Build(BaseModel):
     """Spec for a stratification build."""
 
@@ -396,6 +406,7 @@ class Build(BaseModel):
     include: Include
     other_strats: OtherStrats = {}
     bench: Bench | None = None
+    comparison: Comparison | None = None
 
 
 class RefFile(BaseModel):
