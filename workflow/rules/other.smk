@@ -22,7 +22,7 @@ use rule download_ref as download_other with:
     localrule: True
 
 
-rule filter_sort_existing:
+rule filter_sort_other:
     input:
         rules.download_other.output,
     output:
@@ -39,7 +39,7 @@ def all_other(ref_key, build_key):
     other = config.buildkey_to_build(ref_key, build_key).other_strats
     return [
         expand(
-            rules.filter_sort_existing.output,
+            rules.filter_sort_other.output,
             ref_key=ref_key,
             build_key=build_key,
             other_level_key=lk,
