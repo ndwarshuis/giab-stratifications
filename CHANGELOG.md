@@ -1,0 +1,471 @@
+# 3.2
+
+### New Stratifications
+
+Low Complexity
+- 
+
+### Revised Stratifications
+
+#### Low Complexity
+
+Previous versions in GRCh37 did not include 5bp slop as indicated by the file
+name. This has been fixed.
+
+#### Functional Regions
+
+GRCh37/38 now use a newer version of the refseq database, and thus the
+boundaries of these stratifications have changed slightly.
+
+#### XY
+
+The PAR regions for GRCh37/38 were recently updated.
+
+# Pre v3.1 Releases
+
+## 3.1 - 2022-07-08
+
+### New Stratifications
+
+All stratifications for CHM13v2.0 new and include stratifications for:
+
+- Union
+- LowComplexity
+- SegmentalDuplications
+- XY
+- OtherDifficult
+
+LowComplexity
+
+- added satellite regions and union of all tandem repeats
+    - GRCh3X_satellites.bed.gz
+    - GRCh3X_notinsatellites.bed.gz
+    - GRCh3X_allTandemRepeats.bed.gz
+    - GRCh3X_notinallTandemRepeats.bed.gz
+
+XY
+
+- Added regions specific to chromosomes X and Y.
+    - GRCh3X_allTandemRepeats.bed.gz
+    - GRCh3X_notinallTandemRepeats.bed.gz
+    - GRCh3X_AllAutosomes.bed.gz
+    - GRCh3X_chrX_PAR.bed.gz
+    - GRCh3X_chrX_ampliconic.bed.gz
+    - GRCh3X_chrX_XTR.bed.gz
+    - GRCh3X_chrX_nonPAR.bed.gz
+    - GRCh3X_chrY_PAR.bed.gz
+    - GRCh3X_chrY_ampliconic.bed.gz
+    - GRCh3X_chrY_XTR.bed.gz
+    - GRCh3X_chrY_nonPAR.bed.gz
+	
+### Revised Stratifications
+
+LowComplexity
+- The following LowComplexity stratifications were revised for both GRCh37 and
+  GRCh38 to to include satellite regions
+    - GRCh3X_AllTandemRepeats_201to10000bp_slop5.bed.gz
+    - GRCh3X_AllTandemRepeats_51to200bp_slop5.bed.gz
+    - GRCh3X_AllTandemRepeats_gt10000bp_slop5.bed.gz
+    - GRCh3X_AllTandemRepeats_gt100bp_slop5.bed.gz
+    - GRCh3X_AllTandemRepeats_lt51bp_slop5.bed.gz
+    - GRCh3X_AllTandemRepeatsandHomopolymers_slop5.bed.gz
+    - GRCh3X_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz
+    - All other LowComplexity stratifications were regenerated as part of code in
+    - new GRCh3X_LowComplexity.ipynb however are unchanged.
+
+Segmental Duplications
+- PAR-X was found to be incorrectly annotated in the following files and
+  therefore PAR-X regions removed from these files.
+    - GRCh38_chainSelf.bed.gz
+    - GRCh38_chainSelf_gt10kb.bed.gz
+    - GRCh38_notinchainSelf.bed.gz
+    - GRCh38_notinchainSelf_gt10kb.bed.gz
+    - GRCh37_chainSelf.bed.gz
+    - GRCh37_chainSelf_gt10kb.bed.gz
+    - GRCh37_notinchainSelf.bed.gz
+    - GRCh37_notinchainSelf_gt10kb.bed.gz
+    - GRCh37_notinsegdups.bed.gz
+    - GRCh37_notinsegdups_gt10kb.bed.gz
+    - GRCh37_segdups.bed.gz
+    - GRCh37_segdups_gt10kb.bed.gz
+	
+Union
+- The following Union stratifications were revised for both GRCh37 and GRCh38 to
+  include satellites, chrX/Y XTR and ampliconic regions.
+    - GRCh38_alldifficultregions.bed.gz
+    - GRCh38_notinalldifficultregions.bed.gz
+- The following Union stratifications were revised for both GRCh37 and GRCh38 to
+  include satellites, chrX/Y XTR and ampliconic regions and removal of PAR-X
+  regions from SegDups file.
+    - GRCh37_alldifficultregions.bed.gz
+    - GRCh37_notinalldifficultregions.bed.gz
+    - GRCh37_alllowmapandsegdupregions.bed.gz  
+    - GRCh37_notinalllowmapandsegdupregions.bed.gz
+	
+### Removed Stratifications
+
+None 
+
+## v3.0 - 2021-10-20
+
+### New Stratifications
+
+Ancestry
+- Regions with inferred local ancestry in GRCh38 from the T2T-consortium
+    - GRCh38_ancestry_AFR.bed.gz
+    - GRCh38_ancestry_AMR.bed.gz
+    - GRCh38_ancestry_EAS.bed.gz
+    - GRCh38_ancestry_EUR.bed.gz
+    - GRCh38_ancestry_Neanderthal.bed.gz
+    - GRCh38_ancestry_SAS.bed.gz 
+
+FunctionalTechnicallyDifficult
+- Regions generated as part of the Challenging Medically Revelant Genes
+  benchmark (v1.00) evaluation that identified duplicated regions. (GRCh37 and
+  GRCh38)
+    - GRCh3*_CMRGv1.00_duplicationinKMT2C.bed.gz
+    - GRCh3*_CMRGv1.00_falselyduplicatedgenes.bed.gz
+
+GenomeSpecific
+- Stratifications for genomes HG001, HG003, HG004, HG005, HG006 and HG007 are
+  new as of this version of stratifications and utilize GIAB v4.2.1 benchmark.
+  (GRCh37 and GRCh38)
+- New HG002 stratification:
+    - GRCh3*_HG002_hifiasmv0.11_ComplexVar_in_TRgt100.bed.gz from development of
+      Challenging Medically Relevant Gene benchmark (v1.00) development. (GRCh37
+      and GRCh38)
+
+LowComplexity
+- Regions identified during manual curation of Challenging Medically Relevant
+  Gene benchmark (v1.00) and accounted for a majority of false negatives and
+  false positives for both SNPs and INDELs. (GRCh37 and GRCh38)
+    - GRCh3*_SimpleRepeat_homopolymer_gt20_slop5.bed.gz
+    - GRCh3*_SimpleRepeat_imperfecthomopolgt20_slop5.bed.gz
+
+OtherDifficult
+- Regions from the T2T-consortium for GRCh38 only
+    - GRCh38_false_duplications_correct_copy.bed.gz
+    - GRCh38_false_duplications_incorrect_copy.bed.gz
+    - GRCh38_collapsed_duplication_FP_regions.bed.gz
+    - GRCh38_population_CNV_FP_regions.bed.gz
+    - GRCh38_LD_discordant_haplotypes_slop5bp.bed.gz
+    - GRCh38_gnomAD_InbreedingCoeff_slop1bp_merge1000bp.bed.gz
+	
+- Regions from GIAB v4.2.1 benchmark development (GRCh37 and GRCh38)
+    - GRCh3*_KIR.bed.gz
+	
+### Revised Stratifications
+
+FunctionalRegions
+- corrected filename error, GRCh37_notinrefseq_union_cds.bed.gz to
+  GRCh37_notinrefseq_cds.bed.gz
+
+FunctionalTechnicallyDifficult
+- corrected filename error, GRCh3*_BadPromters.gz to GRCh3*_BadPromters.bed.gz
+
+GenomeSpecific
+- Stratifications for HG002 utilized benchmark v4.2.1. (GRCh37 and GRCh38)
+
+OtherDifficult
+- GRCh38_allOtherDifficultregions.bed.gz now includes new T2T-based
+  stratifications and used newer version of bedtools (v2.30.0).
+- GRCh37_allOtherDifficultregions.bed.gz no additional regions were merged
+  rather file was just reproduced with newer version of bedtools (v2.30.0) to be
+  consistent with GRCh38 file.
+
+Union
+- now includes new T2T-based stratifications and used newer version of bedtools
+  (v2.30.0) (GRCh38 only)
+    - GRCh38_alldifficultregions.bed.gz
+    - GRCh38_notinalldifficultregions.bed.gz
+- no additional regions were merged rather file was just reproduced with newer
+  version of bedtools (v2.30.0) (GRCh37 and GRCh38)
+    - GRCh3*_alllowmapandsegdupregions.bed.gz
+    - GRCh3*_notinalllowmapandsegdupregions.bed.gz
+    - GRCh37_alldifficultregions.bed.gz
+    - GRCh37_notinalldifficultregions.bed.gz
+	
+### Removed Statifications
+
+GenomeSpecific
+- All stratifications that utilized GIAB v3.3.2 and v4.1 benchmark.  All files
+  were updated to using GIAB v4.2.1 benchmark. 
+
+## v2.0 - 2020-03-11
+
+### New Stratifications
+
+FunctionalRegions
+- addition of GRCh38 files
+    - GRCh38_refseq_cds.bed.gz
+    - GRCh38_notinrefseq_cds.bed.gz
+	
+FunctionalTechnicallyDifficult
+- addition of GRCh38 file
+    - GRCh38_BadPromoters.bed.gz
+
+GCcontent
+- addition of GRCh38 files
+    - GRCh38_gc15_slop50.bed.gz
+    - GRCh38_gc15to20_slop50.bed.gz
+    - GRCh38_gc20to25_slop50.bed.gz
+    - GRCh38_gc25to30_slop50.bed.gz
+    - GRCh38_gc30to55_slop50.bed.gz
+    - GRCh38_gc55to60_slop50.bed.gz
+    - GRCh38_gc60to65_slop50.bed.gz
+    - GRCh38_gc65to70_slop50.bed.gz
+    - GRCh38_gc75to80_slop50.bed.gz
+    - GRCh38_gc80to85_slop50.bed.gz
+    - GRCh38_gc85_slop50.bed.gz
+    - GRCh38_gclt25orgt65_slop50.bed.gz
+    - GRCh38_gclt30orgt55_slop50.bed.gz
+
+GenomeSpecific
+- new files utilizing GIAB v3.3.2 and v4.1 benchmarks for GRCh37
+    - GRCh37_HG001_GIABv3.3.2_complexandSVs.bed.gz
+    - GRCh37_HG001_GIABv3.3.2_RTG_PG_v3.3.2_SVs_alldifficultregions.bed.gz
+    - GRCh37_HG001_GIABv3.3.2_RTG_PG_v3.3.2_SVs_notin_alldifficultregions.bed.gz
+    - GRCh37_HG002_expanded_150__Tier1plusTier2_v0.6.1.bed.gz
+    - GRCh37_HG002_GIABv3.3.2_complexandSVs_alldifficultregions.bed.gz
+    - GRCh37_HG002_GIABv3.3.2_complexandSVs.bed.gz
+    - GRCh37_HG002_GIABv3.3.2_notin_complexandSVs_alldifficultregions.bed.gz
+    - GRCh37_HG002_GIABv4.1_CNV_CCSandONT_elliptical_outlier.bed.gz
+    - GRCh37_HG002_GIABv4.1_CNV_gt2assemblycontigs_ONTCanu_ONTFlye_CCSCanu.bed.gz
+    - GRCh37_HG002_GIABv4.1_CNV_mrcanavarIllumina_CCShighcov_ONThighcov_intersection.bed.gz
+    - GRCh37_HG002_GIABv4.1_CNVsandSVs.bed.gz
+    - GRCh37_HG002_GIABv4.1_comphetindel10bp_slop50.bed.gz
+    - GRCh37_HG002_GIABv4.1_comphetsnp10bp_slop50.bed.gz
+    - GRCh37_HG002_GIABv4.1_complexandSVs_alldifficultregions.bed.gz
+    - GRCh37_HG002_GIABv4.1_complexandSVs.bed.gz
+    - GRCh37_HG002_GIABv4.1_complexindel10bp_slop50.bed.gz
+    - GRCh37_HG002_GIABv4.1_inversions_slop25percent.bed.gz
+    - GRCh37_HG002_GIABv4.1_notin_complexandSVs_alldifficultregions.bed.gz
+    - GRCh37_HG002_GIABv4.1_othercomplexwithin10bp_slop50.bed.gz
+    - GRCh37_HG002_GIABv4.1_snpswithin10bp_slop50.bed.gz
+    - GRCh37_HG002_Tier1plusTier2_v0.6.1.bed.gz
+    - GRCh37_HG003_GIABv3.3.2_complexandSVs_alldifficultregions.bed.gz
+    - GRCh37_HG003_GIABv3.3.2_complexandSVs.bed.gz
+    - GRCh37_HG003_GIABv3.3.2_notin_complexandSVs_alldifficultregions.bed.gz
+    - GRCh37_HG004_GIABv3.3.2_complexandSVs_alldifficultregions.bed.gz
+    - GRCh37_HG004_GIABv3.3.2_complexandSVs.bed.gz
+    - GRCh37_HG004_GIABv3.3.2_notin_complexandSVs_alldifficultregions.bed.gz
+    - GRCh37_HG005_GIABv3.3.2_complexandSVs_alldifficultregions.bed.gz
+    - GRCh37_HG005_GIABv3.3.2_complexandSVs.bed.gz
+    - GRCh37_HG005_GIABv3.3.2_notin_complexandSVs_alldifficultregions.bed.gz
+- addition of GRCh38 files
+    - GRCh38_HG001_GIABv3.2.2_compoundhet_slop50.bed.gz
+    - GRCh38_HG001_GIABv3.2.2_varswithin50bp.bed.gz
+    - GRCh38_HG001_GIABv3.3.2_comphetindel10bp_slop50.bed.gz
+    - GRCh38_HG001_GIABv3.3.2_comphetsnp10bp_slop50.bed.gz
+    - GRCh38_HG001_GIABv3.3.2_complexandSVs.bed.gz
+    - GRCh38_HG001_GIABv3.3.2_complexindel10bp_slop50.bed.gz
+    - GRCh38_HG001_GIABv3.3.2_RTG_PG_v3.3.2_SVs_alldifficultregions.bed.gz
+    - GRCh38_HG001_GIABv3.3.2_RTG_PG_v3.3.2_SVs_notin_alldifficultregions.bed.gz
+    - GRCh38_HG001_GIABv3.3.2_snpswithin10bp_slop50.bed.gz
+    - GRCh38_HG001_PacBio_MetaSV.bed.gz
+    - GRCh38_HG001_PG2016-1.0_comphetindel10bp_slop50.bed.gz
+    - GRCh38_HG001_PG2016-1.0_comphetsnp10bp_slop50.bed.gz
+    - GRCh38_HG001_PG2016-1.0_complexindel10bp_slop50.bed.gz
+    - GRCh38_HG001_PG2016-1.0_snpswithin10bp_slop50.bed.gz
+    - GRCh38_HG001_RTG_37.7.3_comphetindel10bp_slop50.bed.gz
+    - GRCh38_HG001_RTG_37.7.3_comphetsnp10bp_slop50.bed.gz
+    - GRCh38_HG001_RTG_37.7.3_complexindel10bp_slop50.bed.gz
+    - GRCh38_HG001_RTG_37.7.3_snpswithin10bp_slop50.bed.gz
+    - GRCh38_HG002_expanded_150_Tier1plusTier2_v0.6.1.bed.gz
+    - GRCh38_HG002_GIABv3.2.2_compoundhet_slop50.bed.gz
+    - GRCh38_HG002_GIABv3.2.2_varswithin50bp.bed.gz
+    - GRCh38_HG002_GIABv3.3.2_comphetindel10bp_slop50.bed.gz
+    - GRCh38_HG002_GIABv3.3.2_comphetsnp10bp_slop50.bed.gz
+    - GRCh38_HG002_GIABv3.3.2_complexandSVs_alldifficultregions.bed.gz
+    - GRCh38_HG002_GIABv3.3.2_complexandSVs.bed.gz
+    - GRCh38_HG002_GIABv3.3.2_complexindel10bp_slop50.bed.gz
+    - GRCh38_HG002_GIABv3.3.2_notin_complexandSVs_alldifficultregions.bed.gz
+    - GRCh38_HG002_GIABv3.3.2_snpswithin10bp_slop50.bed.gz
+    - GRCh38_HG002_GIABv4.1_CNV_CCSandONT_elliptical_outlier.bed.gz
+    - GRCh38_HG002_GIABv4.1_CNV_gt2assemblycontigs_ONTCanu_ONTFlye_CCSCanu.bed.gz
+    - GRCh38_HG002_GIABv4.1_CNV_mrcanavarIllumina_CCShighcov_ONThighcov_intersection.bed.gz
+    - GRCh38_HG002_GIABv4.1_CNVsandSVs.bed.gz
+    - GRCh38_HG002_GIABv4.1_comphetindel10bp_slop50.bed.gz
+    - GRCh38_HG002_GIABv4.1_comphetsnp10bp_slop50.bed.gz
+    - GRCh38_HG002_GIABv4.1_complexandSVs_alldifficultregions.bed.gz
+    - GRCh38_HG002_GIABv4.1_complexandSVs.bed.gz
+    - GRCh38_HG002_GIABv4.1_complexindel10bp_slop50.bed.gz
+    - GRCh38_HG002_GIABv4.1_inversions_slop25percent.bed.gz
+    - GRCh38_HG002_GIABv4.1_notin_complexandSVs_alldifficultregions.bed.gz
+    - GRCh38_HG002_GIABv4.1_othercomplexwithin10bp_slop50.bed.gz
+    - GRCh38_HG002_GIABv4.1_snpswithin10bp_slop50.bed.gz
+    - GRCh38_HG002_HG003_HG004_allsvs.bed.gz
+    - GRCh38_HG002_Tier1plusTier2_v0.6.1.bed.gz
+    - GRCh38_HG003_GIABv3.3.2_comphetindel10bp_slop50.bed.gz
+    - GRCh38_HG003_GIABv3.3.2_comphetsnp10bp_slop50.bed.gz
+    - GRCh38_HG003_GIABv3.3.2_complexandSVs_alldifficultregions.bed.gz
+    - GRCh38_HG003_GIABv3.3.2_complexandSVs.bed.gz
+    - GRCh38_HG003_GIABv3.3.2_complexindel10bp_slop50.bed.gz
+    - GRCh38_HG003_GIABv3.3.2_notin_complexandSVs_alldifficultregions.bed.gz
+    - GRCh38_HG003_GIABv3.3.2_snpswithin10bp_slop50.bed.gz
+    - GRCh38_HG004_GIABv3.3.2_comphetindel10bp_slop50.bed.gz
+    - GRCh38_HG004_GIABv3.3.2_comphetsnp10bp_slop50.bed.gz
+    - GRCh38_HG004_GIABv3.3.2_complexandSVs_alldifficultregions.bed.gz
+    - GRCh38_HG004_GIABv3.3.2_complexandSVs.bed.gz
+    - GRCh38_HG004_GIABv3.3.2_complexindel10bp_slop50.bed.gz
+    - GRCh38_HG004_GIABv3.3.2_notin_complexandSVs_alldifficultregions.bed.gz
+    - GRCh38_HG004_GIABv3.3.2_snpswithin10bp_slop50.bed.gz
+    - GRCh38_HG005_GIABv3.3.2_comphetindel10bp_slop50.bed.gz
+    - GRCh38_HG005_GIABv3.3.2_comphetsnp10bp_slop50.bed.gz
+    - GRCh38_HG005_GIABv3.3.2_complexandSVs_alldifficultregions.bed.gz
+    - GRCh38_HG005_GIABv3.3.2_complexandSVs.bed.gz
+    - GRCh38_HG005_GIABv3.3.2_complexindel10bp_slop50.bed.gz
+    - GRCh38_HG005_GIABv3.3.2_notin_complexandSVs_alldifficultregions.bed.gz
+    - GRCh38_HG005_GIABv3.3.2_snpswithin10bp_slop50.bed.gz
+    - GRCh38_HG005_HG006_HG007_MetaSV_allsvs.bed.gz
+	
+LowComplexity
+- new additions for GRCh37
+    - GRCh37_AllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
+    - GRCh37_AllTandemRepeats_gt10000bp_slop5.bed.gz
+    - GRCh37_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
+    - GRCh37_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz
+    - GRCh37_SimpleRepeat_homopolymer_4to6_slop5.bed.gz
+- addition of GRCh38 files
+    - GRCh38_AllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
+    - GRCh38_AllTandemRepeats_201to10000bp_slop5.bed.gz
+    - GRCh38_AllTandemRepeats_51to200bp_slop5.bed.gz
+    - GRCh38_AllTandemRepeats_gt10000bp_slop5.bed.gz
+    - GRCh38_AllTandemRepeats_gt100bp_slop5.bed.gz
+    - GRCh38_AllTandemRepeats_lt51bp_slop5.bed.gz
+    - GRCh38_AllTandemRepeatsandHomopolymers_slop5.bed.gz
+    - GRCh38_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
+    - GRCh38_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz
+    - GRCh38_SimpleRepeat_diTR_11to50_slop5.bed.gz
+    - GRCh38_SimpleRepeat_diTR_51to200_slop5.bed.gz
+    - GRCh38_SimpleRepeat_diTR_gt200_slop5.bed.gz
+    - GRCh38_SimpleRepeat_homopolymer_4to6_slop5.bed.gz
+    - GRCh38_SimpleRepeat_homopolymer_7to11_slop5.bed.gz
+    - GRCh38_SimpleRepeat_homopolymer_gt11_slop5.bed.gz
+    - GRCh38_SimpleRepeat_imperfecthomopolgt10_slop5.bed.gz
+    - GRCh38_SimpleRepeat_quadTR_20to50_slop5.bed.gz
+    - GRCh38_SimpleRepeat_quadTR_51to200_slop5.bed.gz
+    - GRCh38_SimpleRepeat_quadTR_gt200_slop5.bed.gz
+    - GRCh38_SimpleRepeat_triTR_15to50_slop5.bed.gz
+    - GRCh38_SimpleRepeat_triTR_51to200_slop5.bed.gz
+    - GRCh38_SimpleRepeat_triTR_gt200_slop5.bed.gz
+	
+mappability
+- addition of GRCh38 files
+    - GRCh38_lowmappabilityall.bed.gz
+    - GRCh38_nonunique_l100_m2_e1.bed.gz
+    - GRCh38_nonunique_l250_m0_e0.bed.gz
+    - GRCh38_notinlowmappabilityall.bed.gz
+
+OtherDifficult
+- all stratifications new for v2.0 (GRCh37 and GRCh38)
+    - GRCh37_allOtherDifficultregions.bed.gz
+    - GRCh37_contigs_lt500kb.bed.gz 
+    - GRCh37_gaps_slop15kb.bed.gz
+    - GRCh37_hg38_minimap2_asm20_N10_gt1contig_gt1kb.bed.gz
+    - GRCh37_hg38_minimap2_asm20_N10_nocovgt1kb.bed.gz
+    - GRCh37_hs37d5_decoy_alignments.bed.gz
+    - GRCh37_L1H_gt500.bed.gz
+    - GRCh37_MHC.bed.gz
+    - GRCh37_missing_and_multiple_alignments_of_GRCh38.bed.gz
+    - GRCh37_VDJ.bed.gz
+    - GRCh38_allOtherDifficultregions.bed.gz
+    - GRCh38_contigs_lt500kb.bed.gz 
+    - GRCh38_gaps_slop15kb.bed.gz
+    - GRCh38_L1H_gt500.bed.gz
+    - GRCh38_MHC.bed.gz
+    - GRCh38_VDJ.bed.gz
+
+SegmentalDuplications
+- new additions for GRCh37
+    - GRCh37_gt5segdups_gt10kb_gt99percidentity.bed.gz
+    - GRCh37_notinchainSelf_gt10kb.bed.gz
+    - GRCh37_notinchainSelf.bed.gz
+    - GRCh37_notinsegdups_gt10kb.bed.gz
+    - GRCh37_segdups_gt10kb.bed.gz
+- addition of GRCh38 files
+    - GRCh38_chainSelf_gt10kb.bed.gz
+    - GRCh38_chainSelf.bed.gz
+    - GRCh38_gt5segdups_gt10kb_gt99percidentity.bed.gz
+    - GRCh38_notinchainSelf_gt10kb.bed.gz
+    - GRCh38_notinchainSelf.bed.gz
+    - GRCh38_notinsegdups_gt10kb.bed.gz
+    - GRCh38_notinsegdups.bed.gz
+    - GRCh38_segdups_gt10kb.bed.gz
+    - GRCh38_segdups.bed.gz
+	
+Union
+- all stratifications new for v2.0 (GRCh37 and GRCh38)
+    - GRCh37_alldifficultregions.bed.gz
+    - GRCh37_alllowmapandsegdupregions.bed.gz
+    - GRCh37_notinalldifficultregions.bed.gz
+    - GRCh37_notinalllowmapandsegdupregions.bed.gz
+    - GRCh38_alldifficultregions.bed.gz
+    - GRCh38_alllowmapandsegdupregions.bed.gz
+    - GRCh38_notinalldifficultregions.bed.gz
+    - GRCh38_notinalllowmapandsegdupregions.bed.gz
+
+### Revised Stratifications
+
+FunctionalRegions
+-  bug in the code used to identify the coding regions was corrected. V1.0
+   functional region stratifications only includes chromosomes 1-9. (GRCh37)
+   
+   - GRCh37_notinrefseq_union_cds.bed.gz
+   - GRCh37_refseq_cds.bed.gz
+
+LowComplexity
+- RepeatMasker and TRF_SimpleRepeats downloaded from UCSC for hg19 and hg38 on
+  7/22/19. These replace the TRDB repeats that were used in the 2015 version,
+  since the 2015 version missed some long, imperfect tandem repeats. (GRCh37 and
+  GRCh38)
+  
+- Exact repeats with fewer than 5 copies of the tandem repeat unit (e.g., <15bp
+  total length for trinucleotide STRs) were now ignored, since these tend to
+  have low sequencing error rates. (GRCh37 and GRCh38)
+  
+- Homopolymer lengths were incorrectly labeled, 1bp lower than the actual size,
+  in the previous version. (GRCh37 and GRCh38)
+  
+- Fixed the SimpleRepeat_imperfecthomopolgt10_slop5.bed.gz to only merge
+  adjacent homopolymers if they had the same base repeated. (GRCh37 and GRCh38)
+  
+- All beds have 5bp slop added on each side to capture variants at the edge of
+  the repeats (sometimes insertions were not captured properly before in
+  stratifications). (GRCh37 and GRCh38)
+  
+    - GRCh37_AllTandemRepeats_201to10000bp_slop5.bed.gz
+    - GRCh37_AllTandemRepeats_51to200bp_slop5.bed.gz
+    - GRCh37_AllTandemRepeats_gt100bp_slop5.bed.gz
+    - GRCh37_AllTandemRepeats_lt51bp_slop5.bed.gz
+    - GRCh37_AllTandemRepeatsandHomopolymers_slop5.bed.gz
+    - GRCh37_SimpleRepeat_diTR_11to50_slop5.bed.gz
+    - GRCh37_SimpleRepeat_diTR_51to200_slop5.bed.gz
+    - GRCh37_SimpleRepeat_diTR_gt200_slop5.bed.gz
+    - GRCh37_SimpleRepeat_homopolymer_7to11_slop5.bed.gz
+    - GRCh37_SimpleRepeat_homopolymer_gt11_slop5.bed.gz
+    - GRCh37_SimpleRepeat_imperfecthomopolgt10_slop5.bed.gz
+    - GRCh37_SimpleRepeat_quadTR_20to50_slop5.bed.gz
+    - GRCh37_SimpleRepeat_quadTR_51to200_slop5.bed.gz
+    - GRCh37_SimpleRepeat_quadTR_gt200_slop5.bed.gz
+    - GRCh37_SimpleRepeat_triTR_15to50_slop5.bed.gz
+    - GRCh37_SimpleRepeat_triTR_51to200_slop5.bed.gz
+    - GRCh37_SimpleRepeat_triTR_gt200_slop5.bed.gz
+
+Mappability
+- To reduce the total number of stratifications for V2.0 of the stratifications
+  only two mappability files (parameter sets: l-100, m-2, e-1; and l-250, m-0,
+  e-0) are included. These stratifications represent the most (l-250, m-0, e-0)
+  and least (l-100, m-2, e-1) stringent stratifications. (GRCh37 and GRCh38-new)
+    - GRCh37_lowmappabilityall.bed.gz
+    - GRCh37_notinlowmappabilityall.bed.gz
+	
+SegmentalDuplications
+    - GRCh37_chainSelf_gt10kb.bed.gz
+    - GRCh37_chainSelf.bed.gz
+    - GRCh37_notinsegdups.bed.gz
+    - GRCh37_segdups.bed.gz
+
+## v1.0 - 2017
+
+- initial release (https://github.com/ga4gh/benchmarking-tools/tree/d88448a68a79ed322837bc8eb4d5a096a710993d/resources/stratification-bed-files)

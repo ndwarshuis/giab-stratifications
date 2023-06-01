@@ -6,6 +6,7 @@ __pycache__
 !/test
 
 !README.md
+!CHANGELOG.md
 !env.yml
 !lint.sh
 !.flake8
