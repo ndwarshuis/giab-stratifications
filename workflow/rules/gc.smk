@@ -35,7 +35,7 @@ def subtract_inputs(wildcards):
     uf = int(wildcards["upper_frac"])
 
     # hacky sanity check
-    assert abs(lf - uf) == 5, "invalid GC fraction combo"
+    # assert abs(lf - uf) == 5, "invalid GC fraction combo"
 
     bed_a, bed_b = (
         (expand_frac(uf), expand_frac(lf))
@@ -146,3 +146,10 @@ rule all_gc:
             )
             for key, lwr, upr in [("wide", 25, 65), ("narrow", 30, 55)]
         },
+        # TODO not DRY
+        middle=expand(
+            rules.subtract_gc_content.output,
+            lower_frac=30,
+            upper_frac=55,
+            allow_missing=True,
+        ),
