@@ -11,13 +11,14 @@ from common.io import get_md5, setup_logging
 # specialized rules to convert gzip/nozip files to bgzip and back :/
 # Solution: force bgzip for references and gzip for bed
 
+smk_log = snakemake.log[0]  # type: ignore
 
-log = setup_logging(snakemake.log[0])  # type: ignore
+log = setup_logging(smk_log)
 
 GUNZIP = ["gunzip", "-c"]
 BGZIP = ["bgzip", "-c"]
 GZIP = ["gzip", "-c"]
-CURL = ["curl", "-Ss", "-L", "-q"]
+CURL = ["curl", "-f", "-Ss", "-L", "-q"]
 
 
 def main(opath: str, src: cfg.BedSrc | cfg.RefSrc | None) -> None:
@@ -34,19 +35,23 @@ def main(opath: str, src: cfg.BedSrc | cfg.RefSrc | None) -> None:
         # allow us to test for it)
         curltestcmd = [*CURL, "-r", "0-65000", src.url]
 
-        with open(opath, "wb") as f, Tmp() as tf:
+        with open(opath, "wb") as f, Tmp() as tf, open(smk_log, "w") as lf:
 
             def curl() -> None:
-                sp.Popen(curlcmd, stdout=f).wait()
+                if sp.run(curlcmd, stdout=f, stderr=lf).returncode != 0:
+                    exit(1)
 
             def curl_test(testfun: Callable[[Path], bool]) -> bool:
-                sp.Popen(curltestcmd, stdout=tf).wait()
+                if sp.run(curltestcmd, stdout=tf, stderr=lf).returncode != 0:
+                    exit(1)
                 return testfun(Path(tf.name))
 
             def curl_gzip(cmd: list[str]) -> None:
-                p1 = sp.Popen(curlcmd, stdout=sp.PIPE)
-                p2 = sp.Popen(cmd, stdin=p1.stdout, stdout=f)
-                p2.wait()
+                p1 = sp.Popen(curlcmd, stdout=sp.PIPE, stderr=lf)
+                p2 = sp.run(cmd, stdin=p1.stdout, stdout=f, stderr=lf)
+                p1.wait()
+                if not (p1.returncode == p2.returncode == 0):
+                    exit(1)
 
             # if we are getting a bed file (or related) ensure it is in gzip
             # format
@@ -61,10 +66,13 @@ def main(opath: str, src: cfg.BedSrc | cfg.RefSrc | None) -> None:
                 if curl_test(is_bgzip):
                     curl()
                 elif curl_test(is_gzip):
-                    p1 = sp.Popen(curlcmd, stdout=sp.PIPE)
-                    p2 = sp.Popen(GUNZIP, stdin=p1.stdout, stdout=sp.PIPE)
-                    p3 = sp.Popen(BGZIP, stdin=p2.stdout, stdout=f)
-                    p3.wait()
+                    p1 = sp.Popen(curlcmd, stdout=sp.PIPE, stderr=lf)
+                    p2 = sp.Popen(GUNZIP, stdin=p1.stdout, stdout=sp.PIPE, stderr=lf)
+                    p3 = sp.run(BGZIP, stdin=p2.stdout, stdout=f, stderr=lf)
+                    p1.wait()
+                    p2.wait()
+                    if not (p1.returncode == p2.returncode == p3.returncode == 0):
+                        exit(1)
                 else:
                     curl_gzip(BGZIP)
             else:
