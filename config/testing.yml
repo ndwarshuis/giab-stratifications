@@ -218,6 +218,72 @@ stratifications:
             src:
               url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG005_NA24631_son/NISTv4.2.1/GRCh38/SupplementaryFiles/inputvcfsandbeds/HG005_GRCh38_1_22_PacBio_HiFi_DeepVariant.vcf.gz
 
+        # Specify a previous stratification to which this shall be compared (if
+        # any)
+        comparison:
+
+          # The other stratification to which this should be compared. Must
+          # match a key in "comparisons" (see below) in toplevel config
+          other: GRCh38_v31
+
+          # List of string pairs to transform file names, with the first member
+          # of each pair matching (regexp) the path of the generated strat and
+          # the second in the pair being the replacement for that match. Note
+          # that only strats with "matching" filenames will be compared, so use
+          # this to "make" generated file strat names match those from the other.
+          #
+          # Default: []
+          # replacements: []
+
+          # Similar to "replacements" in purpose, but uses a fixed map of file
+          # paths to denote which strats to compare.
+          path_mapper:
+            LowComplexity/GRCh38_AllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz: LowComplexity/GRCh38_AllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
+            LowComplexity/GRCh38_AllTandemRepeats_ge10000bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt10000bp_slop5.bed.gz
+            LowComplexity/GRCh38_AllTandemRepeats_ge100bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt100bp_slop5.bed.gz
+            LowComplexity/GRCh38_AllTandemRepeats.bed.gz: LowComplexity/GRCh38_allTandemRepeats.bed.gz
+            LowComplexity/GRCh38_notinAllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz: LowComplexity/GRCh38_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_diTR_10to49_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_diTR_11to50_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_diTR_50to199_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_diTR_51to200_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_diTR_ge200_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_diTR_gt200_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_homopolymer_ge12_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_homopolymer_gt11_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_homopolymer_ge21_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_homopolymer_gt20_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_imperfecthomopolge11_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_imperfecthomopolgt10_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_imperfecthomopolge21_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_imperfecthomopolgt20_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_quadTR_19to49_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_quadTR_20to50_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_quadTR_50to199_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_quadTR_51to200_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_quadTR_ge200_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_quadTR_gt200_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_triTR_14to49_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_triTR_15to50_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_triTR_50to199_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_triTR_51to200_slop5.bed.gz
+            LowComplexity/GRCh38_SimpleRepeat_triTR_ge200_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_triTR_gt200_slop5.bed.gz
+            LowComplexity/GRCh38_AllTandemRepeats_le50bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_lt51bp_slop5.bed.gz
+            LowComplexity/GRCh38_AllTandemRepeats_ge101bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt100bp_slop5.bed.gz
+            LowComplexity/GRCh38_AllTandemRepeats_ge10001bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt10000bp_slop5.bed.gz
+            Functional/GRCh38_notinrefseq_cds.bed.gz: FunctionalRegions/GRCh38_notinrefseq_cds.bed.gz
+            Functional/GRCh38_refseq_cds.bed.gz: FunctionalRegions/GRCh38_refseq_cds.bed.gz
+
+          # Patterns in other stratification to ignore in comparison
+          #
+          # Default: []
+          ignore_other:
+            - '.*chainSelf'
+            - '^GenomeSpecific.*'
+            - '^ancestry.*'
+            - '^OtherDifficult.*'
+            - '^FunctionalTechnicallyDifficultRegions.*'
+            - '^mappability.*'
+            - '^Union.*'
+            - '.*gt10kb_gt99percidentity\.bed\.gz'
+            - 'XY/GRCh38_chr[XY]_.*'
+
+          # Patterns in generated strat to ignore in comparison
+          #
+          # Default: []
+          ignore_generated:
+            - '.*_AT_slop5\.bed\.gz$'
+            - '.*_GC_slop5\.bed\.gz$'
+            - '^OtherDifficult\/GRCh38_VDJ\.bed\.gz$'
+
         # Directive for which stratification types to include
         include:
           # Include all low complexity regions if true
@@ -340,18 +406,6 @@ stratifications:
     builds:
       test-autosome:
         chr_filter: [21, 22]
-        bench:
-          bench_vcf:
-            src:
-              url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG005_NA24631_son/NISTv4.2.1/GRCh37/HG005_GRCh37_1_22_v4.2.1_benchmark.vcf.gz
-          bench_bed:
-            src:
-              url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG005_NA24631_son/NISTv4.2.1/GRCh37/HG005_GRCh37_1_22_v4.2.1_benchmark.bed
-            params:
-              chr_prefix: ""
-          query_vcf:
-            src:
-              url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/ChineseTrio/HG005_NA24631_son/NISTv4.2.1/GRCh37/SupplementaryFiles/inputvcfsandbeds/HG005_GRCh37_1_22_PacBio_HiFi_DeepVariant.vcf.gz
         include:
           low_complexity: true
           xy: false
@@ -455,6 +509,9 @@ stratifications:
           segdups: false
           union: true
           mappability: []
+
+comparison_strats:
+  GRCh38_v31: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/v3.1-genome-stratifications-GRCh38.tar.gz
 
 # Paths in which resources and results will be stored
 # "Resource" = downloaded stuff, "Result" = stuff derived from downloaded stuff

@@ -13,6 +13,7 @@ Y = TypeVar("Y")
 
 BuildKey = NewType("BuildKey", str)
 RefKey = NewType("RefKey", str)
+CompareKey = NewType("CompareKey", str)
 OtherLevelKey = NewType("OtherLevelKey", str)
 OtherStratKey = NewType("OtherStratKey", str)
 
@@ -389,6 +390,16 @@ class Bench(BaseModel):
     query_vcf: VCFFile
 
 
+class BuildCompare(BaseModel):
+    """Configuration for comparing generated strats to previous versions."""
+
+    other: CompareKey
+    path_mapper: dict[Path, Path] = {}
+    replacements: list[tuple[str, str]] = []
+    ignore_other: list[str] = []
+    ignore_generated: list[str] = []
+
+
 class Build(BaseModel):
     """Spec for a stratification build."""
 
@@ -396,6 +407,7 @@ class Build(BaseModel):
     include: Include
     other_strats: OtherStrats = {}
     bench: Bench | None = None
+    comparison: BuildCompare | None = None
 
 
 class RefFile(BaseModel):
@@ -437,6 +449,7 @@ class GiabStrats(BaseModel):
     paths: Paths = Paths()
     tools: Tools = Tools()
     stratifications: dict[RefKey, Stratification]
+    comparison_strats: dict[CompareKey, HttpUrl] = {}
 
     @validator("other_levels", each_item=True)
     def other_level_valid(cls, v: OtherLevelKey) -> OtherLevelKey:
@@ -453,7 +466,7 @@ class GiabStrats(BaseModel):
         try:
             levels = cast(list[OtherLevelKey], values["other_levels"])
             bad = [
-                f"invalid level '{lk}' under build key '{bk}'"
+                f"level='{lk}'; build='{bk}'"
                 for bk, b in v.builds.items()
                 for lk in b.other_strats
                 if lk not in levels
@@ -461,7 +474,30 @@ class GiabStrats(BaseModel):
             if len(bad) > 0:
                 assert (
                     False
-                ), f"existing bed files with invalid levels: {', '.join(bad)}"
+                ), f"builds referencing invalid strat categories: {', '.join(bad)}"
+        except KeyError:
+            pass
+        return v
+
+    @validator("stratifications", each_item=True)
+    def builds_have_valid_old_version(
+        cls,
+        v: Stratification,
+        values: dict[str, Any],
+    ) -> Stratification:
+        try:
+            prev = cast(dict[CompareKey, HttpUrl], values["previous"])
+            bad = [
+                f"version='{pk}'; build='{bk}'"
+                for bk, b in v.builds.items()
+                if b.comparison is not None
+                for pk in b.comparison.other
+                if pk not in prev
+            ]
+            if len(bad) > 0:
+                assert (
+                    False
+                ), f"builds referencing invalid previous version keys: {', '.join(bad)}"
         except KeyError:
             pass
         return v
@@ -699,6 +735,20 @@ class GiabStrats(BaseModel):
         ms = self.buildkey_to_include(rk, bk).mappability
         l, m, e = unzip((m.length, m.mismatches, m.indels) for m in ms)
         return ([*l], [*m], [*e])
+
+    def buildkey_to_comparison(
+        self,
+        rk: RefKey,
+        bk: BuildKey,
+    ) -> BuildCompare | None:
+        return self.buildkey_to_build(rk, bk).comparison
+
+    def buildkey_to_comparekey(
+        self,
+        rk: RefKey,
+        bk: BuildKey,
+    ) -> CompareKey | None:
+        return fmap_maybe(lambda x: x.other, self.buildkey_to_comparison(rk, bk))
 
     # include switches (for controlling which snakemake rules to activate)
 
