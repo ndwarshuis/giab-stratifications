@@ -1,3 +1,3 @@
 [submodule "workflow/modules/giab-stratdiff"]
 	path = workflow/scripts/python/common/stratdiff
-	url = ssh://github/ndwarshuis/giab-stratdiff
+	url = https://github.com/ndwarshuis/giab-stratdiff
