@@ -22,7 +22,14 @@ def expand_strat_targets(wildcards):
         (rules.all_low_complexity.input, config.want_low_complexity),
         (rules.all_xy_auto.input, config.want_xy_auto),
         (rules.all_map.input, config.want_mappability),
-        ([rules.all_gc.input.wide[0], rules.all_gc.input.narrow[0]], config.want_gc),
+        (
+            [
+                rules.all_gc.input.wide[0],
+                rules.all_gc.input.narrow[0],
+                rules.all_gc.input.middle[0],
+            ],
+            config.want_gc,
+        ),
         (rules.all_functional.input, config.want_functional),
         (rules.all_segdups.input, config.want_segdups),
         (rules.find_telomeres.output, config.want_telomeres),
@@ -92,6 +99,54 @@ rks, bks = map(
     list,
     unzip([(rk, bk) for rk, r in config.stratifications.items() for bk in r.builds]),
 )
+
+
+rule download_comparison_strat_tarball:
+    output:
+        directory(config.resources_dir / "comparisons" / "{compare_key}"),
+    conda:
+        "../envs/utils.yml"
+    # ASSUME this is not None (we control for this when building the "all" rule)
+    params:
+        url=lambda w: config.comparison_strats[w.compare_key],
+        tar=lambda w: f"/tmp/comparison_{w.compare_key}.tar.gz",
+    shell:
+        """
+        curl -fsSq -o {params.tar} {params.url} && \
+        mkdir {output} && \
+        tar xzf {params.tar} --directory {output} --strip-components=1
+        """
+
+
+rule compare_strats:
+    input:
+        old=lambda w: expand(
+            rules.download_comparison_strat_tarball.output,
+            compare_key=config.buildkey_to_comparekey(w.ref_key, w.build_key),
+        )[0],
+        # use this to target a specific rule to satisfy the snakemake scheduler,
+        # the thing I actually need here is the parent directory
+        new_list=rules.generate_tsv_list.output[0],
+    output:
+        anti=post_inter_dir / "comparison_anti.tsv.gz",
+        diagnostics=post_inter_dir / "comparison_diagnostics.tsv",
+    log:
+        post_log_dir / "comparison.log",
+    conda:
+        "../envs/bedtools.yml"
+    threads: 8
+    script:
+        "../scripts/python/bedtools/postprocess/diff_previous_strats.py"
+
+
+rule all_comparisons:
+    input:
+        [
+            expand(rules.compare_strats.output, ref_key=rk, build_key=bk)[0]
+            for rk, r in config.stratifications.items()
+            for bk in r.builds
+            if config.buildkey_to_comparekey(rk, bk) is not None
+        ],
 
 
 # Silly rule to make a dataframe which maps chromosome names to a common
