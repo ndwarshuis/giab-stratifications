@@ -310,8 +310,8 @@ stratifications:
             ancestry_Neanderthal: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/ancestry/GRCh38_ancestry_Neanderthal.bed.gz }}
           FunctionalTechnicallyDifficult:
             BadPromotors: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/FunctionalTechnicallyDifficultRegions/GRCh38_BadPromoters.bed.gz }}
-            CMRGv1.00_duplicationinKMT2C: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/FunctionalTechnicallyDifficultRegions/GRCh38_CMRGv1.00_duplicationinKMT2C.bed.gz }}
-            CMRGv1.00_falselyduplicatedgenes: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/FunctionalTechnicallyDifficultRegions/GRCh38_CMRGv1.00_falselyduplicatedgenes.bed.gz }}
+            CMRGv1.00_duplicationinKMT2C: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/FunctionalTechnicallyDifficultRegions/GRCh38_CMRGv1.00_duplicationinKMT2C.bed.gz }}
+            CMRGv1.00_falselyduplicatedgenes: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/FunctionalTechnicallyDifficultRegions/GRCh38_CMRGv1.00_falselyduplicatedgenes.bed.gz }}
           GenomeSpecific:
             HG001_v4.2.1_CNV_CCSandONT_elliptical_outlier: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/GenomeSpecific/GRCh38_HG001_v4.2.1_CNV_CCSandONT_elliptical_outlier.bed.gz }}
             HG001_v4.2.1_CNV_mrcanavarIllumina_CCShighcov_ONThighcov_intersection: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/GenomeSpecific/GRCh38_HG001_v4.2.1_CNV_mrcanavarIllumina_CCShighcov_ONThighcov_intersection.bed.gz }}
