@@ -16,6 +16,7 @@ variables:
   FF_USE_FASTZIP: "true"
   ARTIFACT_COMPRESSION_LEVEL: "fast"
   CACHE_COMPRESSION_LEVEL: "fast"
+  GIT_SUBMODULE_STRATEGY: recursive
 
 image: condaforge/mambaforge:4.12.0-0
 
