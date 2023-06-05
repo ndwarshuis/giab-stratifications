@@ -21,10 +21,13 @@ set-resources:
   # some rules involve large files, so more memory
   - get_nonunique:mem_mb=4000
   - subtract_uniform_repeats:mem_mb=4000
+  - subtract_uniform_repeat_compliment:mem_mb=4000
   - filter_sort_rmsk:mem_mb=4000
+  - filter_sort_existing:mem_mb=4000
   - filter_TRs:mem_mb=4000
   - unit_test_strats:mem_mb=8000
   - validate_strats:mem_mb=12000
+  - run_happy:mem_mb=24000
 set-threads:
   - gem_index=32
   - gem_mappability=32
