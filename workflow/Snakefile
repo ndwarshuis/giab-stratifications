@@ -4,9 +4,6 @@ from pathlib import Path
 min_version("7.22")
 
 
-configfile: "workflow/modules/strat-base/config/static.yml"
-
-
 # hack to get pydantic to work (one level down)
 sys.path.extend(["workflow/modules/strat-base/workflow/scripts/python"])
 from common.config import GiabStrats
