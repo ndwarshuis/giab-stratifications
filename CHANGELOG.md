@@ -1,3 +1,9 @@
+# 2.2.0
+
+- add comparison functions to config/pipeline to test how much generated
+  strats have changed relative to previous versions
+- pipeline now fails on http 404 (or other bad request)
+
 # 2.1.1
 
 - fix typo
