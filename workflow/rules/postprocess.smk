@@ -35,6 +35,7 @@ def expand_strat_targets(wildcards):
         (rules.find_telomeres.output, config.want_telomeres),
         (rules.invert_segdup_and_map.output, config.want_segdup_and_map),
         (rules.invert_alldifficult.output, config.want_alldifficult),
+        (rules.get_gaps.output, lambda rk, _: config.want_gaps(rk)),
     ]
     auto = [t for tgt, test in targets if test(rk, bk) for t in tgt]
     other = all_other(rk, bk)

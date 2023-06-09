@@ -2,7 +2,8 @@ from more_itertools import unzip
 
 other_constraints = {
     "other_level_key": f"({'|'.join(config.other_levels)})",
-    "other_strat_key": "[A-Za-z0-9-._]+",
+    # match all but the gap file
+    "other_strat_key": "(?!gaps_slop15kb)[A-Za-z0-9-._]+",
 }
 
 
