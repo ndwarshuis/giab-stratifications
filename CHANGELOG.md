@@ -1,3 +1,7 @@
+# 2.3.0
+
+- automatically make gaps stratification
+
 # 2.2.0
 
 - add comparison functions to config/pipeline to test how much generated
