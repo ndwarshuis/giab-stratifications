@@ -263,6 +263,8 @@ rule summarize_happy:
         ],
     output:
         config.final_root_dir / ".validation" / "benchmark_summary.html",
+    params:
+        subsets=config.benchmark_subsets,
     conda:
         "../envs/rmarkdown.yml"
     script:

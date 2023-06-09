@@ -453,6 +453,25 @@ class GiabStrats(BaseModel):
     tools: Tools = Tools()
     stratifications: dict[RefKey, Stratification]
     comparison_strats: dict[CompareKey, HttpUrl] = {}
+    benchmark_subsets: list[str] = [
+        "AllAutosomes",
+        "AllTandemRepeats",
+        "AllHomopolymers_ge7bp_imperfectge11bp_slop5",
+        "SimpleRepeat_diTR_10to49_slop5",
+        "SimpleRepeat_homopolymer_7to11_slop5",
+        "SimpleRepeat_homopolymer_ge21_slop5",
+        "SimpleRepeat_imperfecthomopolge11_slop5",
+        "SimpleRepeat_imperfecthomopolge21_slop5",
+        "alldifficultregions",
+        "alllowmapandsegdupregions",
+        "chrX_PAR",
+        "chrX_XTR",
+        "chrY_XTR",
+        "notinalldifficultregions",
+        "notinAllHomopolymers_ge7bp_imperfectge11bp_slop5",
+        "notinAllTandemRepeatsandHomopolymers_slop5",
+        "segdups",
+    ]
 
     @validator("other_levels", each_item=True)
     def other_level_valid(cls, v: OtherLevelKey) -> OtherLevelKey:

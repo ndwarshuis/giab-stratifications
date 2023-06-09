@@ -513,6 +513,27 @@ stratifications:
 comparison_strats:
   GRCh38_v31: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/v3.1-genome-stratifications-GRCh38.tar.gz
 
+# Stratifications to include in each benchmark. This is a global options to
+# keep benchmarks comparable across builds.
+# benchmark_subsets:
+#   - AllAutosomes
+#   - AllTandemRepeats
+#   - AllHomopolymers_ge7bp_imperfectge11bp_slop5
+#   - SimpleRepeat_diTR_10to49_slop5
+#   - SimpleRepeat_homopolymer_7to11_slop5
+#   - SimpleRepeat_homopolymer_ge21_slop5
+#   - SimpleRepeat_imperfecthomopolge11_slop5
+#   - SimpleRepeat_imperfecthomopolge21_slop5
+#   - alldifficultregions
+#   - alllowmapandsegdupregions
+#   - chrX_PAR
+#   - chrX_XTR
+#   - chrY_XTR
+#   - notinalldifficultregions
+#   - notinAllHomopolymers_ge7bp_imperfectge11bp_slop5
+#   - notinAllTandemRepeatsandHomopolymers_slop5
+#   - segdups
+
 # Paths in which resources and results will be stored
 # "Resource" = downloaded stuff, "Result" = stuff derived from downloaded stuff
 # paths:
