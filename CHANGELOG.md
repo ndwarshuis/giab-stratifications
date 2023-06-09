@@ -1,3 +1,7 @@
+# 2.4.1
+
+- fix overlapping level bug
+
 # 2.4.0
 
 - make benchmark subsets configurable

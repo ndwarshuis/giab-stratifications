@@ -473,12 +473,6 @@ class GiabStrats(BaseModel):
         "segdups",
     ]
 
-    @validator("other_levels", each_item=True)
-    def other_level_valid(cls, v: OtherLevelKey) -> OtherLevelKey:
-        core = [c.value for c in CoreLevel]
-        assert v not in core, "other level cannot overlap with built-in level"
-        return v
-
     @validator("stratifications", each_item=True)
     def builds_have_valid_existing(
         cls,
