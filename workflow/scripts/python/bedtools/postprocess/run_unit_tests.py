@@ -1,6 +1,6 @@
+import pandas as pd
 from typing import Any, NamedTuple
 from pathlib import Path
-import pandas as pd
 from pybedtools import BedTool as bt  # type: ignore
 from os.path import dirname, basename
 import common.config as cfg
@@ -70,10 +70,16 @@ def test_bed(
     distance = (df["start"] - df["end"].shift(1))[same_chrom]
     overlapping_lines = distance[distance < 1].index.tolist()
 
-    # choose gap file depending on if this is an XY strat or not
-    isXY = basename(dirname(strat_file)) == "XY"
-    gapless_bt = gapless.parY if isXY else gapless.auto
-    gaps = bt.from_dataframe(df).subtract(gapless_bt).to_dataframe()
+    # choose gap file depending on if this is an XY strat or not; note that the
+    # built-in gaps file (if applicable) is obviously whitelisted from this
+    # check
+    if "gaps_slop15kb" in basename(strat_file):
+        no_gaps = True
+    else:
+        isXY = basename(dirname(strat_file)) == "XY"
+        gapless_bt = gapless.parY if isXY else gapless.auto
+        gaps = bt.from_dataframe(df).subtract(gapless_bt).to_dataframe()
+        no_gaps = len(gaps) == 0
 
     return [
         msg
@@ -86,7 +92,7 @@ def test_bed(
                 len(overlapping_lines) == 0,
                 f"non-disjoint regions at lines: {overlapping_lines}",
             ),
-            (len(gaps) == 0, "bed contains gap regions"),
+            (no_gaps, "bed contains gap regions"),
         ]
         if result is False
     ]
@@ -103,7 +109,6 @@ def run_all_tests(
     ]
 
 
-# TODO not DRY...but also this is literally 3 lines so whatever
 def strat_files(path: str) -> list[Path]:
     with open(path, "r") as f:
         return [Path(s.strip()) for s in f]
