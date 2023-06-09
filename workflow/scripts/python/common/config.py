@@ -68,6 +68,9 @@ class CoreLevel(Enum):
     UNION = "Union"
     TELOMERES = "Telomere"
     XY = "XY"
+    # overlaps with "other" strat categories, needed because this is where
+    # the gaps strat will go
+    OtherDifficult = "OtherDifficult"
 
 
 class ChrConversion(NamedTuple):
@@ -834,6 +837,9 @@ class GiabStrats(BaseModel):
 
     def want_benchmark(self, rk: RefKey, bk: BuildKey) -> bool:
         return self.buildkey_to_build(rk, bk).bench is not None
+
+    def want_gaps(self, rk: RefKey) -> bool:
+        return self.stratifications[rk].gap is not None
 
     # key lists for downloading resources
 

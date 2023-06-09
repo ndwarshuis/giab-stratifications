@@ -34,6 +34,7 @@ include: "rules/functional.smk"
 include: "rules/segdups.smk"
 include: "rules/other.smk"
 include: "rules/mappability.smk"
+include: "rules/otherdifficult.smk"
 include: "rules/union.smk"
 include: "rules/postprocess.smk"
 
