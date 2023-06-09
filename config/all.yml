@@ -78,7 +78,6 @@ stratifications:
             MHC: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_MHC.bed.gz }}
             VDJ: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_VDJ.bed.gz }}
             contigs_lt500kb: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_contigs_lt500kb.bed.gz }}
-            gaps_slop15kb: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_gaps_slop15kb.bed.gz }}
             hg38_minimap2_asm20_N10_gt1contig_gt1kb: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hg38_minimap2_asm20_N10_gt1contig_gt1kb.bed.gz }}
             hs37d5_decoy_alignments: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hs37d5_decoy_alignments.bed.gz }}
             missing_and_multiple_alignments_of_GRCh38: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_missing_and_multiple_alignments_of_GRCh38.bed.gz }}
@@ -414,7 +413,6 @@ stratifications:
             contigs_lt500kb: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_contigs_lt500kb.bed.gz }}
             false_duplications_correct_copy: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_false_duplications_correct_copy.bed.gz }}
             false_duplications_incorrect_copy: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_false_duplications_incorrect_copy.bed.gz }}
-            gaps_slop15kb: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_gaps_slop15kb.bed.gz }}
             gnomAD_InbreedingCoeff_slop1bp_merge1000bp: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_gnomAD_InbreedingCoeff_slop1bp_merge1000bp.bed.gz }}
             population_CNV_FP_regions: {src: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_population_CNV_FP_regions.bed.gz }}
         bench:
