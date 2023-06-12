@@ -4,7 +4,7 @@ output:
   html_document:
     code_folding: hide
     toc: true
-    toc_depth: 3
+    toc_depth: 2
     toc_float: true
     df_print: paged
 ---
@@ -40,6 +40,8 @@ read_nonN <- function(path) {
 read_strat <- function(path) {
   strat_filename <- basename(path)
   read_bed(path) %>%
+    group_by(chrom) %>%
+    summarise(total_region = sum(region_size), .groups = "drop") %>%
     mutate(build_key = path %>% dirname() %>% dirname() %>% basename(),
            ## genome = str_extract(strat_filename, "^[^_]+_(HG[0-9]+)_.bed.gz", 1),
            ## strat_level = str_extract(strat_filename, 
@@ -68,15 +70,13 @@ file_list <- snakemake@input$strats %>%
   map(readLines) %>%
   flatten()
 
-read_strats <- function(stype) {
+read_strats <- function(stype, gaps) {
   fs <- keep(file_list, ~ basename(dirname(.x)) == stype)
   if (length(fs) > 0) {
     df <- map_dfr(fs, read_strat)
     all_combos <- chr_build_combinations %>%
       expand(nesting(chrom_std, build_key), strat_name = df$strat_name)
     df %>%
-      group_by(build_key, strat_name, chrom_std) %>%
-      summarise(total_region = sum(region_size), .groups = "drop") %>%
       # join the full cartesian product of all chromosomes and paths, then fill
       # missing with 0 so that we get an empty space on the graphs indicating
       # zero coverage
@@ -108,9 +108,9 @@ coverage_plot <- function(df, level) {
   cat("\n\n")
 }
 
-coverage_plots <- function(stype) {
-  cat(sprintf("### %s\n\n", stype))
-  df <- read_strats(stype)
+coverage_plots <- function(stype, gaps) {
+  cat(sprintf("## %s\n\n", stype))
+  df <- read_strats(stype, gaps)
   if (is.null(df)) {
     cat("None\n\n")
   } else {
@@ -135,16 +135,8 @@ files. These files can be assumed to:
 
 # Coverage Plots
 
-## Core
-
 ```{r, echo = FALSE, results = "asis"}
-walk(snakemake@params$core_levels, coverage_plots)
-```
-
-## Other
-
-User-added stratifications
-
-```{r, echo = FALSE, results = "asis"}
-walk(snakemake@params$other_levels, coverage_plots)
+snakemake@params$core_levels %>%
+  union(snakemake@params$other_levels) %>%
+  walk(coverage_plots)
 ```
