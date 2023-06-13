@@ -17,11 +17,12 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     assert comparison is not None, "this should not happen"
 
+    outdir = Path(smk.output[0]).parent
+
     logged = compare_all(
         Path(smk.input["new_list"]).parent,
         smk.input["old"],
-        smk.output["anti"],
-        smk.output["diagnostics"],
+        outdir,
         comparison.path_mapper,
         comparison.replacements,
         [i.chr_name_full(prefix) for i in ixs],
