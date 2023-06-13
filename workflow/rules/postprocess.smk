@@ -129,8 +129,7 @@ rule compare_strats:
         # the thing I actually need here is the parent directory
         new_list=rules.generate_tsv_list.output[0],
     output:
-        anti=post_inter_dir / "comparison_anti.tsv.gz",
-        diagnostics=post_inter_dir / "comparison_diagnostics.tsv",
+        post_inter_dir / "comparison" / "diagnostics.tsv",
     log:
         post_log_dir / "comparison.log",
     conda:
