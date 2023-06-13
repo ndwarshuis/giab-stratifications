@@ -11,7 +11,7 @@ def common_dirs(files: list[str]) -> list[str]:
 def main(smk: Any) -> None:
     strats = [
         p.path
-        for i in common_dirs(smk.input)
+        for i in common_dirs(smk.input.check)
         for p in scandir(i)
         if p.path.endswith(".bed.gz")
     ]
