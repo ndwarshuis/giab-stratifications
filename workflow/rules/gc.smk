@@ -195,11 +195,19 @@ rule intersect_gc_ranges:
     input:
         unpack(range_inputs),
         genome=rules.get_genome.output[0],
+        gapless=rules.get_gapless.output.auto,
     # randomly need this output to use in union strats
     output:
         gc_inter_dir / "gc_wider_range.bed.gz",
     conda:
         "../envs/bedtools.yml"
+    # hack together a format pattern that will be used for output
+    params:
+        path_pattern=lambda w: expand(
+            gc_final_path("{{}}"),
+            ref_key=w.ref_key,
+            build_key=w.build_key,
+        )[0],
     script:
         "../scripts/python/bedtools/gc/intersect_ranges.py"
 

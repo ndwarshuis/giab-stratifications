@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Callable
 import subprocess as sp
 import common.config as cfg
 
@@ -13,14 +13,8 @@ class GCInput(NamedTuple):
     is_range_bound: bool
 
 
-def gc_final_path(sconf: cfg.GiabStrats, name: str) -> Path:
-    p = sconf.build_strat_path(cfg.CoreLevel.GC, name)
-    p.parent.mkdir(exist_ok=True, parents=True)
-    return p
-
-
 def write_simple_range_beds(
-    sconf: cfg.GiabStrats,
+    final_path: Callable[[str], Path],
     gs: list[GCInput],
     is_low: bool,
 ) -> None:
@@ -31,7 +25,7 @@ def write_simple_range_beds(
             if is_low
             else (bigger.fraction, smaller.fraction)
         )
-        out = gc_final_path(sconf, f"gc{lower_frac}to{upper_frac}_slop50")
+        out = final_path(f"gc{lower_frac}to{upper_frac}_slop50")
         with open(out, "wb") as f:
             p0 = sp.Popen(
                 ["subtractBed", "-a", bigger.bed, "-b", smaller.bed],
@@ -44,12 +38,13 @@ def write_simple_range_beds(
 
 
 def write_middle_range_bed(
-    sconf: cfg.GiabStrats,
+    final_path: Callable[[str], Path],
     lower: GCInput,
     upper: GCInput,
     genome: Path,
+    gapless: Path,
 ) -> None:
-    out = gc_final_path(sconf, f"gc{lower.fraction}to{upper.fraction}_slop50")
+    out = final_path(f"gc{lower.fraction}to{upper.fraction}_slop50")
     with open(out, "wb") as f:
         p0 = sp.Popen(
             ["complementBed", "-i", upper.bed, "-g", genome],
@@ -60,15 +55,21 @@ def write_middle_range_bed(
             stdin=p0.stdout,
             stdout=sp.PIPE,
         )
-        p2 = sp.run(["bgzip", "-c"], stdin=p1.stdout, stdout=f)
+        p2 = sp.Popen(
+            ["intersectBed", "-a", "stdin", "-b", gapless, "-sorted", "-g", genome],
+            stdin=p1.stdout,
+            stdout=sp.PIPE,
+        )
+        p3 = sp.run(["bgzip", "-c"], stdin=p2.stdout, stdout=f)
         p0.wait()
         p1.wait()
-        if not (p0.returncode == p1.returncode == p2.returncode == 0):
+        p2.wait()
+        if not (p0.returncode == p1.returncode == p2.returncode == p3.returncode == 0):
             exit(1)
 
 
 def write_intersected_range_beds(
-    sconf: cfg.GiabStrats,
+    final_path: Callable[[str], Path],
     low: list[GCInput],
     high: list[GCInput],
     wider_out: Path,
@@ -78,7 +79,7 @@ def write_intersected_range_beds(
         [x for x in reversed(high) if x.is_range_bound],
     )
     for i, (b1, b2) in enumerate(pairs):
-        bed_out = gc_final_path(sconf, f"gclt{b1.fraction}orgt{b2.fraction}_slop50")
+        bed_out = final_path(f"gclt{b1.fraction}orgt{b2.fraction}_slop50")
         with open(bed_out, "wb") as f:
             p0 = sp.Popen(
                 ["multiIntersectBed", "-i", b1.bed, b2.bed],
@@ -113,11 +114,17 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     low = [GCInput(p, f, r) for p, (f, r) in zip(smk.input.low, gps.low)]
     high = [GCInput(p, f, r) for p, (f, r) in zip(smk.input.high, gps.high)]
     genome = Path(smk.input.genome)
+    gapless = Path(smk.input.gapless)
 
-    write_simple_range_beds(sconf, low, True)
-    write_simple_range_beds(sconf, high, False)
-    write_middle_range_bed(sconf, low[-1], high[0], genome)
-    write_intersected_range_beds(sconf, low, high, Path(smk.output[0]))
+    def final_path(name: str) -> Path:
+        p = Path(str(smk.params.path_pattern).format(name))
+        p.parent.mkdir(exist_ok=True, parents=True)
+        return p
+
+    write_simple_range_beds(final_path, low, True)
+    write_simple_range_beds(final_path, high, False)
+    write_middle_range_bed(final_path, low[-1], high[0], genome, gapless)
+    write_intersected_range_beds(final_path, low, high, Path(smk.output[0]))
 
 
 main(snakemake, snakemake.config)  # type: ignore

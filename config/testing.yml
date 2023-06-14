@@ -269,7 +269,6 @@ stratifications:
             - '.*chainSelf'
             - '^GenomeSpecific.*'
             - '^ancestry.*'
-            - '^OtherDifficult.*'
             - '^FunctionalTechnicallyDifficultRegions.*'
             - '^mappability.*'
             - '^Union.*'
@@ -282,7 +281,6 @@ stratifications:
           ignore_generated:
             - '.*_AT_slop5\.bed\.gz$'
             - '.*_GC_slop5\.bed\.gz$'
-            - '^OtherDifficult\/GRCh38_VDJ\.bed\.gz$'
 
         # Directive for which stratification types to include
         include:

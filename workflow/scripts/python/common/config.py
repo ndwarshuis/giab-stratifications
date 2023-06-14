@@ -442,7 +442,10 @@ class Include(BaseModel):
     segdups: bool = True
     union: bool = True
     telomeres: bool = True
-    mappability: set[LowMapParams]
+    mappability: set[LowMapParams] = {
+        LowMapParams(length=250, mismatches=0, indels=0),
+        LowMapParams(length=100, mismatches=2, indels=1),
+    }
     gc: GCParams | None = GCParams()
 
 
@@ -471,7 +474,7 @@ class Build(BaseModel):
     """Spec for a stratification build."""
 
     chr_filter: set[ChrIndex]
-    include: Include
+    include: Include = Include()
     other_strats: OtherStrats = {}
     bench: Bench | None = None
     comparison: BuildCompare | None = None
