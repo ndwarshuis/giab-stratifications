@@ -78,14 +78,3 @@ stratifications:
     builds:
       test-autosome:
         chr_filter: []
-        include:
-          low_complexity: true
-          xy: true
-          gc: true
-          functional: true
-          telomeres: false
-          segdups: true
-          union: true
-          mappability:
-            - {length: 250, mismatches: 0, indels: 0}
-            - {length: 100, mismatches: 2, indels: 1}
