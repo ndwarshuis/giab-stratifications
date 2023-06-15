@@ -1,3 +1,9 @@
+# 2.5.0
+
+- make comparison way faster and more intuitive
+- fix missing middle GC content file
+- automatically make flanking gaps stratification
+
 # 2.4.1
 
 - fix overlapping level bug
