@@ -266,21 +266,14 @@ stratifications:
           #
           # Default: []
           ignore_other:
-            - '.*chainSelf'
-            - '^GenomeSpecific.*'
-            - '^ancestry.*'
-            - '^FunctionalTechnicallyDifficultRegions.*'
-            - '^mappability.*'
-            - '^Union.*'
-            - '.*gt10kb_gt99percidentity\.bed\.gz'
-            - 'XY/GRCh38_chr[XY]_.*'
+            # not sure what these files are...
+            - "GenomeSpecific/\\._GRCh38_HG002_v4\\.2\\.1_Tier1plusTier2_v0\\.6\\.1\\.bed\\.gz"
+            - "OtherDifficult/\\._GRCh38_KIR\\.bed\\.gz"
 
           # Patterns in generated strat to ignore in comparison
           #
           # Default: []
-          ignore_generated:
-            - '.*_AT_slop5\.bed\.gz$'
-            - '.*_GC_slop5\.bed\.gz$'
+          # ignore_generated: []
 
         # Directive for which stratification types to include
         include:
