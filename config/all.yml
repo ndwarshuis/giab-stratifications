@@ -216,16 +216,7 @@ stratifications:
             Functional/GRCh37_refseq_cds.bed.gz: FunctionalRegions/GRCh37_refseq_cds.bed.gz
 
         include:
-          low_complexity: true
-          xy: true
-          gc: true
-          functional: true
-          segdups: true
-          union: true
           telomeres: false
-          mappability:
-            - {length: 250, mismatches: 0, indels: 0}
-            - {length: 100, mismatches: 2, indels: 1}
 
   GRCh38:
     ref:
@@ -449,16 +440,7 @@ stratifications:
             Functional/GRCh38_refseq_cds.bed.gz: FunctionalRegions/GRCh38_refseq_cds.bed.gz
 
         include:
-          low_complexity: true
-          xy: true
-          gc: true
-          functional: true
-          segdups: true
-          union: true
           telomeres: false
-          mappability:
-            - {length: 250, mismatches: 0, indels: 0}
-            - {length: 100, mismatches: 2, indels: 1}
 
   CHM13:
     ref:
@@ -564,18 +546,6 @@ stratifications:
             LowComplexity/CHM13_AllTandemRepeats_le50bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_lt51bp_slop5.bed.gz
             LowComplexity/CHM13_AllTandemRepeats_ge101bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_gt100bp_slop5.bed.gz
             LowComplexity/CHM13_AllTandemRepeats_ge10001bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_gt10000bp_slop5.bed.gz
-
-        include:
-          low_complexity: true
-          xy: true
-          gc: true
-          functional: true
-          segdups: false
-          union: true
-          telomeres: true
-          mappability:
-            - {length: 250, mismatches: 0, indels: 0}
-            - {length: 100, mismatches: 2, indels: 1}
 
 comparison_strats:
   GRCh37_v31: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/v3.1-genome-stratifications-GRCh37.tar.gz
