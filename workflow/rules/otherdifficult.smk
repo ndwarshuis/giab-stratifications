@@ -18,5 +18,6 @@ rule get_gaps:
         complementBed -i {input.gapless} -g {input.genome} | \
         slopBed -i stdin -b 15000 -g {input.genome} | \
         mergeBed -i stdin | \
+        intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c > {output}
         """

@@ -1,8 +1,17 @@
 from pathlib import Path
 from pydantic import BaseModel as BaseModel_
-from pydantic import validator, HttpUrl, FilePath, NonNegativeInt
+from pydantic import validator, HttpUrl, FilePath, NonNegativeInt, Field
 from enum import Enum, unique
-from typing import NewType, Any, Callable, TypeVar, Type, NamedTuple, cast
+from typing import (
+    NewType,
+    Any,
+    Callable,
+    TypeVar,
+    Type,
+    NamedTuple,
+    cast,
+    Annotated,
+)
 from typing_extensions import Self
 from more_itertools import unzip, unique_everseen
 from common.io import is_gzip, is_bgzip
@@ -10,6 +19,7 @@ from common.io import is_gzip, is_bgzip
 X = TypeVar("X")
 Y = TypeVar("Y")
 
+Percent = Annotated[int, Field(ge=0, le=100)]
 
 BuildKey = NewType("BuildKey", str)
 RefKey = NewType("RefKey", str)
@@ -369,17 +379,74 @@ class LowMapParams(BaseModel):
     indels: NonNegativeInt
 
 
+GCBound = tuple[Percent, bool]
+
+
+class GCParams(BaseModel):
+    low: list[GCBound] = [
+        (15, False),
+        (20, False),
+        (25, True),
+        (30, True),
+    ]
+    high: list[GCBound] = [
+        (55, True),
+        (60, False),
+        (65, True),
+        (70, False),
+        (75, False),
+        (80, False),
+        (85, False),
+    ]
+
+    @validator("high")
+    def has_balanced_ranges(
+        cls,
+        high: list[GCBound],
+        values: dict[str, Any],
+    ) -> list[tuple[Percent, bool]]:
+        try:
+            low = cast(list[GCBound], values["low"])
+            assert len([x for x in low if x[1]]) == len(
+                [x for x in high if x[1]]
+            ), "GC low/high must have same number of range boundaries"
+        except KeyError:
+            pass
+        return high
+
+    @property
+    def low_sorted(self) -> list[GCBound]:
+        return sorted(self.low, key=lambda x: x[0])
+
+    @property
+    def high_sorted(self) -> list[GCBound]:
+        return sorted(self.high, key=lambda x: x[0])
+
+    @property
+    def low_bounds(self) -> tuple[int, list[int]]:
+        bounds = [x[0] for x in self.low_sorted]
+        return (bounds[0], bounds[1:])
+
+    @property
+    def high_bounds(self) -> tuple[int, list[int]]:
+        bounds = [x[0] for x in self.high_sorted]
+        return (bounds[-1], bounds[:-1])
+
+
 class Include(BaseModel):
     """Flags to control which stratification levels are included."""
 
-    low_complexity: bool
-    xy: bool
-    gc: bool
-    functional: bool
-    segdups: bool
-    union: bool
-    telomeres: bool
-    mappability: set[LowMapParams]
+    low_complexity: bool = True
+    xy: bool = True
+    functional: bool = True
+    segdups: bool = True
+    union: bool = True
+    telomeres: bool = True
+    mappability: set[LowMapParams] = {
+        LowMapParams(length=250, mismatches=0, indels=0),
+        LowMapParams(length=100, mismatches=2, indels=1),
+    }
+    gc: GCParams | None = GCParams()
 
 
 OtherStrats = dict[OtherLevelKey, dict[OtherStratKey, BedFile]]
@@ -407,7 +474,7 @@ class Build(BaseModel):
     """Spec for a stratification build."""
 
     chr_filter: set[ChrIndex]
-    include: Include
+    include: Include = Include()
     other_strats: OtherStrats = {}
     bench: Bench | None = None
     comparison: BuildCompare | None = None
@@ -811,7 +878,7 @@ class GiabStrats(BaseModel):
         return self.buildkey_to_include(rk, bk).low_complexity
 
     def want_gc(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_include(rk, bk).gc
+        return self.buildkey_to_include(rk, bk).gc is not None
 
     def want_functional(self, rk: RefKey, bk: BuildKey) -> bool:
         return self.buildkey_to_include(rk, bk).functional

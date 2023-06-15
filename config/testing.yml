@@ -266,42 +266,37 @@ stratifications:
           #
           # Default: []
           ignore_other:
-            - '.*chainSelf'
-            - '^GenomeSpecific.*'
-            - '^ancestry.*'
-            - '^OtherDifficult.*'
-            - '^FunctionalTechnicallyDifficultRegions.*'
-            - '^mappability.*'
-            - '^Union.*'
-            - '.*gt10kb_gt99percidentity\.bed\.gz'
-            - 'XY/GRCh38_chr[XY]_.*'
+            # not sure what these files are...
+            - "GenomeSpecific/\\._GRCh38_HG002_v4\\.2\\.1_Tier1plusTier2_v0\\.6\\.1\\.bed\\.gz"
+            - "OtherDifficult/\\._GRCh38_KIR\\.bed\\.gz"
 
           # Patterns in generated strat to ignore in comparison
           #
           # Default: []
-          ignore_generated:
-            - '.*_AT_slop5\.bed\.gz$'
-            - '.*_GC_slop5\.bed\.gz$'
-            - '^OtherDifficult\/GRCh38_VDJ\.bed\.gz$'
+          # ignore_generated: []
 
         # Directive for which stratification types to include
         include:
           # Include all low complexity regions if true
-          low_complexity: true
+          # Default: true
+          # low_complexity: true
           # Include all XY if true
+          # Default: true
           xy: false
-          # Include GC content regions if true
-          gc: true
           # Include functional regions if true
-          functional: true
+          # Default: true
+          # functional: true
           # Include telomeres if true (for references without telomeres this
           # will be deflatingly boring)
+          # Default: true
           telomeres: false
           # Include segmental duplications if true
-          segdups: true
+          # Default: true
+          # segdups: true
           # Include union if true. Note, since union actually unifies the GC,
           # XY, LowComplexity, and mappabilty regions, this flag may do nothing
           # if some of these are also false.
+          # Default: true
           union: false
           # List hard-to-map alignment parameters to compute. Use an empty list
           # if this is not desired. NOTE: this is computationally very heavy,
@@ -312,27 +307,41 @@ stratifications:
           # This corresponds to finding regions of length l that have at least
           # one other alignment in the genome with SNPs m and INDELs i.
           mappability: []
+          # Include GC content regions if provided. High and low are lists of
+          # high/low bounds of GC content on which to bracket. The first of
+          # each least is the fraction of GC content; the second is denotes
+          # which fractions should be combined into a meta range. For example,
+          # below there will be two meta ranges of 25-65 and 30-55. There must
+          # be a matching number of 'True' entries in the high/low lists and
+          # they will be combined in inverse order.
+          # Defaults to:
+          # gc:
+          #   low:
+          #     - [15, False]
+          #     - [20, False]
+          #     - [25, True]
+          #     - [30, True]
+          #   high:
+          #     - [55, True]
+          #     - [60, False]
+          #     - [65, True]
+          #     - [70, False]
+          #     - [75, False]
+          #     - [80, False]
+          #     - [85, False]
       test-xy:
         chr_filter: [23, 24]
         include:
-          low_complexity: true
-          xy: true
-          gc: true
-          functional: true
           telomeres: false
-          segdups: true
-          union: true
           mappability: []
       test-map:
         chr_filter: [21]
         include:
           low_complexity: false
           xy: false
-          gc: false
+          gc: null
           functional: false
           telomeres: false
-          segdups: true
-          union: true
           mappability:
             - {length: 50, mismatches: 0, indels: 0}
 
@@ -407,23 +416,14 @@ stratifications:
       test-autosome:
         chr_filter: [21, 22]
         include:
-          low_complexity: true
           xy: false
-          gc: true
-          functional: true
           telomeres: false
-          segdups: true
-          union: true
           mappability: []
       test-xy:
         chr_filter: [23, 24]
         include:
           low_complexity: false
-          xy: true
-          gc: true
           telomeres: false
-          functional: true
-          segdups: true
           union: false
           mappability: []
 
@@ -489,25 +489,15 @@ stratifications:
       test-autosome:
         chr_filter: [21, 22]
         include:
-          low_complexity: true
           xy: false
-          gc: true
-          functional: true
-          telomeres: true
           segdups: false
-          union: true
           mappability: []
 
       test-xy:
         chr_filter: [23, 24]
         include:
           low_complexity: false
-          xy: true
-          gc: true
-          telomeres: true
-          functional: true
           segdups: false
-          union: true
           mappability: []
 
 comparison_strats:

@@ -44,7 +44,7 @@ rule invert_segdup_and_map:
 use rule intersect_segdup_and_map as intersect_alldifficult with:
     input:
         rules.intersect_segdup_and_map.output,
-        rules.all_gc.input.wide,
+        rules.intersect_gc_ranges.output,
         rules.merge_HPs_and_TRs.output,
         all_xy_features,
     output:
