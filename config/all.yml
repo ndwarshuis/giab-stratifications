@@ -214,12 +214,6 @@ stratifications:
             LowComplexity/GRCh37_AllTandemRepeats_ge10001bp_slop5.bed.gz: LowComplexity/GRCh37_AllTandemRepeats_gt10000bp_slop5.bed.gz
             Functional/GRCh37_notinrefseq_cds.bed.gz: FunctionalRegions/GRCh37_notinrefseq_cds.bed.gz
             Functional/GRCh37_refseq_cds.bed.gz: FunctionalRegions/GRCh37_refseq_cds.bed.gz
-          ignore_other:
-            - '.*chainSelf'
-            - '.*gt10kb_gt99percidentity\.bed\.gz'
-          ignore_generated:
-            - '.*_AT_slop5\.bed\.gz$'
-            - '.*_GC_slop5\.bed\.gz$'
 
         include:
           low_complexity: true
@@ -453,12 +447,6 @@ stratifications:
             LowComplexity/GRCh38_AllTandemRepeats_ge10001bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt10000bp_slop5.bed.gz
             Functional/GRCh38_notinrefseq_cds.bed.gz: FunctionalRegions/GRCh38_notinrefseq_cds.bed.gz
             Functional/GRCh38_refseq_cds.bed.gz: FunctionalRegions/GRCh38_refseq_cds.bed.gz
-          ignore_other:
-            - '.*chainSelf'
-            - '.*gt10kb_gt99percidentity\.bed\.gz'
-          ignore_generated:
-            - '.*_AT_slop5\.bed\.gz$'
-            - '.*_GC_slop5\.bed\.gz$'
 
         include:
           low_complexity: true
@@ -576,18 +564,6 @@ stratifications:
             LowComplexity/CHM13_AllTandemRepeats_le50bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_lt51bp_slop5.bed.gz
             LowComplexity/CHM13_AllTandemRepeats_ge101bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_gt100bp_slop5.bed.gz
             LowComplexity/CHM13_AllTandemRepeats_ge10001bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_gt10000bp_slop5.bed.gz
-          ignore_other:
-            - '.*chainSelf'
-            - '.*gt10kb_gt99percidentity\.bed\.gz'
-          ignore_generated:
-            - '.*_AT_slop5\.bed\.gz$'
-            - '.*_GC_slop5\.bed\.gz$'
-            - '^Functional.*'
-            - '^mappability.*'
-            - '^Union/CHM13v2.0_(notin)?alllowmapandsegdupregions.bed.gz$'
-            - '^GCContent.*'
-            - '^Functional.*'
-            - '^Telomeres.*'
 
         include:
           low_complexity: true
