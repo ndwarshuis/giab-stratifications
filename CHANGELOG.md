@@ -1,3 +1,7 @@
+# 2.5.1
+
+- use plaintext and not gzipped file when performing md5 checks for resources
+
 # 2.5.0
 
 - make comparison way faster and more intuitive
