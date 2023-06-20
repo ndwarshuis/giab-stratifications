@@ -1,3 +1,7 @@
+# 2.6.0
+
+- add option to remove gaps from imported strat beds
+
 # 2.5.1
 
 - use plaintext and not gzipped file when performing md5 checks for resources

@@ -25,7 +25,9 @@ use rule download_ref as download_other with:
 
 rule filter_sort_other:
     input:
-        rules.download_other.output,
+        bed=rules.download_other.output,
+        genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output.auto,
     output:
         config.build_final_strat_path("{other_level_key}", "{other_strat_key}"),
     conda:
