@@ -202,6 +202,7 @@ stratifications:
             VDJ:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_VDJ.bed.gz
+              remove_gaps: true
 
         # Benchmark files for this reference (if desired). Each key will be fed
         # into corresponding inputs for hap.py using the generated stratifications

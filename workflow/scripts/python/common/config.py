@@ -449,7 +449,11 @@ class Include(BaseModel):
     gc: GCParams | None = GCParams()
 
 
-OtherStrats = dict[OtherLevelKey, dict[OtherStratKey, BedFile]]
+class OtherBedFile(BedFile):
+    remove_gaps: bool = False
+
+
+OtherStrats = dict[OtherLevelKey, dict[OtherStratKey, OtherBedFile]]
 
 
 class Bench(BaseModel):
@@ -713,7 +717,7 @@ class GiabStrats(BaseModel):
         bk: BuildKey,
         lk: OtherLevelKey,
         sk: OtherStratKey,
-    ) -> BedFile:
+    ) -> OtherBedFile:
         return self.buildkey_to_build(rk, bk).other_strats[lk][sk]
 
     # src getters (for use in downloading inputs)
