@@ -76,6 +76,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_allOtherDifficultregions.bed.gz
               params: {chr_prefix: ''}
+              remove_gaps: true
             KIR:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_KIR.bed.gz
@@ -104,6 +105,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hs37d5_decoy_alignments.bed.gz
               params: {chr_prefix: ''}
+              remove_gaps: true
             missing_and_multiple_alignments_of_GRCh38:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_missing_and_multiple_alignments_of_GRCh38.bed.gz
