@@ -182,11 +182,11 @@ stratifications:
           bench_vcf:
             src:
               filepath: data/GRCh37/benchmark/truth.vcf.gz
-              md5: 8a6e9dbdd22f26cd04473a375e943a14
+              md5: f496238235258af3df13b66750ae7d7f
           bench_bed:
             src:
               filepath: data/GRCh37/benchmark/truth.bed.gz
-              md5: 34cf570b3de70ab2eef2fe7c54b2f04e
+              md5: ec881659e782bf408b77aa833db1d16a
 
         comparison:
           other: GRCh37_v31
@@ -406,11 +406,11 @@ stratifications:
           bench_vcf:
             src:
               filepath: data/GRCh38/benchmark/truth.vcf.gz
-              md5: cc8c5a6120f5e1050b81c355ce9a0cd9
+              md5: 0a4aab5820c6cbf818729d5b4da4e25b
           bench_bed:
             src:
               filepath: data/GRCh38/benchmark/truth.bed.gz
-              md5: cc850a6bb4d591ea265fd6e88b04cf75
+              md5: 5f70b5f407b48e701376bad6129330e5
 
         comparison:
           other: GRCh38_v31
@@ -458,12 +458,12 @@ stratifications:
         src:
           # from here: https://app.globus.org/file-manager?origin_id=9db1f0a6-a05a-11ea-8f06-0a21f750d19b&origin_path=%2Fteam-segdups%2FAssembly_analysis%2FMasked%2F/T2T_CHM13v2_trf.bed
           filepath: data/CHM13/LowComplexity/trf.bed.gz
-          md5: 548a415b4f45aab0b117b5e2d40f7705
+          md5: e7b3c29aab9bce3cbbd29517f35c27f8
       # https://t2t-consortium.slack.com/files/ULT7E06GL/F039A96RY84/t2t_censat_chm13v2.0_trackv2.0.bed
       satellites:
         src:
           filepath: data/CHM13/LowComplexity/censat.bed.gz
-          md5: 3d6e6aea2a0001806a19218277261578
+          md5: 5faa89497c10534e61e03c97a8e7392f
         params:
           skip_lines: 1
         sat_col: 3
@@ -493,7 +493,7 @@ stratifications:
           # from here: https://hgdownload.soe.ucsc.edu/gbdb/hs1/sedefSegDups/sedefSegDups.bb
           # need to convert to a gzipped bed file with bigBedToBed and gzip
           filepath: data/CHM13/Segdups/sedef.bed.gz
-          md5: 5e52c58b54f2f2cc76e7e2696d0b92dd
+          md5: 674a084afd2a80b35955f20a11fc0621
     functional:
       ftbl_src:
         url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_feature_table.txt.gz
@@ -515,11 +515,11 @@ stratifications:
           bench_vcf:
             src:
               filepath: data/CHM13/benchmark/truth.vcf.gz
-              md5: 05dce2d8115c163944bea96f981aaf08
+              md5: a585d2c91936310a28e5c7ad523c69e0
           bench_bed:
             src:
               filepath: data/CHM13/benchmark/truth.bed.gz
-              md5: 2b67f7d4715dc002ae4c7bc82f70fe38
+              md5: 891f3c539842f148213c6bb2ec493606
 
         comparison:
           other: CHM13_v31
