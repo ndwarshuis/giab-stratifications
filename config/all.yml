@@ -154,6 +154,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG001_v4.2.1_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG001_v4.2.1_complexindel10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG001_v4.2.1_complexindel10bp_slop50.bed.gz 
@@ -166,6 +167,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG001_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG001_v4.2.1_othercomplexwithin10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG001_v4.2.1_othercomplexwithin10bp_slop50.bed.gz 
@@ -218,6 +220,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG002_v4.2.1_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG002_v4.2.1_complexindel10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG002_v4.2.1_complexindel10bp_slop50.bed.gz 
@@ -230,6 +233,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG002_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG002_v4.2.1_othercomplexwithin10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG002_v4.2.1_othercomplexwithin10bp_slop50.bed.gz 
@@ -270,6 +274,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG003_v4.2.1_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG003_v4.2.1_complexindel10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG003_v4.2.1_complexindel10bp_slop50.bed.gz 
@@ -278,6 +283,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG003_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG003_v4.2.1_othercomplexwithin10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG003_v4.2.1_othercomplexwithin10bp_slop50.bed.gz 
@@ -318,6 +324,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG004_v4.2.1_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG004_v4.2.1_complexindel10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG004_v4.2.1_complexindel10bp_slop50.bed.gz 
@@ -326,6 +333,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG004_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG004_v4.2.1_othercomplexwithin10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG004_v4.2.1_othercomplexwithin10bp_slop50.bed.gz 
@@ -366,6 +374,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG005_v4.2.1_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG005_v4.2.1_complexindel10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG005_v4.2.1_complexindel10bp_slop50.bed.gz 
@@ -378,6 +387,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG005_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG005_v4.2.1_othercomplexwithin10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG005_v4.2.1_othercomplexwithin10bp_slop50.bed.gz 
@@ -418,6 +428,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG006_v4.2.1_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG006_v4.2.1_complexindel10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG006_v4.2.1_complexindel10bp_slop50.bed.gz 
@@ -426,6 +437,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG006_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG006_v4.2.1_othercomplexwithin10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG006_v4.2.1_othercomplexwithin10bp_slop50.bed.gz 
@@ -466,6 +478,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG007_v4.2.1_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG007_v4.2.1_complexindel10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG007_v4.2.1_complexindel10bp_slop50.bed.gz 
@@ -474,6 +487,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG007_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz 
               params: {chr_prefix: ''}
+              remove_gaps: true
             HG007_v4.2.1_othercomplexwithin10bp_slop50:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/GenomeSpecific/GRCh37_HG007_v4.2.1_othercomplexwithin10bp_slop50.bed.gz 
