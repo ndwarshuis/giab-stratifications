@@ -157,9 +157,9 @@ rule write_chr_name_mapper:
                 for i in config.buildkey_to_chr_indices(ref_key, build_key):
                     prefix = config.refkey_to_final_chr_prefix(ref_key)
                     line = [
-                        i.chr_name_full(prefix),
-                        i.chr_name,
+                        str(i.value),
                         f"{ref_key}@{build_key}",
+                        i.chr_name_full(prefix),
                     ]
                     f.write("\t".join(line) + "\n")
 

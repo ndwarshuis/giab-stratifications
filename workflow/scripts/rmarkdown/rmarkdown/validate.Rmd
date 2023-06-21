@@ -16,9 +16,10 @@ knitr::opts_chunk$set(fig.width=25, fig.height=6, fig_caption=TRUE)
 
 chr_mapper <- readr::read_tsv(
   snakemake@input$chr_mapper,
-  col_names = c("chrom", "chrom_std", "build_key"),
-  col_types = "ccc"
-)
+  col_names = c("chrom_index", "build_key", "chrom"),
+  col_types = "icc"
+) %>%
+  arrange(chrom_index, build_key)
 
 bed_cols <- c("chrom", "start", "end")
 
@@ -56,35 +57,40 @@ read_strat <- function(path) {
 
 df_chr_sizes <- snakemake@input$nonN %>%
   map_dfr(read_nonN) %>%
-  group_by(chrom_std, build_key) %>%
+  group_by(chrom_index, build_key) %>%
   summarise(nonN_ref_len = sum(region_size), .groups = "drop")
 
-chr_order <- df_chr_sizes %>%
-  pull(chrom_std) %>%
-  unique()
-
 chr_build_combinations <- chr_mapper %>%
-  expand(build_key, chrom_std = chr_order)
+  expand(build_key, chrom_index)
 
 file_list <- snakemake@input$strats %>%
   map(readLines) %>%
   flatten()
+
+chr_name <- function(i) {
+  case_when(i == 23 ~ "X",
+            i == 24 ~ "Y",
+            0 < i & i < 23 ~ as.character(i),
+            TRUE ~ "oops")
+}
+
+chr_levels <- chr_name(1:24)
 
 read_strats <- function(stype, gaps) {
   fs <- keep(file_list, ~ basename(dirname(.x)) == stype)
   if (length(fs) > 0) {
     df <- map_dfr(fs, read_strat)
     all_combos <- chr_build_combinations %>%
-      expand(nesting(chrom_std, build_key), strat_name = df$strat_name)
+      expand(nesting(chrom_index, build_key), strat_name = df$strat_name)
     df %>%
       # join the full cartesian product of all chromosomes and paths, then fill
       # missing with 0 so that we get an empty space on the graphs indicating
       # zero coverage
-      full_join(all_combos, by = c("chrom_std", "strat_name", "build_key")) %>%
-      left_join(df_chr_sizes, by = c("chrom_std", "build_key")) %>%
+      full_join(all_combos, by = c("chrom_index", "strat_name", "build_key")) %>%
+      left_join(df_chr_sizes, by = c("chrom_index", "build_key")) %>%
       mutate(strat_type = stype,
              coverage = total_region / nonN_ref_len,
-             chrom_std = factor(chrom_std, levels = chr_order)) %>%
+             chrom = factor(chr_name(chrom_index), levels = chr_levels)) %>%
       replace_na(list(coverage = 0))
   } else {
     NULL
@@ -94,7 +100,7 @@ read_strats <- function(stype, gaps) {
 coverage_plot <- function(df, level) {
   cat(sprintf("#### %s\n\n", level))
   p <- df %>%
-    ggplot(aes(chrom_std, coverage, fill = build_key)) +
+    ggplot(aes(chrom, coverage, fill = build_key)) +
     geom_col(position = "dodge") +
     scale_y_continuous(labels = scales::percent) +
     theme(legend.position = "top",
