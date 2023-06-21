@@ -1,3 +1,7 @@
+# 2.6.1
+
+- fix chrom order in coverage plots
+
 # 2.6.0
 
 - add option to remove gaps from imported strat beds
