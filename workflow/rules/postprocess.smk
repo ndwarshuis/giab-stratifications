@@ -17,32 +17,35 @@ def expand_strat_targets(wildcards):
     rk = wildcards.ref_key
     bk = wildcards.build_key
 
-    # all targets except sex (which needs an additional wildcard)
-    targets = [
-        (rules.all_low_complexity.input, config.want_low_complexity, True),
-        (rules.all_xy_auto.input, config.want_xy_auto, True),
-        (rules.all_map.input, config.want_mappability, True),
-        (rules.intersect_gc_ranges.output, config.want_gc, False),
-        (rules.all_functional.input, config.want_functional, True),
-        (rules.all_segdups.input, config.want_segdups, True),
-        (rules.find_telomeres.output, config.want_telomeres, True),
-        (rules.invert_segdup_and_map.output, config.want_segdup_and_map, True),
-        (rules.invert_alldifficult.output, config.want_alldifficult, True),
-        (rules.get_gaps.output, lambda rk, _: config.want_gaps(rk), True),
+    checkpoint_targets = [
+        (gc_inputs_flat, config.want_gc),
     ]
-    _auto = [(t, check) for tgt, test, check in targets if test(rk, bk) for t in tgt]
-    auto_check = [t for t, c in _auto if c]
-    auto_nocheck = [t for t, c in _auto if not c]
+    # all targets except sex (which needs an additional wildcard)
+    rule_targets = [
+        (rules.all_low_complexity.input, config.want_low_complexity),
+        (rules.all_xy_auto.input, config.want_xy_auto),
+        (rules.all_map.input, config.want_mappability),
+        (rules.all_functional.input, config.want_functional),
+        (rules.all_segdups.input, config.want_segdups),
+        (rules.find_telomeres.output, config.want_telomeres),
+        (rules.invert_segdup_and_map.output, config.want_segdup_and_map),
+        (rules.invert_alldifficult.output, config.want_alldifficult),
+        (rules.get_gaps.output, lambda rk, _: config.want_gaps(rk)),
+    ]
+    checkpoint_auto = [
+        t for f, test in checkpoint_targets if test(rk, bk) for t in f(wildcards)
+    ]
+    rule_auto = [t for tgt, test in rule_targets if test(rk, bk) for t in tgt]
     other = all_other(rk, bk)
 
     # xy (expand target depending on which chromosomes we have selected)
     sex = all_xy_features(wildcards) + all_xy_PAR(wildcards)
 
     # combine and ensure that all "targets" refer to final bed files
-    all_targets = auto_check + sex + other
+    all_targets = rule_auto + checkpoint_auto + sex + other
     invalid = [f for f in all_targets if not f.startswith(str(config.final_root_dir))]
     assert len(invalid) == 0, f"invalid targets: {invalid}"
-    return {"check": all_targets, "_nocheck": auto_nocheck}
+    return all_targets
 
 
 rule list_all_strats:
@@ -81,6 +84,8 @@ rule unit_test_strats:
         strats=rules.list_all_strats.output,
         gapless_auto=rules.get_gapless.output.auto,
         gapless_parY=rules.get_gapless.output.parY,
+        strat_list=rules.generate_tsv_list.output[0],
+        checksums=rules.generate_md5sums.output[0],
     output:
         touch(post_inter_dir / "unit_tests.done"),
     log:
@@ -150,7 +155,7 @@ rule all_comparisons:
 # it as a param to the rmd script...dataframe in IO monad it is :/
 rule write_chr_name_mapper:
     output:
-        config.final_root_dir / ".validation" / "chr_mapper.tsv",
+        config.intermediate_root_dir / ".validation" / "chr_mapper.tsv",
     run:
         with open(output[0], "w") as f:
             for ref_key, build_key in zip(rks, bks):

@@ -423,13 +423,21 @@ class GCParams(BaseModel):
         return sorted(self.high, key=lambda x: x[0])
 
     @property
+    def low_fractions(self) -> list[int]:
+        return [x[0] for x in self.low_sorted]
+
+    @property
+    def high_fractions(self) -> list[int]:
+        return [x[0] for x in self.high_sorted]
+
+    @property
     def low_bounds(self) -> tuple[int, list[int]]:
-        bounds = [x[0] for x in self.low_sorted]
+        bounds = self.low_fractions
         return (bounds[0], bounds[1:])
 
     @property
     def high_bounds(self) -> tuple[int, list[int]]:
-        bounds = [x[0] for x in self.high_sorted]
+        bounds = self.high_fractions
         return (bounds[-1], bounds[:-1])
 
 

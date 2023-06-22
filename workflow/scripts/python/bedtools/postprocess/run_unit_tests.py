@@ -3,8 +3,10 @@ from typing import Any, NamedTuple
 from pathlib import Path
 from pybedtools import BedTool as bt  # type: ignore
 from os.path import dirname, basename
+from os import scandir
 import common.config as cfg
 from common.io import setup_logging, is_bgzip
+import subprocess as sp
 
 log = setup_logging(snakemake.log[0])  # type: ignore
 
@@ -15,6 +17,7 @@ class GaplessBT(NamedTuple):
 
 
 def test_bgzip(strat_file: Path) -> list[str]:
+    """Each bed file should be bgzip'ed (not just gzip'ed)."""
     return [] if is_bgzip(strat_file) else ["is not bgzip file"]
 
 
@@ -23,6 +26,8 @@ def test_bed(
     reverse_map: dict[str, int],
     gapless: GaplessBT,
 ) -> list[str]:
+    """Each stratification should be a valid bed file."""
+
     # test bed files in multiple phases, where each phase depends on the
     # previous being valid
     #
@@ -98,6 +103,42 @@ def test_bed(
     ]
 
 
+def test_checksums(checksums: Path) -> list[str]:
+    """The md5sum utility should pass when invoked."""
+    res = sp.run(
+        ["md5sum", "-c", "--strict", "--quiet", checksums.name],
+        cwd=checksums.parent,
+        capture_output=True,
+        text=True,
+    )
+    errors = [] if (s := res.stdout) == "" else s.strip().split("\n")
+    return [f"checksum error: {e}" for e in errors]
+
+
+def test_tsv_list(tsv_list: Path) -> list[str]:
+    """The final stratifications list should match final beds exactly.
+
+    We are running our hotel on very tight margins; no extra or missing beds
+    allowed.
+    """
+
+    def strat_set(root: Path, sub: Path) -> set[str]:
+        if root.is_dir():
+            deeper = (Path(p.path) for p in scandir(root))
+            return {str(q) for d in deeper for q in strat_set(d, sub / d.name)}
+        elif root.is_file() and root.name.endswith(".bed.gz"):
+            return {str(sub)}
+        else:
+            return set()
+
+    current = strat_set(tsv_list.parent, Path("./"))
+    with open(tsv_list, "r") as f:
+        listed = {line.strip().split("\t")[1] for line in f}
+        missing = [f"not in final list: {p}" for p in listed - current]
+        extra = [f"not in final directory: {p}" for p in current - listed]
+        return missing + extra
+
+
 def run_all_tests(
     strat_file: Path,
     reverse_map: dict[str, int],
@@ -119,21 +160,35 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     bk = cfg.BuildKey(smk.wildcards["build_key"])
     reverse_map = {v: k for k, v in sconf.buildkey_to_final_chr_mapping(rk, bk).items()}
 
+    # check global stuff first (since this is faster)
+
+    global_failures: list[str] = test_checksums(
+        Path(smk.input["checksums"])
+    ) + test_tsv_list(Path(smk.input["strat_list"]))
+
+    for j in global_failures:
+        log.error(j)
+
+    if len(global_failures) > 0:
+        exit(1)
+
+    # check individual stratification files
+
     gapless = GaplessBT(
         auto=bt(str(smk.input["gapless_auto"])),
         parY=bt(str(smk.input["gapless_parY"])),
     )
 
-    all_failures = [
+    strat_failures = [
         res
         for p in strat_files(str(smk.input["strats"]))
         for res in run_all_tests(p, reverse_map, gapless)
     ]
 
-    for res in all_failures:
-        log.error("%s: %s" % res)
+    for i in strat_failures:
+        log.error("%s: %s" % i)
 
-    if len(all_failures) > 0:
+    if len(strat_failures) > 0:
         exit(1)
 
 
