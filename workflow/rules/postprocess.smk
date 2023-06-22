@@ -7,54 +7,46 @@ post_inter_dir = config.intermediate_build_dir / "postprocess"
 post_log_dir = config.log_build_dir / "postprocess"
 
 
-# NOTE This will only give a limited set of "targets" from each of the strat
-# level types. Because of the way snakemake works, it is not practical or
-# maintainable to specify every single stratification file; therefore we only
-# use the "toplevel" targets which will pull in all others. In downstream rules
-# from this, it is much easier to condense this to a list of parent directories
-# then manually iterate all strat files in these directories.
-def expand_strat_targets(wildcards):
-    rk = wildcards.ref_key
-    bk = wildcards.build_key
-
-    checkpoint_targets = [
+def expand_strat_targets_inner(ref_key, build_key):
+    function_targets = [
         (gc_inputs_flat, config.want_gc),
+        (all_xy_sex, lambda *_: True),
+        (all_other, lambda *_: True),
     ]
-    # all targets except sex (which needs an additional wildcard)
     rule_targets = [
         (rules.all_low_complexity.input, config.want_low_complexity),
-        (rules.all_xy_auto.input, config.want_xy_auto),
+        (rules.filter_autosomes.output, config.want_xy_auto),
         (rules.all_map.input, config.want_mappability),
         (rules.all_functional.input, config.want_functional),
         (rules.all_segdups.input, config.want_segdups),
         (rules.find_telomeres.output, config.want_telomeres),
         (rules.invert_segdup_and_map.output, config.want_segdup_and_map),
         (rules.invert_alldifficult.output, config.want_alldifficult),
-        (rules.get_gaps.output, lambda rk, _: config.want_gaps(rk)),
+        (rules.get_gaps.output, lambda r, _: config.want_gaps(r)),
     ]
-    checkpoint_auto = [
-        t for f, test in checkpoint_targets if test(rk, bk) for t in f(wildcards)
+    all_function = [
+        f(ref_key, build_key)
+        for f, test in function_targets
+        if test(ref_key, build_key)
     ]
-    rule_auto = [t for tgt, test in rule_targets if test(rk, bk) for t in tgt]
-    other = all_other(rk, bk)
-
-    # xy (expand target depending on which chromosomes we have selected)
-    sex = all_xy_features(wildcards) + all_xy_PAR(wildcards)
+    all_rule = [tgt for tgt, test in rule_targets if test(ref_key, build_key)]
 
     # combine and ensure that all "targets" refer to final bed files
-    all_targets = rule_auto + checkpoint_auto + sex + other
+    all_targets = [y for xs in all_function + all_rule for y in xs]
     invalid = [f for f in all_targets if not f.startswith(str(config.final_root_dir))]
     assert len(invalid) == 0, f"invalid targets: {invalid}"
     return all_targets
 
 
+def expand_strat_targets(wildcards):
+    return expand_strat_targets_inner(wildcards.ref_key, wildcards.build_key)
+
+
 rule list_all_strats:
     input:
-        unpack(expand_strat_targets),
+        expand_strat_targets,
     output:
         post_inter_dir / "all_strats.txt",
-    conda:
-        "../envs/bedtools.yml"
     script:
         "../scripts/python/bedtools/postprocess/list_strats.py"
 
@@ -121,6 +113,12 @@ rule download_comparison_strat_tarball:
 
 rule compare_strats:
     input:
+        _test=expand(
+            rules.unit_test_strats.output,
+            zip,
+            ref_key=rks,
+            build_key=bks,
+        ),
         old=lambda w: expand(
             rules.download_comparison_strat_tarball.output,
             compare_key=config.buildkey_to_comparekey(w.ref_key, w.build_key),
@@ -173,26 +171,24 @@ rule validate_strats:
     input:
         # this first input isn't actually used, but ensures the unit tests pass
         # before running the rmd script
-        **{
-            "_test": expand(
-                rules.unit_test_strats.output,
-                zip,
-                ref_key=rks,
-                build_key=bks,
-            ),
-            "strats": expand(
-                rules.list_all_strats.output,
-                zip,
-                ref_key=rks,
-                build_key=bks,
-            ),
-            "nonN": expand(
-                rules.get_gapless.output.auto,
-                zip,
-                ref_key=rks,
-                build_key=bks,
-            ),
-        },
+        _test=expand(
+            rules.unit_test_strats.output,
+            zip,
+            ref_key=rks,
+            build_key=bks,
+        ),
+        strats=expand(
+            rules.list_all_strats.output,
+            zip,
+            ref_key=rks,
+            build_key=bks,
+        ),
+        nonN=expand(
+            rules.get_gapless.output.auto,
+            zip,
+            ref_key=rks,
+            build_key=bks,
+        ),
         chr_mapper=rules.write_chr_name_mapper.output,
     output:
         config.final_root_dir / ".validation" / "coverage_plots.html",
@@ -229,6 +225,12 @@ rule index_unzipped_ref:
 
 rule run_happy:
     input:
+        _test=expand(
+            rules.unit_test_strats.output,
+            zip,
+            ref_key=rks,
+            build_key=bks,
+        ),
         refi=rules.index_unzipped_ref.output,
         ref=rules.unzip_ref.output,
         bench_vcf=rules.download_bench_vcf.output,

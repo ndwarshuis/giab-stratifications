@@ -100,11 +100,12 @@ checkpoint intersect_gc_ranges:
         "../scripts/python/bedtools/gc/intersect_ranges.py"
 
 
-def gc_inputs(wildcards):
-    with checkpoints.intersect_gc_ranges.get(**wildcards).output[0].open() as f:
+def gc_inputs(ref_key, build_key):
+    c = checkpoints.intersect_gc_ranges.get(ref_key=ref_key, build_key=build_key)
+    with c.output[0].open() as f:
         return json.load(f)
 
 
-def gc_inputs_flat(wildcards):
-    res = gc_inputs(wildcards)
+def gc_inputs_flat(ref_key, build_key):
+    res = gc_inputs(ref_key, build_key)
     return [*res["gc_ranges"], res["widest_extreme"], *res["other_extremes"]]

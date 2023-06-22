@@ -46,7 +46,7 @@ use rule intersect_segdup_and_map as intersect_alldifficult with:
         rules.intersect_segdup_and_map.output,
         rules.merge_HPs_and_TRs.output,
         all_xy_features,
-        lambda w: gc_inputs(w)["wider_extreme"],
+        lambda w: gc_inputs(w.ref_key, w.build_key)["wider_extreme"],
     output:
         uni_final_path("alldifficultregions"),
 
