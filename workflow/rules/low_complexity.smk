@@ -22,9 +22,9 @@ URep = namedtuple("URep", ["unit_len", "range_indices", "total_lens"])
 
 uniform_repeats = {
     "homopolymer": URep(1, 3, [4, 7, 12, 21]),
-    "diTR": URep(2, 3, [10, 50, 200]),
-    "triTR": URep(3, 3, [14, 50, 200]),
-    "quadTR": URep(4, 3, [19, 50, 200]),
+    "diTR": URep(2, 3, [10, 50, 150]),
+    "triTR": URep(3, 3, [14, 50, 150]),
+    "quadTR": URep(4, 3, [19, 50, 150]),
 }
 
 unit_name_constraint = f"({'|'.join(uniform_repeats)})"
