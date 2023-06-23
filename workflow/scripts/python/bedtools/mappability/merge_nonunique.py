@@ -25,7 +25,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     def to_single_output(basename: str) -> Path:
         m = re.match(".*(l\\d+_m\\d+_e\\d+).*", basename)
         assert m is not None, f"malformed mappability file name: {basename}"
-        return final_path("nonunique_{m[1]}")
+        return final_path(f"nonunique_{m[1]}")
 
     def read_sort_bed(p: Path) -> bt:
         df = read_bed(p)
