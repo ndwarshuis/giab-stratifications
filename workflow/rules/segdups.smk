@@ -95,3 +95,4 @@ rule all_segdups:
         rules.filter_long_superdups.output,
         rules.notin_superdups.output,
         rules.notin_long_superdups.output,
+    localrule: True

@@ -47,6 +47,7 @@ rule list_all_strats:
         expand_strat_targets,
     output:
         post_inter_dir / "all_strats.txt",
+    localrule: True
     script:
         "../scripts/python/bedtools/postprocess/list_strats.py"
 
@@ -67,6 +68,7 @@ rule generate_tsv_list:
         rules.list_all_strats.output,
     output:
         config.final_build_dir / "{ref_key}-all-stratifications.tsv",
+    localrule: True
     script:
         "../scripts/python/bedtools/postprocess/generate_tsv.py"
 
@@ -103,6 +105,7 @@ rule download_comparison_strat_tarball:
     params:
         url=lambda w: config.comparison_strats[w.compare_key],
         tar=lambda w: f"/tmp/comparison_{w.compare_key}.tar.gz",
+    localrule: True
     shell:
         """
         curl -fsSq -o {params.tar} {params.url} && \
@@ -145,6 +148,7 @@ rule all_comparisons:
             for bk in r.builds
             if config.buildkey_to_comparekey(rk, bk) is not None
         ],
+    localrule: True
 
 
 # Silly rule to make a dataframe which maps chromosome names to a common
@@ -154,6 +158,7 @@ rule all_comparisons:
 rule write_chr_name_mapper:
     output:
         config.intermediate_root_dir / ".validation" / "chr_mapper.tsv",
+    localrule: True
     run:
         with open(output[0], "w") as f:
             for ref_key, build_key in zip(rks, bks):

@@ -99,6 +99,7 @@ rule all_perfect_uniform_repeats:
             for t in u.total_lens
             for bs in COMPLIMENTS
         },
+    localrule: True
 
 
 def lookup_perfect_uniform_repeat(unit_name, total_len):
@@ -365,6 +366,7 @@ rule all_uniform_repeats:
             )
             for x in IMPERFECT_LENS
         },
+    localrule: True
 
 
 ################################################################################
@@ -641,6 +643,7 @@ rule all_TRs:
             )
             for k in tr_bounds
         },
+    localrule: True
 
 
 rule merge_filtered_TRs:
@@ -703,3 +706,4 @@ rule all_low_complexity:
         # "Everything" (in theory)
         rules.merge_HPs_and_TRs.output,
         rules.invert_HPs_and_TRs.output,
+    localrule: True

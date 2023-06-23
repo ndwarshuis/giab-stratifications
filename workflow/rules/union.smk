@@ -62,9 +62,11 @@ rule all_segdup_and_map:
     input:
         rules.intersect_segdup_and_map.output,
         rules.invert_segdup_and_map.output,
+    localrule: True
 
 
 rule all_alldifficult:
     input:
         rules.intersect_alldifficult.output,
         rules.invert_alldifficult.output,
+    localrule: True

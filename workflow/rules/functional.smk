@@ -80,3 +80,4 @@ rule all_functional:
     input:
         rules.merge_functional.output,
         rules.invert_functional.output,
+    localrule: True

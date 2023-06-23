@@ -15,6 +15,7 @@ rule unpack_repseq:
         rules.download_repseq.output,
     output:
         directory(config.tools_make_dir / "repseq"),
+    localrule: True
     shell:
         """
         mkdir {output} && \
