@@ -138,7 +138,6 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         low,
         high,
     )
-    print(low_strats)
 
     with open(smk.output[0], "w") as f:
         # put the first low and last high input here since these are already
