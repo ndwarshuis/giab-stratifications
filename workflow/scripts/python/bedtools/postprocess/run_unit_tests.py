@@ -134,8 +134,8 @@ def test_tsv_list(tsv_list: Path) -> list[str]:
     current = strat_set(tsv_list.parent, Path("./"))
     with open(tsv_list, "r") as f:
         listed = {line.strip().split("\t")[1] for line in f}
-        missing = [f"not in final list: {p}" for p in listed - current]
-        extra = [f"not in final directory: {p}" for p in current - listed]
+        missing = [f"not in final directory: {p}" for p in listed - current]
+        extra = [f"not in final list: {p}" for p in current - listed]
         return missing + extra
 
 

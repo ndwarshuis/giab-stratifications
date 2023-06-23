@@ -1,5 +1,4 @@
 from typing import Any
-from os.path import dirname
 
 
 def main(smk: Any) -> None:

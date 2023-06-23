@@ -122,15 +122,23 @@ def all_xy_features(ref_key, build_key):
         t
         for p, f in targets
         if f(ref_key)
-        for t in expand(p, allow_missing=True, sex_chr=cns)
+        for t in expand(
+            p,
+            allow_missing=True,
+            sex_chr=cns,
+            ref_key=ref_key,
+            build_key=build_key,
+        )
     ]
 
 
 def all_xy_PAR(ref_key, build_key):
     return expand(
-        rules.invert_PAR.output,
+        rules.invert_PAR.output + rules.write_PAR_final.output,
         allow_missing=True,
         sex_chr=config.wanted_xy_chr_names(ref_key, build_key),
+        ref_key=ref_key,
+        build_key=build_key,
     )
 
 

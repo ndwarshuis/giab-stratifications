@@ -8,7 +8,7 @@ def uni_final_path(name):
 rule intersect_segdup_and_map:
     input:
         rules.merge_superdups.output,
-        rules.merge_nonunique.output,
+        lambda w: nonunique_inputs(w.ref_key, w.build_key)["all_lowmap"],
     output:
         uni_final_path("alllowmapandsegdupregions"),
     conda:
@@ -56,3 +56,15 @@ use rule invert_segdup_and_map as invert_alldifficult with:
         bed=rules.intersect_alldifficult.output,
     output:
         uni_final_path("notinalldifficultregions"),
+
+
+rule all_segdup_and_map:
+    input:
+        rules.intersect_segdup_and_map.output,
+        rules.invert_segdup_and_map.output,
+
+
+rule all_alldifficult:
+    input:
+        rules.intersect_alldifficult.output,
+        rules.invert_alldifficult.output,

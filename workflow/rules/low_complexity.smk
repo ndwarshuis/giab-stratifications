@@ -691,6 +691,7 @@ rule all_low_complexity:
     input:
         # Uniform repeats
         rules.all_uniform_repeats.input,
+        rules.merge_all_uniform_repeats.output,
         rules.invert_all_uniform_repeats.output,
         # Satellites
         rules.merge_satellites.output,

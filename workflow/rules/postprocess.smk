@@ -10,18 +10,18 @@ post_log_dir = config.log_build_dir / "postprocess"
 def expand_strat_targets_inner(ref_key, build_key):
     function_targets = [
         (gc_inputs_flat, config.want_gc),
+        (mappabilty_inputs, config.want_mappability),
         (all_xy_sex, lambda *_: True),
         (all_other, lambda *_: True),
     ]
     rule_targets = [
         (rules.all_low_complexity.input, config.want_low_complexity),
         (rules.filter_autosomes.output, config.want_xy_auto),
-        (rules.all_map.input, config.want_mappability),
         (rules.all_functional.input, config.want_functional),
         (rules.all_segdups.input, config.want_segdups),
         (rules.find_telomeres.output, config.want_telomeres),
-        (rules.invert_segdup_and_map.output, config.want_segdup_and_map),
-        (rules.invert_alldifficult.output, config.want_alldifficult),
+        (rules.all_segdup_and_map.output, config.want_segdup_and_map),
+        (rules.all_alldifficult.output, config.want_alldifficult),
         (rules.get_gaps.output, lambda r, _: config.want_gaps(r)),
     ]
     all_function = [

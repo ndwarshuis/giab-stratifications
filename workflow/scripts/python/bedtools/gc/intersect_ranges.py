@@ -141,8 +141,16 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     print(low_strats)
 
     with open(smk.output[0], "w") as f:
+        # put the first low and last high input here since these are already
+        # in the final directory
         obj = {
-            "gc_ranges": low_strats + high_strats + [range_strat],
+            "gc_ranges": [
+                low[0][0],
+                *low_strats,
+                range_strat,
+                *high_strats,
+                high[-1][0],
+            ],
             "widest_extreme": inter_strats[0],
             "other_extremes": inter_strats[1:],
         }
