@@ -1,3 +1,11 @@
+# 2.7.0
+
+- make small rules not run on slurm
+- fix lots of errors involving the final list of strats (actually involved using
+  checkpoints for rules with complex output)
+- fix formatting errors in checksum file (which didn't actually allow md5sun to
+  run previously)
+
 # 2.6.1
 
 - fix chrom order in coverage plots
