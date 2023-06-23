@@ -15,7 +15,7 @@ def main(smk: Any) -> None:
     with open(out, "w") as op:
         for s in ss:
             h = get_md5(s)
-            p = s.replace(root, "")
+            p = s.replace(root + "/", "")
             op.write(f"{h}  {p}\n")
 
 

@@ -17,6 +17,7 @@ rule write_PAR_intermediate:
         ref_inter_dir / "chr{sex_chr}_PAR.bed.gz",
     conda:
         "../envs/bedtools.yml"
+    localrule: True
     script:
         "../scripts/python/bedtools/xy/write_par.py"
 
