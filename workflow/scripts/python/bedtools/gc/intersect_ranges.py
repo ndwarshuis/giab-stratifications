@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any, NamedTuple, Callable
 import subprocess as sp
 import common.config as cfg
+import json
 
 # use subprocess here because I don't see an easy way to stream a bedtools
 # python object to a bgzip file (it only seems to do gzip...oh well)
@@ -17,15 +18,19 @@ def write_simple_range_beds(
     final_path: Callable[[str], Path],
     gs: list[GCInput],
     is_low: bool,
-) -> None:
-    pairs = zip(gs[1:], gs[:-1]) if is_low else zip(gs[:-1], gs[1:])
-    for bigger, smaller in pairs:
+) -> list[str]:
+    def fmt_out(bigger_frac: int, smaller_frac: int) -> Path:
         lower_frac, upper_frac = (
-            (smaller.fraction, bigger.fraction)
-            if is_low
-            else (bigger.fraction, smaller.fraction)
+            (smaller_frac, bigger_frac) if is_low else (bigger_frac, smaller_frac)
         )
-        out = final_path(f"gc{lower_frac}to{upper_frac}_slop50")
+        return final_path(f"gc{lower_frac}to{upper_frac}_slop50")
+
+    pairs = zip(gs[1:], gs[:-1]) if is_low else zip(gs[:-1], gs[1:])
+    torun = [
+        (fmt_out(bigger.fraction, smaller.fraction), bigger, smaller)
+        for bigger, smaller in pairs
+    ]
+    for out, bigger, smaller in torun:
         with open(out, "wb") as f:
             p0 = sp.Popen(
                 ["subtractBed", "-a", bigger.bed, "-b", smaller.bed],
@@ -35,6 +40,7 @@ def write_simple_range_beds(
             p0.wait()
             if not (p0.returncode == p1.returncode == 0):
                 exit(1)
+    return [str(t[0]) for t in torun]
 
 
 def write_middle_range_bed(
@@ -43,7 +49,7 @@ def write_middle_range_bed(
     upper: GCInput,
     genome: Path,
     gapless: Path,
-) -> None:
+) -> str:
     out = final_path(f"gc{lower.fraction}to{upper.fraction}_slop50")
     with open(out, "wb") as f:
         p0 = sp.Popen(
@@ -66,20 +72,23 @@ def write_middle_range_bed(
         p2.wait()
         if not (p0.returncode == p1.returncode == p2.returncode == p3.returncode == 0):
             exit(1)
+    return str(out)
 
 
 def write_intersected_range_beds(
     final_path: Callable[[str], Path],
     low: list[GCInput],
     high: list[GCInput],
-    wider_out: Path,
-) -> None:
+) -> list[str]:
     pairs = zip(
         [x for x in low if x.is_range_bound],
         [x for x in reversed(high) if x.is_range_bound],
     )
-    for i, (b1, b2) in enumerate(pairs):
-        bed_out = final_path(f"gclt{b1.fraction}orgt{b2.fraction}_slop50")
+    torun = [
+        (i, final_path(f"gclt{b1.fraction}orgt{b2.fraction}_slop50"), b1, b2)
+        for i, (b1, b2) in enumerate(pairs)
+    ]
+    for i, bed_out, b1, b2 in torun:
         with open(bed_out, "wb") as f:
             p0 = sp.Popen(
                 ["multiIntersectBed", "-i", b1.bed, b2.bed],
@@ -96,13 +105,7 @@ def write_intersected_range_beds(
             if not (p0.returncode == p1.returncode == p2.returncode == 0):
                 exit(1)
 
-        # This is necessary because unions require the widest of the meta-range
-        # GC intersection beds. This is hacky AF but easiest way to do this is
-        # to "return" a link that points to the file I want. Need to link b/c
-        # snakemake doesn't allow me to dynamically declare output files in a
-        # rule, which is basically what this symlink is simulating.
-        if i == 0:
-            Path(wider_out).symlink_to(Path(bed_out).resolve())
+    return [str(t[1]) for t in torun]
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
@@ -121,10 +124,37 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         p.parent.mkdir(exist_ok=True, parents=True)
         return p
 
-    write_simple_range_beds(final_path, low, True)
-    write_simple_range_beds(final_path, high, False)
-    write_middle_range_bed(final_path, low[-1], high[0], genome, gapless)
-    write_intersected_range_beds(final_path, low, high, Path(smk.output[0]))
+    low_strats = write_simple_range_beds(final_path, low, True)
+    high_strats = write_simple_range_beds(final_path, high, False)
+    range_strat = write_middle_range_bed(
+        final_path,
+        low[-1],
+        high[0],
+        genome,
+        gapless,
+    )
+    inter_strats = write_intersected_range_beds(
+        final_path,
+        low,
+        high,
+    )
+    print(low_strats)
+
+    with open(smk.output[0], "w") as f:
+        # put the first low and last high input here since these are already
+        # in the final directory
+        obj = {
+            "gc_ranges": [
+                low[0][0],
+                *low_strats,
+                range_strat,
+                *high_strats,
+                high[-1][0],
+            ],
+            "widest_extreme": inter_strats[0],
+            "other_extremes": inter_strats[1:],
+        }
+        json.dump(obj, f, indent=4)
 
 
 main(snakemake, snakemake.config)  # type: ignore

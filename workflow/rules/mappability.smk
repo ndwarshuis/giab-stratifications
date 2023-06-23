@@ -190,26 +190,34 @@ def nonunique_inputs(wildcards):
     return expand(rules.wig_to_bed.output, zip, allow_missing=True, l=l, m=m, e=e)
 
 
-rule merge_nonunique:
+checkpoint merge_nonunique:
     input:
         bed=nonunique_inputs,
         gapless=rules.get_gapless.output.auto,
         genome=rules.get_genome.output,
     output:
-        # if there are multiple inputs, there will be other outputs
-        # corresponding to each input besides this one
-        map_final_path("lowmappabilityall"),
+        map_inter_dir / "nonunique_output.json",
     params:
-        map_dir=map_dir,
+        path_pattern=lambda w: expand(
+            map_final_path("{{}}"),
+            ref_key=w.ref_key,
+            build_key=w.build_key,
+        )[0],
     conda:
         "../envs/bedtools.yml"
     script:
         "../scripts/python/bedtools/mappability/merge_nonunique.py"
 
 
+def nonunique_inputs(ref_key, build_key):
+    c = checkpoints.merge_nonunique.get(ref_key=ref_key, build_key=build_key)
+    with c.output[0].open() as f:
+        return json.load(f)
+
+
 rule invert_merged_nonunique:
     input:
-        rules.merge_nonunique.output,
+        lambda w: nonunique_inputs(w.ref_key, w.build_key)["all_lowmap"],
     output:
         map_final_path("notinlowmappabilityall"),
     conda:
@@ -225,6 +233,12 @@ rule invert_merged_nonunique:
         """
 
 
-rule all_map:
-    input:
-        rules.invert_merged_nonunique.output,
+def nonunique_inputs_flat(ref_key, build_key):
+    res = nonunique_inputs(ref_key, build_key)
+    return [res["all_lowmap"], *res["single_lowmap"]]
+
+
+def mappabilty_inputs(ref_key, build_key):
+    return nonunique_inputs_flat(ref_key, build_key) + expand(
+        rules.invert_merged_nonunique.output, ref_key=ref_key, build_key=build_key
+    )

@@ -91,5 +91,8 @@ use rule notin_superdups as notin_long_superdups with:
 
 rule all_segdups:
     input:
+        rules.merge_superdups.output,
+        rules.filter_long_superdups.output,
         rules.notin_superdups.output,
         rules.notin_long_superdups.output,
+    localrule: True
