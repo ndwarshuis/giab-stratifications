@@ -20,8 +20,8 @@ def expand_strat_targets_inner(ref_key, build_key):
         (rules.all_functional.input, config.want_functional),
         (rules.all_segdups.input, config.want_segdups),
         (rules.find_telomeres.output, config.want_telomeres),
-        (rules.all_segdup_and_map.output, config.want_segdup_and_map),
-        (rules.all_alldifficult.output, config.want_alldifficult),
+        (rules.all_segdup_and_map.input, config.want_segdup_and_map),
+        (rules.all_alldifficult.input, config.want_alldifficult),
         (rules.get_gaps.output, lambda r, _: config.want_gaps(r)),
     ]
     all_function = [
