@@ -1,3 +1,7 @@
+# 2.7.1
+
+- fix typos
+
 # 2.7.0
 
 - make small rules not run on slurm
