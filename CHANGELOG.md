@@ -1,6 +1,27 @@
 # 3.2
 
-### New Stratifications
+All updates are summarized here. For exact versions and provanance information,
+see the configuration file at `config/all.yml`.
+
+### Changes to naming convention
+
+For all strats and references, the naming convention was updated (and files
+presented in subsequent sections are in terms of the new names).
+
+* all directory names are now capitalized for consistency
+* `FunctionalTechnicallyDifficultRegions` was shortened to
+  `FunctionalTechnicallyDifficult`
+* `FunctionalRegions` was shortened to `Functional`
+* `LowComplexity` base pair lengths are now more consistent. Specifically,
+  `XtoY` now means "X through Y" (this meaning was not consistent previously)
+  and `geX` now means "greater than or equal to X" (before it said `gtX` which
+  gave the erronous impression that this length did not include `X`)
+* (CHM13 only) - each stratification file now is prefixed with `CHM13` rather
+  than `CHM13v2.0` for simplicity.
+* (CHM13 only) - `SegDups` in the segmental duplications strats was lowercased
+  to `segdups` to be consistent with the other references.
+
+### Additions
 
 #### Low Complexity
 
@@ -37,37 +58,302 @@ Simple repeat stratifications now have GC or AT-only analogous:
 `LowComplexity/*_SimpleRepeat_triTR_ge200_AT_slop5.bed.gz`
 `LowComplexity/*_SimpleRepeat_triTR_ge200_GC_slop5.bed.gz`
 
-#### Telomeres
+#### Telomeres (CHM13 only)
 
 CHM13 now has a telomeres stratification:
 
 `Telomeres/CHM13_telomeres.bed.gz`
 
-#### Mappability
+#### Functional, GCContent, Mappability (CHM13 only)
 
-CHM13 now has mappability stratifications analogously to GRCh37/8:
+CHM13 now has these stratifications analogously to GRCh37/38:
+
+`Functional/CHM13_notinrefseq_cds.bed.gz`
+`Functional/CHM13_refseq_cds.bed.gz`
+
+`GCcontent/CHM13_gc15_slop50.bed.gz`
+`GCcontent/CHM13_gc15to20_slop50.bed.gz`
+`GCcontent/CHM13_gc20to25_slop50.bed.gz`
+`GCcontent/CHM13_gc25to30_slop50.bed.gz`
+`GCcontent/CHM13_gc30to55_slop50.bed.gz`
+`GCcontent/CHM13_gc55to60_slop50.bed.gz`
+`GCcontent/CHM13_gc60to65_slop50.bed.gz`
+`GCcontent/CHM13_gc65to70_slop50.bed.gz`
+`GCcontent/CHM13_gc70to75_slop50.bed.gz`
+`GCcontent/CHM13_gc75to80_slop50.bed.gz`
+`GCcontent/CHM13_gc80to85_slop50.bed.gz`
+`GCcontent/CHM13_gc85_slop50.bed.gz`
+`GCcontent/CHM13_gclt25orgt65_slop50.bed.gz`
+`GCcontent/CHM13_gclt30orgt55_slop50.bed.gz`
 
 `Mappability/CHM13_lowmappabilityall.bed.gz`
 `Mappability/CHM13_nonunique_l100_m2_e1.bed.gz`
 `Mappability/CHM13_nonunique_l250_m0_e0.bed.gz`
 `Mappability/CHM13_notinlowmappabilityall.bed.gz`
 
+#### Other Difficult (CHM13 only)
 
-### Revised Stratifications
+These stratifications were lifted from GRCh38 onto the CHM13 assembly and are
+now included:
 
-#### Low Complexity
+`OtherDifficult/CHM13_KIR.bed.gz`
+`OtherDifficult/CHM13_MHC.bed.gz`
+`OtherDifficult/CHM13_VDJ.bed.gz`
 
-Previous versions in GRCh37 did not include 5bp slop as indicated by the file
-name. This has been fixed.
+### Removals
 
-#### Functional Regions
+#### Segmental duplications
 
-GRCh37/38 now use a newer version of the refseq database, and thus the
-boundaries of these stratifications have changed slightly.
+Self chain stratifications were removed from both GRCh37 and GRCh38:
 
-#### XY
+`SegmentalDuplications/*_chainSelf.bed.gz`
+`SegmentalDuplications/*_chainSelf_gt10kb.bed.gz`
+`SegmentalDuplications/*_notinchainSelf.bed.gz`
+`SegmentalDuplications/*_notinchainSelf_gt10kb.bed.gz`
 
-The PAR regions for GRCh37/38 were recently updated.
+Additionally, the 99 percent identity file was removed:
+
+`SegmentalDuplications/*_gt5segdups_gt10kb_gt99percidentity.bed.gz`
+
+### Revisions to regions
+
+#### All references
+
+For low complexity stratifications, the di/tri/quad simple repeat
+stratifications are now constructed with an upper limit of 150bp in the highest
+bracket instead of 200bp. This was to better match a common short-read length
+(150bp) and to include more meaningful regions, as some of these stratifications
+were totally empty with the previous upper limit.
+
+Affected files:
+
+`LowComplexity/*_SimpleRepeat_diTR_50to149_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_diTR_50to149_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_diTR_50to149_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_quadTR_50to149_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_quadTR_50to149_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_quadTR_50to149_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_triTR_50to149_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_triTR_50to149_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_triTR_50to149_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_diTR_ge150_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_diTR_ge150_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_diTR_ge150_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_quadTR_ge150_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_quadTR_ge150_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_quadTR_ge150_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_triTR_ge150_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_triTR_ge150_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_triTR_ge150_slop5.bed.g`
+
+#### GRCh37
+
+##### Updated source file versions
+
+Functional regions were updated with the latest feature table and GFF files from
+refseq. This resulted in minor changes to the boundaries of these regions:
+
+`Functional/GRCh37_notinrefseq_cds.bed.gz`
+`Functional/GRCh37_refseq_cds.bed.gz`
+
+Segmental duplications were made using a more updated version of the superdups
+database from UCSC. This also resulted in minor boundary changes:
+
+`SegmentalDuplications/GRCh37_notinsegdups.bed.gz`
+`SegmentalDuplications/GRCh37_notinsegdups_gt10kb.bed.gz`
+`SegmentalDuplications/GRCh37_segdups.bed.gz`
+`SegmentalDuplications/GRCh37_segdups_gt10kb.bed.gz`
+
+##### Mappability
+
+Previous mappability files were constructed with a slightly different reference
+(with different decoy regions) and possibly without merging nearby regions with
+`mergeBed ... -d 100`. This resulted in ~1.5% and ~17.0% increases in the number
+of covered bases in `l250_m0_e0` and `l100_m2_e1` in v3.2 vs 3.1.
+
+Affected files:
+
+`Mappability/GRCh37_lowmappabilityall.bed.gz`
+`Mappability/GRCh37_nonunique_l100_m2_e1.bed.gz`
+`Mappability/GRCh37_nonunique_l250_m0_e0.bed.gz`
+`Mappability/GRCh37_notinlowmappabilityall.bed.gz`
+
+##### Union
+
+These stratifications changed slightly since they are aggregated from GCcontent,
+SegDup, and Mappability strats. Affected files:
+
+`Union/GRCh37_alldifficultregions.bed.gz`
+`Union/GRCh37_alllowmapandsegdupregions.bed.gz`
+`Union/GRCh37_notinalldifficultregions.bed.gz`
+`Union/GRCh37_notinalllowmapandsegdupregions.bed.gz`
+
+##### Gaps
+
+The gaps stratification is now made from the gaps track from UCSC. Unlike the
+previous gaps source file, this no longer includes small (sometimes single bp)
+gaps, nor does it include centromeres. For the latter we provide the `satellite`
+stratification file from `LowComplexity`.
+
+Affected file:
+
+`OtherDifficult/GRCh37_gaps_slop15kb.bed.gz`
+
+##### Correcting missing slop
+
+Low complexity homopolymers were originally created without adding slop (despite
+the filename). This has been corrected. As a consequence, some regions are now
+in different length brackets, since length was computed before as if slop were
+already added. Affected files:
+
+`LowComplexity/GRCh37_AllTandemRepeats_201to10000bp_slop5.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeats_51to200bp_slop5.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeatsandHomopolymers_slop5.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeats.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeats_ge10001bp_slop5.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeats_ge101bp_slop5.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeats_le50bp_slop5.bed.gz`
+`LowComplexity/GRCh37_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz`
+`LowComplexity/GRCh37_notinallTandemRepeats.bed.gz`
+
+##### X Chromosome
+
+The PAR and XTR regions were updated since v3.1. Affected files:
+
+`XY/GRCh37_chrX_nonPAR.bed.gz`
+`XY/GRCh37_chrX_PAR.bed.gz`
+`XY/GRCh37_chrX_XTR.bed.gz`
+
+##### Changes to Y pseudoautosomal region
+
+The boundaries of the PAR on the Y chromosome was updated since v3.1. This
+affected both the Y PAR-specific stratifications themselves as well as any other
+stratifications that intersected with the old/new PAR regions (for most
+stratifications we subtract off the Y PAR).
+
+Affected XY stratifications:
+
+`XY/GRCh37_chrY_nonPAR.bed.gz`
+`XY/GRCh37_chrY_PAR.bed.g`
+
+Affected non-XY stratifications:
+
+`GCcontent/GRCh37_gc15to20_slop50.bed.gz`
+`GCcontent/GRCh37_gc20to25_slop50.bed.gz`
+`GCcontent/GRCh37_gc25to30_slop50.bed.gz`
+`GCcontent/GRCh37_gc30to55_slop50.bed.gz`
+`GCcontent/GRCh37_gc55to60_slop50.bed.gz`
+`GCcontent/GRCh37_gc60to65_slop50.bed.gz`
+`GCcontent/GRCh37_gc65to70_slop50.bed.gz`
+`GCcontent/GRCh37_gclt25orgt65_slop50.bed.gz`
+`GCcontent/GRCh37_gclt30orgt55_slop50.bed.gz`
+`GenomeSpecific/GRCh37_HG001_v4.2.1_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG001_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG002_v4.2.1_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG002_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG003_v4.2.1_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG003_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG004_v4.2.1_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG004_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG005_v4.2.1_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG005_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG006_v4.2.1_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG006_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG007_v4.2.1_complexandSVs_alldifficultregions.bed.gz`
+`GenomeSpecific/GRCh37_HG007_v4.2.1_notin_complexandSVs_alldifficultregions.bed.gz`
+`LowComplexity/GRCh37_AllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeats_201to10000bp_slop5.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeats_51to200bp_slop5.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeatsandHomopolymers_slop5.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeats.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeats_ge10001bp_slop5.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeats_ge101bp_slop5.bed.gz`
+`LowComplexity/GRCh37_AllTandemRepeats_le50bp_slop5.bed.gz`
+`LowComplexity/GRCh37_notinAllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz`
+`LowComplexity/GRCh37_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz`
+`LowComplexity/GRCh37_notinallTandemRepeats.bed.gz`
+`LowComplexity/GRCh37_notinsatellites_slop5.bed.gz`
+`LowComplexity/GRCh37_SimpleRepeat_diTR_10to49_slop5.bed.gz`
+`LowComplexity/GRCh37_SimpleRepeat_homopolymer_4to6_slop5.bed.gz`
+`LowComplexity/GRCh37_SimpleRepeat_homopolymer_7to11_slop5.bed.gz`
+`LowComplexity/GRCh37_SimpleRepeat_homopolymer_ge12_slop5.bed.gz`
+`LowComplexity/GRCh37_SimpleRepeat_homopolymer_ge21_slop5.bed.gz`
+`LowComplexity/GRCh37_SimpleRepeat_imperfecthomopolge11_slop5.bed.gz`
+`LowComplexity/GRCh37_SimpleRepeat_imperfecthomopolge21_slop5.bed.gz`
+`LowComplexity/GRCh37_SimpleRepeat_quadTR_19to49_slop5.bed.gz`
+`LowComplexity/GRCh37_SimpleRepeat_triTR_14to49_slop5.bed.gz`
+`Mappability/GRCh37_lowmappabilityall.bed.gz`
+`Mappability/GRCh37_nonunique_l100_m2_e1.bed.gz`
+`Mappability/GRCh37_nonunique_l250_m0_e0.bed.gz`
+`Mappability/GRCh37_notinlowmappabilityall.bed.gz`
+`OtherDifficult/GRCh37_allOtherDifficultregions.bed.gz`
+`OtherDifficult/GRCh37_gaps_slop15kb.bed.gz`
+`OtherDifficult/GRCh37_hg38_minimap2_asm20_N10_nocovgt1kb.bed.gz`
+`OtherDifficult/GRCh37_hs37d5_decoy_alignments.bed.gz`
+`SegmentalDuplications/GRCh37_notinsegdups.bed.gz`
+`SegmentalDuplications/GRCh37_notinsegdups_gt10kb.bed.gz`
+`SegmentalDuplications/GRCh37_segdups.bed.gz`
+`SegmentalDuplications/GRCh37_segdups_gt10kb.bed.gz`
+`Union_GRCh37/alldifficultregions.bed.gz`
+`Union_GRCh37/alllowmapandsegdupregions.bed.gz`
+`Union_GRCh37/notinalldifficultregions.bed.gz`
+`Union_GRCh37/notinalllowmapandsegdupregions.bed.gz`
+
+#### GRCh38
+
+##### Updated source file versions
+
+Functional regions and segmental duplications now use updated source files
+(analogously to GRCh37, see above). Affected files:
+
+`Functional/GRCh38_notinrefseq_cds.bed.gz`
+`Functional/GRCh38_refseq_cds.bed.gz`
+`SegmentalDuplications/GRCh38_notinsegdups.bed.gz`
+`SegmentalDuplications/GRCh38_notinsegdups_gt10kb.bed.gz`
+`SegmentalDuplications/GRCh38_segdups.bed.gz`
+`SegmentalDuplications/GRCh38_segdups_gt10kb.bed.gz`
+
+##### Mappability
+
+Very minor changes (~400bp total) occured b/t v3.1 and v3.2 due to not including
+the EBV alternative contig in the newer pass. Affected files:
+
+`Mappability/GRCh38_lowmappabilityall.bed.gz`
+`Mappability/GRCh38_nonunique_l100_m2_e1.bed.gz`
+`Mappability/GRCh38_nonunique_l250_m0_e0.bed.gz`
+`Mappability/GRCh38_notinlowmappabilityall.bed.gz`
+
+##### Union
+
+Changes to mappability and segmental duplications strats affected the union
+strats (which are aggregated from the former). Affected files:
+
+`Union_GRCh38_alldifficultregions.bed.gz`
+`Union_GRCh38_alllowmapandsegdupregions.bed.gz`
+`Union_GRCh38_notinalldifficultregions.bed.gz`
+`Union_GRCh38_notinalllowmapandsegdupregions.bed.gz`
+
+##### Gaps
+
+The gaps file was updated analogously to GRCh37 (see above). Affected file:
+
+`OtherDifficult/GRCh38_gaps_slop15kb.bed.gz`
+
+#### CHM13
+
+Segmental duplications are now created using the
+[SEDEF](https://genome.ucsc.edu/cgi-bin/hgTables?db=hub_3671779_hs1&hgta_group=varRep&hgta_track=hub_3671779_sedefSegDups&hgta_table=hub_3671779_sedefSegDups&hgta_doSchema=describe+table+schema)
+track from UCSC. Affected stratifications:
+
+`SegmentalDuplications/CHM13_notinsegdups.bed.gz`
+`SegmentalDuplications/CHM13_segdups.bed.gz`
+
+The existing `Union` stratifications have been revised to incorporate
+new mappability stratifications. Affected files:
+
+`Union/CHM13_alldifficultregions.bed.gz`
+`Union/CHM13_notinalldifficultregions.bed.gz`
+
 
 # Pre v3.1 Releases
 
