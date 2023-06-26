@@ -2,8 +2,56 @@
 
 ### New Stratifications
 
-Low Complexity
-- 
+#### Low Complexity
+
+Simple repeat stratifications now have GC or AT-only analogous:
+
+`LowComplexity/*_SimpleRepeat_diTR_10to49_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_diTR_10to49_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_diTR_50to199_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_diTR_50to199_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_diTR_ge200_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_diTR_ge200_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_homopolymer_4to6_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_homopolymer_4to6_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_homopolymer_7to11_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_homopolymer_7to11_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_homopolymer_ge12_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_homopolymer_ge12_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_homopolymer_ge21_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_homopolymer_ge21_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_imperfecthomopolge11_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_imperfecthomopolge11_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_imperfecthomopolge21_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_imperfecthomopolge21_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_quadTR_19to49_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_quadTR_19to49_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_quadTR_50to199_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_quadTR_50to199_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_quadTR_ge200_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_quadTR_ge200_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_triTR_14to49_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_triTR_14to49_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_triTR_50to199_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_triTR_50to199_GC_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_triTR_ge200_AT_slop5.bed.gz`
+`LowComplexity/*_SimpleRepeat_triTR_ge200_GC_slop5.bed.gz`
+
+#### Telomeres
+
+CHM13 now has a telomeres stratification:
+
+`Telomeres/CHM13_telomeres.bed.gz`
+
+#### Mappability
+
+CHM13 now has mappability stratifications analogously to GRCh37/8:
+
+`Mappability/CHM13_lowmappabilityall.bed.gz`
+`Mappability/CHM13_nonunique_l100_m2_e1.bed.gz`
+`Mappability/CHM13_nonunique_l250_m0_e0.bed.gz`
+`Mappability/CHM13_notinlowmappabilityall.bed.gz`
+
 
 ### Revised Stratifications
 
