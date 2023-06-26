@@ -1,3 +1,7 @@
+# 2.8.1
+
+- fix some random typos and bugs
+
 # 2.8.0
 
 - lower max low complexity length to 150bp
