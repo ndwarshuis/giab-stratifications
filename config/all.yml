@@ -81,7 +81,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_KIR.bed.gz
               params: {chr_prefix: ''}
-            L1H:
+            L1H_gt500:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_L1H_gt500.bed.gz
               params: {chr_prefix: ''}
@@ -101,6 +101,11 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hg38_minimap2_asm20_N10_gt1contig_gt1kb.bed.gz
               params: {chr_prefix: ''}
+            hg38_minimap2_asm20_N10_nocovgt1kb:
+              src:
+                url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hg38_minimap2_asm20_N10_nocovgt1kb.bed.gz
+              params: {chr_prefix: ''}
+              remove_gaps: true
             hs37d5_decoy_alignments:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hs37d5_decoy_alignments.bed.gz
@@ -111,7 +116,7 @@ stratifications:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_missing_and_multiple_alignments_of_GRCh38.bed.gz
               params: {chr_prefix: ''}
           FunctionalTechnicallyDifficult:
-            BadPromotors:
+            BadPromoters:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/FunctionalTechnicallyDifficultRegions/GRCh37_BadPromoters.bed.gz 
               params: {chr_prefix: ''}
@@ -514,6 +519,9 @@ stratifications:
 
         comparison:
           other: GRCh37_v31
+          replacements:
+            - [Mappability, mappability]
+            - [FunctionalTechnicallyDifficult, FunctionalTechnicallyDifficultRegions]
           path_mapper:
             LowComplexity/GRCh37_AllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz: LowComplexity/GRCh37_AllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
             LowComplexity/GRCh37_AllTandemRepeats_ge10000bp_slop5.bed.gz: LowComplexity/GRCh37_AllTandemRepeats_gt10000bp_slop5.bed.gz
@@ -629,7 +637,7 @@ stratifications:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/ancestry/GRCh38_ancestry_Neanderthal.bed.gz 
           FunctionalTechnicallyDifficult:
-            BadPromotors:
+            BadPromoters:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/FunctionalTechnicallyDifficultRegions/GRCh38_BadPromoters.bed.gz 
             CMRGv1.00_duplicationinKMT2C:
@@ -960,6 +968,10 @@ stratifications:
 
         comparison:
           other: GRCh38_v31
+          replacements:
+            - [Mappability, mappability]
+            - [Ancestry, ancestry]
+            - [FunctionalTechnicallyDifficult, FunctionalTechnicallyDifficultRegions]
           path_mapper:
             LowComplexity/GRCh38_AllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz: LowComplexity/GRCh38_AllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
             LowComplexity/GRCh38_AllTandemRepeats_ge10000bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt10000bp_slop5.bed.gz
@@ -1057,6 +1069,18 @@ stratifications:
             rDNA:
               src:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/CHM13v2.0/OtherDifficult/CHM13v2.0_rDNA.bed.gz 
+            KIR:
+              src:
+                filepath: data/CHM13/OtherDifficult/KIR.bed.gz
+                md5: d014405e106d87c5810dd6a9736cadce
+            MHC:
+              src:
+                filepath: data/CHM13/OtherDifficult/MHC.bed.gz
+                md5: 4d16a3354bdeb8cfe786744b697e47e5
+            VDJ:
+              src:
+                filepath: data/CHM13/OtherDifficult/VDJ.bed.gz
+                md5: b47699eeb6a61c8a28ff9675e6f03b67
         bench:
           query_vcf: {src: {url: https://storage.googleapis.com/brain-genomics/awcarroll/misc/giab/HG002.pacbio.chm13.vcf.gz }}
           # https://drive.google.com/drive/u/1/folders/11RY2oMMShOuQ0HDBmkwXllBEHrUlwTRg
@@ -1094,6 +1118,8 @@ stratifications:
             LowComplexity/CHM13_AllTandemRepeats_le50bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_lt51bp_slop5.bed.gz
             LowComplexity/CHM13_AllTandemRepeats_ge101bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_gt100bp_slop5.bed.gz
             LowComplexity/CHM13_AllTandemRepeats_ge10001bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_gt10000bp_slop5.bed.gz
+            SegmentalDuplications/CHM13_notinsegdups.bed.gz: SegmentalDuplications/CHM13v2.0_notinSegDups.bed.gz
+            SegmentalDuplications/CHM13_segdups.bed.gz: SegmentalDuplications/CHM13v2.0_SegDups.bed.gz
 
 comparison_strats:
   GRCh37_v31: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/v3.1-genome-stratifications-GRCh37.tar.gz
