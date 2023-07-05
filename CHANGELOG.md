@@ -1,3 +1,8 @@
+# 2.10.0
+
+- add AT/GC to low complexity just for homopolymers
+- add AT/GC low complexity to benchmark output
+
 # 2.9.0
 
 - remove AT/GC from low complexity (for now)
