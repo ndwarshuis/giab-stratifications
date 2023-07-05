@@ -319,13 +319,13 @@ rule all_uniform_repeats:
                 unit_name=k,
                 total_len=x,
             )
-            # + expand(
-            #     rules.slop_uniform_repeats_compliment.output,
-            #     allow_missing=True,
-            #     unit_name=k,
-            #     total_len=x,
-            #     bases=COMPLIMENTS,
-            # )
+            + (expand(
+                rules.slop_uniform_repeats_compliment.output,
+                allow_missing=True,
+                unit_name=k,
+                total_len=x,
+                bases=COMPLIMENTS,
+            ) if k == "homopolymer" else [])
         ],
         # Perfect (between X and Y)
         *[
@@ -342,22 +342,22 @@ rule all_uniform_repeats:
                 total_lenA=a,
                 total_lenB=b - 1,
             )
-            # + expand(
-            #     rules.slop_uniform_repeat_ranges_compliment.output,
-            #     allow_missing=True,
-            #     unit_name=k,
-            #     total_lenA=a,
-            #     total_lenB=b - 1,
-            #     bases=COMPLIMENTS,
-            # )
+            + (expand(
+                rules.slop_uniform_repeat_ranges_compliment.output,
+                allow_missing=True,
+                unit_name=k,
+                total_lenA=a,
+                total_lenB=b - 1,
+                bases=COMPLIMENTS,
+            ) if k == "homopolymer" else [])
         ],
         # Imperfect (greater than X)
-        # expand(
-        #     rules.merge_imperfect_uniform_repeats_compliment.output,
-        #     allow_missing=True,
-        #     merged_len=IMPERFECT_LENS,
-        #     bases=COMPLIMENTS,
-        # ),
+        expand(
+            rules.merge_imperfect_uniform_repeats_compliment.output,
+            allow_missing=True,
+            merged_len=IMPERFECT_LENS,
+            bases=COMPLIMENTS,
+        ),
         **{
             f"imperfect_ge{x}": expand(
                 rules.merge_imperfect_uniform_repeats.output,
