@@ -1,6 +1,6 @@
-# 3.2
+# 3.2-1
 
-All updates are summarized here. For exact versions and provanance information,
+All updates are summarized here. For exact versions and provenance information,
 see the configuration file at `config/all.yml`.
 
 ### Changes to naming convention
@@ -15,7 +15,7 @@ presented in subsequent sections are in terms of the new names).
 * `LowComplexity` base pair lengths are now more consistent. Specifically,
   `XtoY` now means "X through Y" (this meaning was not consistent previously)
   and `geX` now means "greater than or equal to X" (before it said `gtX` which
-  gave the erronous impression that this length did not include `X`)
+  gave the erroneous impression that this length did not include `X`)
 * (CHM13 only) - each stratification file now is prefixed with `CHM13` rather
   than `CHM13v2.0` for simplicity.
 * (CHM13 only) - `SegDups` in the segmental duplications strats was lowercased
@@ -25,14 +25,8 @@ presented in subsequent sections are in terms of the new names).
 
 #### Low Complexity
 
-Simple repeat stratifications now have GC or AT-only analogous:
+Homopolymer stratifications now have GC or AT-only analogues:
 
-* `LowComplexity/*_SimpleRepeat_diTR_10to49_AT_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_diTR_10to49_GC_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_diTR_50to199_AT_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_diTR_50to199_GC_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_diTR_ge200_AT_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_diTR_ge200_GC_slop5.bed.gz`
 * `LowComplexity/*_SimpleRepeat_homopolymer_4to6_AT_slop5.bed.gz`
 * `LowComplexity/*_SimpleRepeat_homopolymer_4to6_GC_slop5.bed.gz`
 * `LowComplexity/*_SimpleRepeat_homopolymer_7to11_AT_slop5.bed.gz`
@@ -45,18 +39,6 @@ Simple repeat stratifications now have GC or AT-only analogous:
 * `LowComplexity/*_SimpleRepeat_imperfecthomopolge11_GC_slop5.bed.gz`
 * `LowComplexity/*_SimpleRepeat_imperfecthomopolge21_AT_slop5.bed.gz`
 * `LowComplexity/*_SimpleRepeat_imperfecthomopolge21_GC_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_quadTR_19to49_AT_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_quadTR_19to49_GC_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_quadTR_50to199_AT_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_quadTR_50to199_GC_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_quadTR_ge200_AT_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_quadTR_ge200_GC_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_triTR_14to49_AT_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_triTR_14to49_GC_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_triTR_50to199_AT_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_triTR_50to199_GC_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_triTR_ge200_AT_slop5.bed.gz`
-* `LowComplexity/*_SimpleRepeat_triTR_ge200_GC_slop5.bed.gz`
 
 #### Telomeres (CHM13 only)
 
@@ -64,7 +46,7 @@ CHM13 now has a telomeres stratification:
 
 * `Telomeres/CHM13_telomeres.bed.gz`
 
-#### Functional, GCContent, Mappability (CHM13 only)
+#### Functional, GCcontent, Mappability (CHM13 only)
 
 CHM13 now has these stratifications analogously to GRCh37/38:
 
@@ -315,7 +297,7 @@ Functional regions and segmental duplications now use updated source files
 
 ##### Mappability
 
-Very minor changes (~400bp total) occured b/t v3.1 and v3.2 due to not including
+Very minor changes (~400bp total) occurred b/t v3.1 and v3.2 due to not including
 the EBV alternative contig in the newer pass. Affected files:
 
 * `Mappability/GRCh38_lowmappabilityall.bed.gz`
