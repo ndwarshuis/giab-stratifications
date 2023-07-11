@@ -33,6 +33,18 @@ references:
 * GRCh38
 * CHM13
 
+## Versioning
+
+Version tags follow the format `X.Y-Z` where `X` will be incremented for removal
+of old stratifications and/or large deletions, `Y` will be incremented for
+additions and minor revisions, and `Z` will be incremented for documentation
+updates in this repository. Note that `X.Y` (without `Z`) corresponds to the
+versions located in [the FTP
+site](https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/).
+
+For those looking for precise differences between each stratification version,
+see [the stratdiff tool](https://github.com/ndwarshuis/giab-stratdiff).
+
 ## General Information
 
 Author Information
@@ -140,9 +152,9 @@ case of GRCh37/38, these include regions near gaps or errors in the reference or
 regions that are known to be expanded/collapsed relative to most other genomes.
 
 This category also includes highly polymorphic regions such as those coding the
-major histocompatibility complex (MHC), the VDJ regions, and regions coding the killer-cell
-immunoglobulin-like receptor (KIR). These are all highly polymorphic in nature
-and thus difficult to sequence.
+major histocompatibility complex (MHC), the VDJ regions, and regions coding the
+killer-cell immunoglobulin-like receptor (KIR). These are all highly polymorphic
+in nature and thus difficult to sequence.
 
 Finally, in the case of CHM13, this category also includes the rDNA arrays.
 

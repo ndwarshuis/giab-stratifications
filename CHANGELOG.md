@@ -1,4 +1,4 @@
-# 3.2-1
+# 3.2
 
 All updates are summarized here. For exact versions and provenance information,
 see the configuration file at `config/all.yml`.
