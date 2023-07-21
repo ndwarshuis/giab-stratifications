@@ -1013,8 +1013,18 @@ class GiabStrats(BaseModel):
         return [k for k in self.all_refkeys if self.refkey_to_gap_src(k) is not None]
 
     @property
-    def all_refkey_rmsk_trf(self) -> list[RefKey]:
-        return self._all_refkey_from_want(self.want_low_complexity)
+    def all_refkey_rmsk(self) -> list[RefKey]:
+        return self._all_refkey_from_want(
+            lambda r, b: self.want_low_complexity(r, b)
+            and self.has_low_complexity_simreps(r)
+        )
+
+    @property
+    def all_refkey_trf(self) -> list[RefKey]:
+        return self._all_refkey_from_want(
+            lambda r, b: self.want_low_complexity(r, b)
+            and self.has_low_complexity_rmsk(r)
+        )
 
     @property
     def all_refkey_censat(self) -> list[RefKey]:
