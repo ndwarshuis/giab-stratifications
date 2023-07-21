@@ -96,7 +96,7 @@ use rule download_ref as download_gaps with:
 def gapless_input(wildcards):
     if config.refkey_to_gap_src(wildcards.ref_key):
         gaps = {"gaps": rules.download_gaps.output[0]}
-        if self.refkey_to_y_PAR(rk) is None:
+        if config.refkey_to_y_PAR(wildcards.ref_key) is None:
             return gaps
         else:
             return {
