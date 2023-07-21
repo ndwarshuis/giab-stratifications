@@ -42,12 +42,13 @@ stratifications:
         # checksum)
         md5: a6da8681616c05eb542f1d91606a7b2f
 
-      # The prefix of each chromosome. This must match the fasta exactly or
+      # The pattern of each chromosome. This must match the fasta exactly or
       # weird things will happen. The final stratification beds will also have
-      # this prefix.
+      # this pattern. The pattern must include one special directive '%i' which
+      # will denote the standard name of the chromosome (1, 2, 3, ...X, Y)
       #
-      # Defaults: 'chr'
-      chr_prefix: chr
+      # Defaults: 'chr%i'
+      # chr_pattern: 'chr%i'
 
     # A BED file containing gaps (if any) in the fasta reference. Gaps usually
     # mean regions with 'N' or some other indeterminate base. These gaps will
@@ -72,7 +73,7 @@ stratifications:
 
         # The prefix of each chromosome. Must match the chromosome column exactly
         # or weird things will happen. Defaults to 'chr'
-        # chr_prefix: chr
+        # chr_pattern: chr%i
 
         # Number of lines to skip. If the bed file has some unconventional header
         # it may be necessary to skip the first N lines.
@@ -353,7 +354,7 @@ stratifications:
       src:
         url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/references/GRCh37/hs37d5.fa.gz
         md5: 12a0bed94078e2d9e8c00da793bbc84e
-      chr_prefix: ''
+      chr_pattern: '%i'
     gap:
       src: 
         url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/gap.txt.gz
@@ -435,7 +436,6 @@ stratifications:
       src:
         url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/analysis_set/chm13v2.0.fa.gz
         md5: 42b830df45df08ab63068e9128156e56
-      chr_prefix: chr
     low_complexity:
       rmsk:
         src:
@@ -501,6 +501,33 @@ stratifications:
         include:
           low_complexity: false
           segdups: false
+          mappability: []
+
+  HG002:
+    ref:
+      src:
+        url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/analysis_set/chm13v2.0.fa.gz
+        # md5: 42b830df45df08ab63068e9128156e56
+    low_complexity:
+      rmsk: null
+      simreps: null
+      satellites: null
+    xy:
+      features: null
+      x_par: null
+      y_par: null
+    segdups:
+      superdups: null
+    functional: null
+    mappability:
+      unplaced_chr_patterns: ["^chr(MT|EBV)$"]
+    builds:
+      test-autosome:
+        chr_filter: [21, 22]
+        include:
+          xy: false
+          segdups: false
+          functional: false
           mappability: []
 
 comparison_strats:

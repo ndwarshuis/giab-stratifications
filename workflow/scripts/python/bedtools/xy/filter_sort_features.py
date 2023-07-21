@@ -13,11 +13,12 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     assert i in [cfg.ChrIndex.CHRX, cfg.ChrIndex.CHRY], "invalid sex chr"
 
     fs = sconf.refkey_to_strat(rk).xy.features
+    assert fs is not None, "this should not happen"
     bedfile = fs.x_bed if i is cfg.ChrIndex.CHRX else fs.y_bed
     ps = bedfile.params
 
     level_col = bedfile.level_col
-    conv = sconf.buildkey_to_chr_conversion(rk, bk, ps.chr_prefix)
+    conv = sconf.buildkey_to_chr_conversion(rk, bk, ps.chr_pattern)
 
     df = read_bed(smk.input["bed"], ps, [level_col])
     filtsort = filter_sort_bed(conv, df)

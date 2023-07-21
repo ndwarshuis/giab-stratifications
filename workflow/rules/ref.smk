@@ -93,20 +93,27 @@ use rule download_ref as download_gaps with:
         ref_log_src_dir / "download_gaps.log",
 
 
-rule get_gapless:
-    input:
-        unpack(
-            lambda w: {
-                "gaps": rules.download_gaps.output[0],
+def gapless_input(wildcards):
+    if config.refkey_to_gap_src(wildcards.ref_key):
+        gaps = {"gaps": rules.download_gaps.output[0]}
+        if self.refkey_to_y_PAR(rk) is None:
+            return gaps
+        else:
+            return {
+                **gaps,
                 "parY": expand(
                     rules.write_PAR_intermediate.output[0],
                     allow_missing=True,
                     sex_chr="Y",
                 )[0],
             }
-            if config.refkey_to_gap_src(w.ref_key)
-            else {}
-        ),
+    else:
+        return {}
+
+
+rule get_gapless:
+    input:
+        unpack(gapless_input),
         genome=rules.get_genome.output[0],
     output:
         auto=ref_inter_dir / "genome_gapless.bed.gz",

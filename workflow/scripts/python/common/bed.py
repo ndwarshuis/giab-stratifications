@@ -107,7 +107,7 @@ def read_filter_sort_bed(
     more: list[int] = [],
 ) -> None:
     """Read a bed file, sort it, and write it in bgzip format."""
-    conv = sconf.buildkey_to_chr_conversion(rk, bk, bp.chr_prefix)
+    conv = sconf.buildkey_to_chr_conversion(rk, bk, bp.chr_pattern)
     df = read_bed(ipath, bp, more)
     df_ = filter_sort_bed(conv, df)
     write_bed(opath, df_)

@@ -9,13 +9,13 @@ post_log_dir = config.log_build_dir / "postprocess"
 
 def expand_strat_targets_inner(ref_key, build_key):
     function_targets = [
+        (all_low_complexity, config.want_low_complexity),
         (gc_inputs_flat, config.want_gc),
         (mappabilty_inputs, config.want_mappability),
         (all_xy_sex, lambda *_: True),
         (all_other, lambda *_: True),
     ]
     rule_targets = [
-        (rules.all_low_complexity.input, config.want_low_complexity),
         (rules.filter_autosomes.output, config.want_xy_auto),
         (rules.all_functional.input, config.want_functional),
         (rules.all_segdups.input, config.want_segdups),
@@ -163,11 +163,11 @@ rule write_chr_name_mapper:
         with open(output[0], "w") as f:
             for ref_key, build_key in zip(rks, bks):
                 for i in config.buildkey_to_chr_indices(ref_key, build_key):
-                    prefix = config.refkey_to_final_chr_prefix(ref_key)
+                    pattern = config.refkey_to_final_chr_pattern(ref_key)
                     line = [
                         str(i.value),
                         f"{ref_key}@{build_key}",
-                        i.chr_name_full(prefix),
+                        i.chr_name_full(pattern),
                     ]
                     f.write("\t".join(line) + "\n")
 

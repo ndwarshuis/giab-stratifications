@@ -26,6 +26,12 @@ RefKey = NewType("RefKey", str)
 CompareKey = NewType("CompareKey", str)
 OtherLevelKey = NewType("OtherLevelKey", str)
 OtherStratKey = NewType("OtherStratKey", str)
+ChrPattern = NewType("ChrPattern", str)
+ChrFromPattern = NewType("ChrFromPattern", str)
+ChrToPattern = NewType("ChrToPattern", str)
+
+CHR_PLACEHOLDER = "%i"
+# CHR_CAPTURE = "(1?[0-9]|2[0-2]|X|Y)"
 
 
 def fmap_maybe(f: Callable[[X], Y], x: X | None) -> None | Y:
@@ -57,8 +63,8 @@ class ChrIndex(Enum):
     def __init__(self, i: int) -> None:
         self.chr_name: str = "X" if i == 23 else ("Y" if i == 24 else str(i))
 
-    def chr_name_full(self, prefix: str) -> str:
-        return f"{prefix}{self.chr_name}"
+    def chr_name_full(self, pattern: ChrPattern) -> str:
+        return pattern.replace(CHR_PLACEHOLDER, self.chr_name)
 
 
 @unique
@@ -87,28 +93,28 @@ class ChrConversion(NamedTuple):
     """Data to filter, sort, and standardize chromosome names.
 
     Members:
-    fromPrefix - chr prefix of input file (usually a bed file)
-    toPrefix - chr prefix of output stratification file (should match ref)
+    fromPattern - chr pattern of input file (usually a bed file)
+    toPattern - chr pattern of output stratification file (should match ref)
     indices - the desired chromosome indices to keep
     """
 
-    fromPrefix: str
-    toPrefix: str
+    fromPattern: ChrPattern
+    toPattern: ChrPattern
     indices: set[ChrIndex]
 
 
 # For instances where we simply need to sort all the chromosomes and they are
 # already named appropriately
-def fullset_conv(prefix: str) -> ChrConversion:
-    return ChrConversion(prefix, prefix, set([i for i in ChrIndex]))
+def fullset_conv(pattern: ChrPattern) -> ChrConversion:
+    return ChrConversion(pattern, pattern, set([i for i in ChrIndex]))
 
 
 def conversion_to_init_mapper(c: ChrConversion) -> dict[str, int]:
-    return {i.chr_name_full(c.fromPrefix): i.value for i in c.indices}
+    return {i.chr_name_full(c.fromPattern): i.value for i in c.indices}
 
 
 def conversion_to_final_mapper(c: ChrConversion) -> dict[int, str]:
-    return {i.value: i.chr_name_full(c.toPrefix) for i in c.indices}
+    return {i.value: i.chr_name_full(c.toPattern) for i in c.indices}
 
 
 class BaseModel(BaseModel_):
@@ -228,20 +234,31 @@ RefSrc = RefFileSrc | RefHttpSrc
 BedSrc = BedFileSrc | BedHttpSrc
 
 
+def assert_chr_pattern(s: ChrPattern) -> None:
+    assert s.count(CHR_PLACEHOLDER) == 1, "chr pattern must have '%i' in it"
+
+
 class BedFileParams(BaseModel):
     """Parameters decribing how to parse a bed-like file.
 
     Members:
-    chr_prefix - the prefix on the chromosomes
+    chr_pattern - the pattern on the chromosomes; must include the special
+      directive '%i' which will denote a standardized name (eg 1, 2 ...X, Y);
+      the pattern is assumed to match the whole chromosome name.
     bed_cols - the columns for the bed coordinates
     skip_lines - how many input lines to skip
     sep - column separator regexp (for "beds" with spaces instead of tabs)
     """
 
-    chr_prefix: str = "chr"
+    chr_pattern: ChrPattern = ChrPattern("chr%i")
     bed_cols: BedColumns = BedColumns()
     skip_lines: NonNegativeInt = 0
     sep: str = "\t"
+
+    @validator("chr_pattern")
+    def is_valid_pattern(cls, v: ChrPattern) -> ChrPattern:
+        assert_chr_pattern(v)
+        return v
 
 
 class BedFile(BaseModel):
@@ -255,7 +272,12 @@ class VCFFile(BaseModel):
     """Inport specs for a vcf file."""
 
     src: BedSrc
-    chr_prefix: str = "chr"
+    chr_pattern: ChrPattern = ChrPattern("chr%i")
+
+    @validator("chr_pattern")
+    def is_valid_pattern(cls, v: ChrPattern) -> ChrPattern:
+        assert_chr_pattern(v)
+        return v
 
 
 class RMSKFile(BedFile):
@@ -285,8 +307,8 @@ class SatFile(BedFile):
 class LowComplexity(BaseModel):
     """Configuration for low complexity stratification."""
 
-    rmsk: RMSKFile
-    simreps: BedFile
+    rmsk: RMSKFile | None
+    simreps: BedFile | None
     satellites: SatFile | None
 
 
@@ -328,9 +350,9 @@ class XYPar(BaseModel):
         assert v[1] > v[0], "End must be greater than start"
         return v
 
-    def fmt(self, i: ChrIndex, prefix: str) -> str:
+    def fmt(self, i: ChrIndex, pattern: ChrPattern) -> str:
         # TODO this smells like something I'll be doing alot
-        c = i.chr_name_full(prefix)
+        c = i.chr_name_full(pattern)
         return "\n".join(
             [
                 f"{c}\t{self.start[0]}\t{self.start[1]}",
@@ -342,15 +364,15 @@ class XYPar(BaseModel):
 class XY(BaseModel):
     """Configuration for the XY stratification."""
 
-    features: XYFeatures
-    x_par: XYPar
-    y_par: XYPar
+    features: XYFeatures | None
+    x_par: XYPar | None
+    y_par: XYPar | None
 
-    def fmt_x_par(self, prefix: str) -> str:
-        return self.x_par.fmt(ChrIndex.CHRX, prefix)
+    def fmt_x_par(self, pattern: ChrPattern) -> str | None:
+        return fmap_maybe(lambda x: x.fmt(ChrIndex.CHRX, pattern), self.x_par)
 
-    def fmt_y_par(self, prefix: str) -> str:
-        return self.y_par.fmt(ChrIndex.CHRY, prefix)
+    def fmt_y_par(self, pattern: ChrPattern) -> str | None:
+        return fmap_maybe(lambda x: x.fmt(ChrIndex.CHRY, pattern), self.y_par)
 
 
 class Mappability(BaseModel):
@@ -496,7 +518,12 @@ class RefFile(BaseModel):
     """Specification for reference file."""
 
     src: RefSrc
-    chr_prefix: str
+    chr_pattern: ChrPattern = ChrPattern("chr%i")
+
+    @validator("chr_pattern")
+    def is_valid_pattern(cls, v: ChrPattern) -> ChrPattern:
+        assert_chr_pattern(v)
+        return v
 
 
 class Functional(BaseModel):
@@ -515,7 +542,7 @@ class Stratification(BaseModel):
     xy: XY
     mappability: Mappability | None
     segdups: SegDups
-    functional: Functional
+    functional: Functional | None
     builds: dict[BuildKey, Build]
 
 
@@ -759,19 +786,25 @@ class GiabStrats(BaseModel):
     def refkey_to_gap_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(lambda x: x.src, self.stratifications[k].gap)
 
-    def refkey_to_x_features_src(self, k: RefKey) -> BedSrc:
-        return self.stratifications[k].xy.features.x_bed.src
+    def refkey_to_x_features_src(self, k: RefKey) -> BedSrc | None:
+        return fmap_maybe(lambda x: x.x_bed.src, self.stratifications[k].xy.features)
 
-    def refkey_to_y_features_src(self, k: RefKey) -> BedSrc:
-        return self.stratifications[k].xy.features.y_bed.src
+    def refkey_to_y_features_src(self, k: RefKey) -> BedSrc | None:
+        return fmap_maybe(lambda x: x.y_bed.src, self.stratifications[k].xy.features)
+
+    def refkey_to_x_PAR(self, k: RefKey) -> XYPar | None:
+        return self.stratifications[k].xy.x_par
+
+    def refkey_to_y_PAR(self, k: RefKey) -> XYPar | None:
+        return self.stratifications[k].xy.y_par
 
     def refkey_to_simreps_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(
-            lambda x: x.simreps.src, self.stratifications[k].low_complexity
+            lambda x: x.src, self.stratifications[k].low_complexity.simreps
         )
 
     def refkey_to_rmsk_src(self, k: RefKey) -> BedSrc | None:
-        return fmap_maybe(lambda x: x.rmsk.src, self.stratifications[k].low_complexity)
+        return fmap_maybe(lambda x: x.src, self.stratifications[k].low_complexity.rmsk)
 
     def refkey_to_satellite_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(
@@ -785,11 +818,11 @@ class GiabStrats(BaseModel):
             self.stratifications[k].segdups,
         )
 
-    def refkey_to_functional_ftbl_src(self, k: RefKey) -> BedSrc:
-        return self.stratifications[k].functional.ftbl_src
+    def refkey_to_functional_ftbl_src(self, k: RefKey) -> BedSrc | None:
+        return fmap_maybe(lambda x: x.ftbl_src, self.stratifications[k].functional)
 
-    def refkey_to_functional_gff_src(self, k: RefKey) -> BedSrc:
-        return self.stratifications[k].functional.gff_src
+    def refkey_to_functional_gff_src(self, k: RefKey) -> BedSrc | None:
+        return fmap_maybe(lambda x: x.gff_src, self.stratifications[k].functional)
 
     def otherkey_to_src(
         self,
@@ -802,31 +835,31 @@ class GiabStrats(BaseModel):
 
     # chromosome standardization
 
-    def refkey_to_final_chr_prefix(self, k: RefKey) -> str:
-        return self.stratifications[k].ref.chr_prefix
+    def refkey_to_final_chr_pattern(self, k: RefKey) -> ChrPattern:
+        return self.stratifications[k].ref.chr_pattern
 
-    def refkey_to_bench_chr_prefix(self, rk: RefKey, bk: BuildKey) -> str | None:
+    def refkey_to_bench_chr_pattern(self, rk: RefKey, bk: BuildKey) -> str | None:
         return fmap_maybe(
-            lambda x: x.bench_vcf.chr_prefix, self.buildkey_to_build(rk, bk).bench
+            lambda x: x.bench_vcf.chr_pattern, self.buildkey_to_build(rk, bk).bench
         )
 
-    def refkey_to_query_chr_prefix(self, rk: RefKey, bk: BuildKey) -> str | None:
+    def refkey_to_query_chr_pattern(self, rk: RefKey, bk: BuildKey) -> str | None:
         return fmap_maybe(
-            lambda x: x.query_vcf.chr_prefix, self.buildkey_to_build(rk, bk).bench
+            lambda x: x.query_vcf.chr_pattern, self.buildkey_to_build(rk, bk).bench
         )
 
     def buildkey_to_chr_conversion(
         self,
         rk: RefKey,
         bk: BuildKey,
-        fromChr: str,
+        fromChr: ChrPattern,
     ) -> ChrConversion:
-        toChr = self.refkey_to_final_chr_prefix(rk)
+        toChr = self.refkey_to_final_chr_pattern(rk)
         cis = self.buildkey_to_chr_indices(rk, bk)
         return ChrConversion(fromChr, toChr, cis)
 
     def buildkey_to_final_chr_mapping(self, rk: RefKey, bk: BuildKey) -> dict[int, str]:
-        p = self.refkey_to_final_chr_prefix(rk)
+        p = self.refkey_to_final_chr_pattern(rk)
         cs = self.buildkey_to_chr_indices(rk, bk)
         return {c.value: c.chr_name_full(p) for c in cs}
 
@@ -855,7 +888,13 @@ class GiabStrats(BaseModel):
 
     # include switches (for controlling which snakemake rules to activate)
 
-    def want_low_complexity_censat(self, rk: RefKey) -> bool:
+    def has_low_complexity_rmsk(self, rk: RefKey) -> bool:
+        return self.stratifications[rk].low_complexity.rmsk is not None
+
+    def has_low_complexity_simreps(self, rk: RefKey) -> bool:
+        return self.stratifications[rk].low_complexity.simreps is not None
+
+    def has_low_complexity_censat(self, rk: RefKey) -> bool:
         return self.stratifications[rk].low_complexity.satellites is not None
 
     def _want_chr_index(self, rk: RefKey, bk: BuildKey, i: ChrIndex) -> bool:
@@ -881,18 +920,26 @@ class GiabStrats(BaseModel):
             if self._want_chr_index(rk, bk, i)
         ]
 
-    def want_xy_sex(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.want_xy_x(rk, bk) and self.want_xy_y(rk, bk)
+    # def want_xy_sex(self, rk: RefKey, bk: BuildKey) -> bool:
+    #     return self.want_xy_x(rk, bk) and self.want_xy_y(rk, bk)
+
+    def want_x_PAR(self, rk: RefKey, bk: BuildKey) -> bool:
+        return self.want_xy_x(rk, bk) and self.refkey_to_x_PAR(rk) is not None
+
+    def want_y_PAR(self, rk: RefKey, bk: BuildKey) -> bool:
+        return self.want_xy_y(rk, bk) and self.refkey_to_y_PAR(rk) is not None
 
     def want_xy_auto(self, rk: RefKey, bk: BuildKey) -> bool:
         cis = self.buildkey_to_chr_indices(rk, bk)
         return len(cis - set([ChrIndex.CHRX, ChrIndex.CHRY])) > 0
 
     def want_xy_XTR(self, rk: RefKey) -> bool:
-        return self.refkey_to_strat(rk).xy.features.xtr
+        f = self.refkey_to_strat(rk).xy.features
+        return f is not None and f.xtr
 
     def want_xy_ampliconic(self, rk: RefKey) -> bool:
-        return self.refkey_to_strat(rk).xy.features.ampliconic
+        f = self.refkey_to_strat(rk).xy.features
+        return f is not None and f.ampliconic
 
     def want_low_complexity(self, rk: RefKey, bk: BuildKey) -> bool:
         return self.buildkey_to_include(rk, bk).low_complexity
@@ -901,7 +948,11 @@ class GiabStrats(BaseModel):
         return self.buildkey_to_include(rk, bk).gc is not None
 
     def want_functional(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_include(rk, bk).functional
+        return (
+            self.buildkey_to_include(rk, bk).functional
+            and self.refkey_to_functional_ftbl_src(rk) is not None
+            and self.refkey_to_functional_gff_src(rk) is not None
+        )
 
     def want_telomeres(self, rk: RefKey, bk: BuildKey) -> bool:
         return self.buildkey_to_include(rk, bk).telomeres
@@ -962,14 +1013,24 @@ class GiabStrats(BaseModel):
         return [k for k in self.all_refkeys if self.refkey_to_gap_src(k) is not None]
 
     @property
-    def all_refkey_rmsk_trf(self) -> list[RefKey]:
-        return self._all_refkey_from_want(self.want_low_complexity)
+    def all_refkey_rmsk(self) -> list[RefKey]:
+        return self._all_refkey_from_want(
+            lambda r, b: self.want_low_complexity(r, b)
+            and self.has_low_complexity_simreps(r)
+        )
+
+    @property
+    def all_refkey_trf(self) -> list[RefKey]:
+        return self._all_refkey_from_want(
+            lambda r, b: self.want_low_complexity(r, b)
+            and self.has_low_complexity_rmsk(r)
+        )
 
     @property
     def all_refkey_censat(self) -> list[RefKey]:
         return self._all_refkey_from_want(
             lambda r, b: self.want_low_complexity(r, b)
-            and self.want_low_complexity_censat(r)
+            and self.has_low_complexity_censat(r)
         )
 
     @property

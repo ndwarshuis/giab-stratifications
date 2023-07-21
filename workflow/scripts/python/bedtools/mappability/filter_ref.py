@@ -17,7 +17,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     rk = cfg.RefKey(smk.wildcards["ref_key"])
     bk = cfg.BuildKey(smk.wildcards["build_key"])
 
-    prefix = sconf.refkey_to_final_chr_prefix(rk)
+    pattern = sconf.refkey_to_final_chr_pattern(rk)
     pats = sconf.refkey_to_mappability_patterns(rk)
     cis = sconf.buildkey_to_chr_indices(rk, bk)
 
@@ -30,7 +30,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     chrs = [
         *filter(
-            lambda c: any(i.chr_name_full(prefix) == c for i in cis)
+            lambda c: any(i.chr_name_full(pattern) == c for i in cis)
             or any(re.match(p, c) for p in pats),
             idx[0].tolist(),
         )
