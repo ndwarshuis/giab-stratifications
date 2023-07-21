@@ -506,8 +506,8 @@ stratifications:
   HG002:
     ref:
       src:
-        url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/analysis_set/chm13v2.0.fa.gz
-        # md5: 42b830df45df08ab63068e9128156e56
+        url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v0.9.mat_Y_EBV_MT.fasta
+      chr_pattern: 'chr%i_MATERNAL'
     low_complexity:
       rmsk: null
       simreps: null

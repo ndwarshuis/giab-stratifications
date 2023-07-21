@@ -741,7 +741,7 @@ def all_low_complexity(ref_key, _):
     trs = (
         rules.all_TRs.input + rules.merge_filtered_TRs.output + rules.invert_TRs.output
     )
-    merged = (rules.merge_HPs_and_TRs.output + rules.invert_HPs_and_TRs.output,)
+    merged = rules.merge_HPs_and_TRs.output + rules.invert_HPs_and_TRs.output
     all_trs_and_hps = trs + merged if has_sats and trf else []
 
     return all_trs_and_hps + sats + urs
