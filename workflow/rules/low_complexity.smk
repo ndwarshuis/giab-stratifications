@@ -319,13 +319,17 @@ rule all_uniform_repeats:
                 unit_name=k,
                 total_len=x,
             )
-            + (expand(
-                rules.slop_uniform_repeats_compliment.output,
-                allow_missing=True,
-                unit_name=k,
-                total_len=x,
-                bases=COMPLIMENTS,
-            ) if k == "homopolymer" else [])
+            + (
+                expand(
+                    rules.slop_uniform_repeats_compliment.output,
+                    allow_missing=True,
+                    unit_name=k,
+                    total_len=x,
+                    bases=COMPLIMENTS,
+                )
+                if k == "homopolymer"
+                else []
+            )
         ],
         # Perfect (between X and Y)
         *[
@@ -342,14 +346,18 @@ rule all_uniform_repeats:
                 total_lenA=a,
                 total_lenB=b - 1,
             )
-            + (expand(
-                rules.slop_uniform_repeat_ranges_compliment.output,
-                allow_missing=True,
-                unit_name=k,
-                total_lenA=a,
-                total_lenB=b - 1,
-                bases=COMPLIMENTS,
-            ) if k == "homopolymer" else [])
+            + (
+                expand(
+                    rules.slop_uniform_repeat_ranges_compliment.output,
+                    allow_missing=True,
+                    unit_name=k,
+                    total_lenA=a,
+                    total_lenB=b - 1,
+                    bases=COMPLIMENTS,
+                )
+                if k == "homopolymer"
+                else []
+            )
         ],
         # Imperfect (greater than X)
         expand(
@@ -494,7 +502,7 @@ rule filter_sort_censat:
 rule merge_satellites_intermediate:
     input:
         lambda w: rules.filter_sort_censat.output
-        if config.want_low_complexity_censat(w.ref_key)
+        if config.has_low_complexity_censat(w.ref_key)
         else all_rmsk_classes["Satellite"],
     output:
         lc_inter_dir / "merged_satellites.bed.gz",
@@ -690,20 +698,50 @@ use rule invert_satellites as invert_HPs_and_TRs with:
         lc_final_path("notinAllTandemRepeatsandHomopolymers_slop5"),
 
 
-rule all_low_complexity:
-    input:
-        # Uniform repeats
-        rules.all_uniform_repeats.input,
-        rules.merge_all_uniform_repeats.output,
-        rules.invert_all_uniform_repeats.output,
-        # Satellites
-        rules.merge_satellites.output,
-        rules.invert_satellites.output,
-        # Tandem Repeats
-        rules.all_TRs.input,
-        rules.merge_filtered_TRs.output,
-        rules.invert_TRs.output,
-        # "Everything" (in theory)
-        rules.merge_HPs_and_TRs.output,
-        rules.invert_HPs_and_TRs.output,
-    localrule: True
+# rule all_low_complexity:
+#     input:
+#         # Uniform repeats
+#         rules.all_uniform_repeats.input,
+#         rules.merge_all_uniform_repeats.output,
+#         rules.invert_all_uniform_repeats.output,
+#         # Satellites
+#         rules.merge_satellites.output,
+#         rules.invert_satellites.output,
+#         # Tandem Repeats
+#         rules.all_TRs.input,
+#         rules.merge_filtered_TRs.output,
+#         rules.invert_TRs.output,
+#         # "Everything" (in theory)
+#         rules.merge_HPs_and_TRs.output,
+#         rules.invert_HPs_and_TRs.output,
+#     localrule: True
+
+
+def all_low_complexity(ref_key, _):
+    rmsk = config.has_low_complexity_rmsk(ref_key)
+    trf = config.has_low_complexity_simreps(ref_key)
+    censat = config.has_low_complexity_censat(ref_key)
+    has_sats = rmsk or censat
+
+    # include uniform repeats no matter what
+    urs = (
+        rules.all_uniform_repeats.input
+        + rules.merge_all_uniform_repeats.output
+        + rules.invert_all_uniform_repeats.output
+    )
+
+    # include satellites only if we have rmsk or censat
+    sats = (
+        rules.merge_satellites.output + rules.invert_satellites.output
+        if has_sats
+        else []
+    )
+
+    # include tandem repeats and merged output if we have rmsk/censat and TRF
+    trs = (
+        rules.all_TRs.input + rules.merge_filtered_TRs.output + rules.invert_TRs.output
+    )
+    merged = (rules.merge_HPs_and_TRs.output + rules.invert_HPs_and_TRs.output,)
+    all_trs_and_hps = trs + merged if has_sats and trf else []
+
+    return all_trs_and_hps + sats + urs

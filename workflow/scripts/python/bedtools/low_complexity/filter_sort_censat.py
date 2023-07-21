@@ -11,7 +11,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     assert bedfile is not None, "this should not happen"
 
     ps = bedfile.params
-    conv = sconf.buildkey_to_chr_conversion(rk, bk, ps.chr_prefix)
+    conv = sconf.buildkey_to_chr_conversion(rk, bk, ps.chr_pattern)
 
     df = read_bed(smk.input[0], ps, [bedfile.sat_col])
     df = filter_sort_bed(conv, df)

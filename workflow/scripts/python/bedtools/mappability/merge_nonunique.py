@@ -10,8 +10,8 @@ import json
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     rk = cfg.RefKey(smk.wildcards["ref_key"])
 
-    prefix = sconf.refkey_to_final_chr_prefix(rk)
-    conv = cfg.fullset_conv(prefix)
+    pattern = sconf.refkey_to_final_chr_pattern(rk)
+    conv = cfg.fullset_conv(pattern)
 
     inputs = smk.input["bed"]
     genome = Path(smk.input["genome"][0])

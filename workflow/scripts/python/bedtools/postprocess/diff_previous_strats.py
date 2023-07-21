@@ -12,7 +12,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     rk = cfg.RefKey(smk.wildcards.ref_key)
     bk = cfg.BuildKey(smk.wildcards.build_key)
     comparison = sconf.buildkey_to_build(rk, bk).comparison
-    prefix = sconf.refkey_to_final_chr_prefix(rk)
+    pattern = sconf.refkey_to_final_chr_pattern(rk)
     ixs = sconf.buildkey_to_chr_indices(rk, bk)
 
     assert comparison is not None, "this should not happen"
@@ -25,7 +25,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         outdir,
         comparison.path_mapper,
         comparison.replacements,
-        [i.chr_name_full(prefix) for i in ixs],
+        [i.chr_name_full(pattern) for i in ixs],
         comparison.ignore_generated,
         comparison.ignore_other,
     )

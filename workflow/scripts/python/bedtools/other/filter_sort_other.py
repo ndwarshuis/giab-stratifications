@@ -11,7 +11,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     sk = cfg.OtherStratKey(smk.wildcards["other_strat_key"])
     bed = sconf.otherkey_to_bed(rk, bk, lk, sk)
     ps = bed.params
-    conv = sconf.buildkey_to_chr_conversion(rk, bk, ps.chr_prefix)
+    conv = sconf.buildkey_to_chr_conversion(rk, bk, ps.chr_pattern)
     df = filter_sort_bed(conv, read_bed(smk.input["bed"][0], ps))
     if bed.remove_gaps:
         df = (

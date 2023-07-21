@@ -66,18 +66,18 @@ use rule filter_XTR_features as filter_ampliconic_features with:
         level="Ampliconic",
 
 
-def par_input(wildcards):
-    test_fun = config.want_xy_y if wildcards.sex_chr == "Y" else config.want_xy_x
-    return (
-        rules.write_PAR_final.output
-        if test_fun(wildcards.ref_key, wildcards.build_key)
-        else rules.write_PAR_intermediate.output
-    )
+# def par_input(wildcards):
+#     test_fun = config.want_xy_y if wildcards.sex_chr == "Y" else config.want_xy_x
+#     return (
+#         rules.write_PAR_final.output
+#         if test_fun(wildcards.ref_key, wildcards.build_key)
+#         else rules.write_PAR_intermediate.output
+#     )
 
 
 rule invert_PAR:
     input:
-        bed=par_input,
+        bed=rules.write_PAR_final.output,
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.parY,
     output:
@@ -133,10 +133,15 @@ def all_xy_features(ref_key, build_key):
 
 
 def all_xy_PAR(ref_key, build_key):
+    wanted_chrs = [
+        c
+        for (c, fun) in [("X", config.want_x_PAR), ("Y", config.want_y_PAR)]
+        if fun(ref_key, build_key)
+    ]
     return expand(
         rules.invert_PAR.output + rules.write_PAR_final.output,
         allow_missing=True,
-        sex_chr=config.wanted_xy_chr_names(ref_key, build_key),
+        sex_chr=wanted_chrs,
         ref_key=ref_key,
         build_key=build_key,
     )

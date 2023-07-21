@@ -17,7 +17,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ps = bedfile.params
 
     level_col = bedfile.level_col
-    conv = sconf.buildkey_to_chr_conversion(rk, bk, ps.chr_prefix)
+    conv = sconf.buildkey_to_chr_conversion(rk, bk, ps.chr_pattern)
 
     df = read_bed(smk.input["bed"], ps, [level_col])
     filtsort = filter_sort_bed(conv, df)
