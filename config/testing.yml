@@ -44,11 +44,16 @@ stratifications:
 
       # The pattern of each chromosome. This must match the fasta exactly or
       # weird things will happen. The final stratification beds will also have
-      # this pattern. The pattern must include one special directive '%i' which
-      # will denote the standard name of the chromosome (1, 2, 3, ...X, Y)
+      # this pattern. The 'special' block contains 1-1 mappings between
+      # chromosome names and their index (1-24). Anything not matching these
+      # will be delegated to the 'template', which must include one special
+      # directive '%i' which will denote the standard name of the chromosome (1,
+      # 2, 3, ...X, Y).
       #
       # Defaults: 'chr%i'
-      # chr_pattern: 'chr%i'
+      # chr_pattern:
+      #   template: 'chr%i'
+      #   special: {}
 
     # A BED file containing gaps (if any) in the fasta reference. Gaps usually
     # mean regions with 'N' or some other indeterminate base. These gaps will
@@ -71,9 +76,10 @@ stratifications:
       # Params for the bed file
       params:
 
-        # The prefix of each chromosome. Must match the chromosome column exactly
-        # or weird things will happen. Defaults to 'chr'
-        # chr_pattern: chr%i
+        # Analogous to chr pattern above
+        # chr_pattern:
+        #   template: chr%i
+        #   special: {}
 
         # Number of lines to skip. If the bed file has some unconventional header
         # it may be necessary to skip the first N lines.
@@ -354,7 +360,8 @@ stratifications:
       src:
         url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/references/GRCh37/hs37d5.fa.gz
         md5: 12a0bed94078e2d9e8c00da793bbc84e
-      chr_pattern: '%i'
+      chr_pattern:
+        template: '%i'
     gap:
       src: 
         url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/gap.txt.gz
@@ -507,7 +514,8 @@ stratifications:
     ref:
       src:
         url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v0.9.mat_Y_EBV_MT.fasta
-      chr_pattern: 'chr%i_MATERNAL'
+      chr_pattern:
+        template: 'chr%i_MATERNAL'
     low_complexity:
       rmsk: null
       simreps: null

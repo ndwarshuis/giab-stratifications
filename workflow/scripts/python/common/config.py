@@ -11,6 +11,7 @@ from typing import (
     NamedTuple,
     cast,
     Annotated,
+    Generic,
 )
 from typing_extensions import Self
 from more_itertools import unzip, unique_everseen
@@ -26,16 +27,28 @@ RefKey = NewType("RefKey", str)
 CompareKey = NewType("CompareKey", str)
 OtherLevelKey = NewType("OtherLevelKey", str)
 OtherStratKey = NewType("OtherStratKey", str)
-ChrPattern = NewType("ChrPattern", str)
-ChrFromPattern = NewType("ChrFromPattern", str)
-ChrToPattern = NewType("ChrToPattern", str)
 
 CHR_PLACEHOLDER = "%i"
-# CHR_CAPTURE = "(1?[0-9]|2[0-2]|X|Y)"
 
 
 def fmap_maybe(f: Callable[[X], Y], x: X | None) -> None | Y:
     return None if x is None else f(x)
+
+
+class BaseModel(BaseModel_):
+    class Config:
+        frozen = True
+        extra = "forbid"
+
+
+class ChrPattern_(BaseModel, Generic[X]):
+    template: str = "chr%i"
+    special: dict[X, str] = {}
+
+    @validator("template")
+    def is_valid_template(cls, v: str) -> str:
+        assert v.count(CHR_PLACEHOLDER) == 1, "chr template must have '%i' in it"
+        return v
 
 
 @unique
@@ -63,8 +76,14 @@ class ChrIndex(Enum):
     def __init__(self, i: int) -> None:
         self.chr_name: str = "X" if i == 23 else ("Y" if i == 24 else str(i))
 
-    def chr_name_full(self, pattern: ChrPattern) -> str:
-        return pattern.replace(CHR_PLACEHOLDER, self.chr_name)
+    def chr_name_full(self, pattern: ChrPattern_[Self]) -> str:
+        try:
+            return pattern.special[self.value]
+        except KeyError:
+            return pattern.template.replace(CHR_PLACEHOLDER, self.chr_name)
+
+
+ChrPattern = ChrPattern_[ChrIndex]
 
 
 @unique
@@ -115,12 +134,6 @@ def conversion_to_init_mapper(c: ChrConversion) -> dict[str, int]:
 
 def conversion_to_final_mapper(c: ChrConversion) -> dict[int, str]:
     return {i.value: i.chr_name_full(c.toPattern) for i in c.indices}
-
-
-class BaseModel(BaseModel_):
-    class Config:
-        frozen = True
-        extra = "forbid"
 
 
 class Paths(BaseModel):
@@ -234,10 +247,6 @@ RefSrc = RefFileSrc | RefHttpSrc
 BedSrc = BedFileSrc | BedHttpSrc
 
 
-def assert_chr_pattern(s: ChrPattern) -> None:
-    assert s.count(CHR_PLACEHOLDER) == 1, "chr pattern must have '%i' in it"
-
-
 class BedFileParams(BaseModel):
     """Parameters decribing how to parse a bed-like file.
 
@@ -250,15 +259,10 @@ class BedFileParams(BaseModel):
     sep - column separator regexp (for "beds" with spaces instead of tabs)
     """
 
-    chr_pattern: ChrPattern = ChrPattern("chr%i")
+    chr_pattern: ChrPattern = ChrPattern()
     bed_cols: BedColumns = BedColumns()
     skip_lines: NonNegativeInt = 0
     sep: str = "\t"
-
-    @validator("chr_pattern")
-    def is_valid_pattern(cls, v: ChrPattern) -> ChrPattern:
-        assert_chr_pattern(v)
-        return v
 
 
 class BedFile(BaseModel):
@@ -272,12 +276,7 @@ class VCFFile(BaseModel):
     """Inport specs for a vcf file."""
 
     src: BedSrc
-    chr_pattern: ChrPattern = ChrPattern("chr%i")
-
-    @validator("chr_pattern")
-    def is_valid_pattern(cls, v: ChrPattern) -> ChrPattern:
-        assert_chr_pattern(v)
-        return v
+    chr_pattern: ChrPattern = ChrPattern()
 
 
 class RMSKFile(BedFile):
@@ -518,12 +517,7 @@ class RefFile(BaseModel):
     """Specification for reference file."""
 
     src: RefSrc
-    chr_pattern: ChrPattern = ChrPattern("chr%i")
-
-    @validator("chr_pattern")
-    def is_valid_pattern(cls, v: ChrPattern) -> ChrPattern:
-        assert_chr_pattern(v)
-        return v
+    chr_pattern: ChrPattern = ChrPattern()
 
 
 class Functional(BaseModel):
@@ -838,12 +832,16 @@ class GiabStrats(BaseModel):
     def refkey_to_final_chr_pattern(self, k: RefKey) -> ChrPattern:
         return self.stratifications[k].ref.chr_pattern
 
-    def refkey_to_bench_chr_pattern(self, rk: RefKey, bk: BuildKey) -> str | None:
+    def refkey_to_bench_chr_pattern(
+        self, rk: RefKey, bk: BuildKey
+    ) -> ChrPattern | None:
         return fmap_maybe(
             lambda x: x.bench_vcf.chr_pattern, self.buildkey_to_build(rk, bk).bench
         )
 
-    def refkey_to_query_chr_pattern(self, rk: RefKey, bk: BuildKey) -> str | None:
+    def refkey_to_query_chr_pattern(
+        self, rk: RefKey, bk: BuildKey
+    ) -> ChrPattern | None:
         return fmap_maybe(
             lambda x: x.query_vcf.chr_pattern, self.buildkey_to_build(rk, bk).bench
         )
