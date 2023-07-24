@@ -1,3 +1,11 @@
+# 3.0.0
+
+- generalize chr prefix into a pattern (to allow recognizing chromosome names
+  like "chr1_PATERNAL")
+- relax constraints in input files; if not provided, output will not be
+  generated; this is useful for cases where the input files do not exist.
+  - affected strats: low complexity, xy, functional
+
 # 2.10.0
 
 - add AT/GC to low complexity just for homopolymers
