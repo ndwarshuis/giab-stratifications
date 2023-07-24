@@ -1,3 +1,8 @@
+# 4.0.0
+
+- allow custom chromosome mappings (to deal with the HG2 paternal asms having
+'chrX_MATERNAL' and vice versa)
+
 # 3.0.0
 
 - generalize chr prefix into a pattern (to allow recognizing chromosome names
