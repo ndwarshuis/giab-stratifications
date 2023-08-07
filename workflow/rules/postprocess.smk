@@ -277,3 +277,55 @@ rule summarize_happy:
         "../envs/rmarkdown.yml"
     script:
         "../scripts/rmarkdown/rmarkdown/benchmark.Rmd"
+
+
+rule copy_READMEs:
+    input:
+        main="workflow/files/README_main.md",
+        validation="workflow/files/README_validation.md",
+    output:
+        validation=validation_dir / "README.md",
+        main=config.final_root_dir / "README.md",
+    shell:
+        """
+        cp {input.main} {output.main}
+        cp {input.validation} {output.validation}
+        """
+
+
+rule generate_tarballs:
+    input:
+        all_strats=rules.generate_tsv_list.output,
+        _checksums=rules.generate_md5sums.output,
+    output:
+        config.final_root_dir / "genome-stratifications-{ref_key}@{build_key}.tar.gz",
+    shell:
+        """
+        tar czf {output} $(dirname {input})
+        """
+
+
+rule checksum_everything:
+    input:
+        rules.copy_READMEs.output,
+        rules.validate_strats.output,
+        rules.summarize_happy.output,
+        rules.all_comparisons.input,
+        [
+            expand(rules.generate_tarballs.output, ref_key=rk, build_key=bk)
+            for rk, r in config.stratifications.items()
+            for bk in r.builds
+        ],
+    output:
+        config.final_root_dir / "genome-stratifications-md5s.txt",
+    params:
+        root=config.final_root_dir,
+    shell:
+        """
+        find {params.root} -type f -exec md5sum {{}} + | \
+        sed 's|{params.root}|\.|' | \
+        grep -v "\./genome-stratifications-md5s\.txt" | \
+        sort -k2,2 > {output} && \
+        cd {params.root} && \
+        md5sum -c --quiet genome-stratifications-md5s.txt
+        """

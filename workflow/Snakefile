@@ -57,15 +57,4 @@ rule all_resources:
 
 rule all:
     input:
-        rules.validate_strats.output,
-        rules.summarize_happy.output,
-        rules.all_comparisons.input,
-        [
-            expand(
-                rules.generate_md5sums.output + rules.generate_tsv_list.output,
-                ref_key=rk,
-                build_key=bk,
-            )
-            for rk, r in config.stratifications.items()
-            for bk in r.builds
-        ],
+        rules.checksum_everything.output,
