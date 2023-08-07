@@ -471,6 +471,8 @@ class Include(BaseModel):
     segdups: bool = True
     union: bool = True
     telomeres: bool = True
+    # TODO also add KIR and MHC since these should be derivable from refseq
+    vdj: bool = True
     mappability: set[LowMapParams] = {
         LowMapParams(length=250, mismatches=0, indels=0),
         LowMapParams(length=100, mismatches=2, indels=1),
@@ -989,6 +991,16 @@ class GiabStrats(BaseModel):
 
     def want_gaps(self, rk: RefKey) -> bool:
         return self.stratifications[rk].gap is not None
+
+    def want_vdj(self, rk: RefKey, bk: BuildKey) -> bool:
+        cis = self.buildkey_to_chr_indices(rk, bk)
+        vdj_chrs = {ChrIndex(i) for i in [2, 7, 14, 22]}
+        return (
+            self.buildkey_to_include(rk, bk).vdj
+            and self.refkey_to_functional_ftbl_src(rk) is not None
+            and self.refkey_to_functional_gff_src(rk) is not None
+            and len(cis & vdj_chrs) > 0
+        )
 
     # key lists for downloading resources
 

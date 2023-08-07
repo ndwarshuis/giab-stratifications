@@ -26,7 +26,10 @@ def read_bed(
         comment="#",
         skiprows=b.skip_lines,
         # satisfy type checker :/
-        dtype={k: v for k, v in b.bed_cols.columns.items()},
+        dtype={
+            **{k: v for k, v in b.bed_cols.columns.items()},
+            **{m: str for m in more},
+        },
     )
     df.columns = pd.Index(range(len(bedcols)))
     return df

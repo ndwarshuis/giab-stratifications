@@ -206,9 +206,9 @@ stratifications:
         # Here, the file will be named "OtherDifficult/GRCh38_VDJ.bed.gz".
         other_strats:
           OtherDifficult:
-            VDJ:
+            contigs_lt500kb:
               src:
-                url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_VDJ.bed.gz
+                url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_contigs_lt500kb.bed.gz
               remove_gaps: true
 
         # Benchmark files for this reference (if desired). Each key will be fed
