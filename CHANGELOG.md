@@ -1,3 +1,7 @@
+# 4.1.0
+
+- automatically derive vdj regions from refseq
+
 # 4.0.0
 
 - allow custom chromosome mappings (to deal with the HG2 paternal asms having
