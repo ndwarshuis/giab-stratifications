@@ -5,6 +5,7 @@ from common.config import CoreLevel
 
 post_inter_dir = config.intermediate_build_dir / "postprocess"
 post_log_dir = config.log_build_dir / "postprocess"
+validation_dir = config.final_root_dir / ".validation"
 
 
 def expand_strat_targets_inner(ref_key, build_key):
@@ -23,6 +24,7 @@ def expand_strat_targets_inner(ref_key, build_key):
         (rules.all_segdup_and_map.input, config.want_segdup_and_map),
         (rules.all_alldifficult.input, config.want_alldifficult),
         (rules.get_gaps.output, lambda r, _: config.want_gaps(r)),
+        (rules.remove_vdj_gaps.output, config.want_vdj),
     ]
     all_function = [
         f(ref_key, build_key)
@@ -130,7 +132,7 @@ rule compare_strats:
         # the thing I actually need here is the parent directory
         new_list=rules.generate_tsv_list.output[0],
     output:
-        post_inter_dir / "comparison" / "diagnostics.tsv",
+        validation_dir / "{ref_key}@{build_key}" / "diagnostics.tsv",
     log:
         post_log_dir / "comparison.log",
     conda:
@@ -196,7 +198,7 @@ rule validate_strats:
         ),
         chr_mapper=rules.write_chr_name_mapper.output,
     output:
-        config.final_root_dir / ".validation" / "coverage_plots.html",
+        validation_dir / "coverage_plots.html",
     conda:
         "../envs/rmarkdown.yml"
     params:
@@ -268,10 +270,62 @@ rule summarize_happy:
             if config.want_benchmark(rk, bk)
         ],
     output:
-        config.final_root_dir / ".validation" / "benchmark_summary.html",
+        validation_dir / "benchmark_summary.html",
     params:
         subsets=config.benchmark_subsets,
     conda:
         "../envs/rmarkdown.yml"
     script:
         "../scripts/rmarkdown/rmarkdown/benchmark.Rmd"
+
+
+rule copy_READMEs:
+    input:
+        main="workflow/files/README_main.md",
+        validation="workflow/files/README_validation.md",
+    output:
+        validation=validation_dir / "README.md",
+        main=config.final_root_dir / "README.md",
+    shell:
+        """
+        cp {input.main} {output.main}
+        cp {input.validation} {output.validation}
+        """
+
+
+rule generate_tarballs:
+    input:
+        all_strats=rules.generate_tsv_list.output,
+        _checksums=rules.generate_md5sums.output,
+    output:
+        config.final_root_dir / "genome-stratifications-{ref_key}@{build_key}.tar.gz",
+    shell:
+        """
+        tar czf {output} $(dirname {input})
+        """
+
+
+rule checksum_everything:
+    input:
+        rules.copy_READMEs.output,
+        rules.validate_strats.output,
+        rules.summarize_happy.output,
+        rules.all_comparisons.input,
+        [
+            expand(rules.generate_tarballs.output, ref_key=rk, build_key=bk)
+            for rk, r in config.stratifications.items()
+            for bk in r.builds
+        ],
+    output:
+        config.final_root_dir / "genome-stratifications-md5s.txt",
+    params:
+        root=config.final_root_dir,
+    shell:
+        """
+        find {params.root} -type f -exec md5sum {{}} + | \
+        sed 's|{params.root}|\.|' | \
+        grep -v "\./genome-stratifications-md5s\.txt" | \
+        sort -k2,2 > {output} && \
+        cd {params.root} && \
+        md5sum -c --quiet genome-stratifications-md5s.txt
+        """

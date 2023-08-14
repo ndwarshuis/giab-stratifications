@@ -124,6 +124,53 @@ rule get_gapless:
         "../scripts/python/bedtools/ref/get_gapless.py"
 
 
+use rule download_ref as download_ftbl with:
+    output:
+        config.ref_src_dir / "ftbl.txt.gz",
+    params:
+        src=lambda w: config.refkey_to_functional_ftbl_src(w.ref_key),
+    localrule: True
+    log:
+        ref_master_log_dir / "ftbl.log",
+
+
+use rule download_ref as download_gff with:
+    output:
+        config.ref_src_dir / "gff.txt.gz",
+    params:
+        src=lambda w: config.refkey_to_functional_gff_src(w.ref_key),
+    localrule: True
+    log:
+        ref_master_log_dir / "gff.log",
+
+
+rule ftbl_to_mapper:
+    input:
+        rules.download_ftbl.output,
+    output:
+        ref_inter_dir / "ftbl_mapper.json",
+    conda:
+        "../envs/bedtools.yml"
+    script:
+        "../scripts/python/bedtools/ref/get_ftbl_mapper.py"
+
+
+rule gff_to_bed:
+    input:
+        rules.download_gff.output,
+    output:
+        ref_master_dir / "gff.bed.gz",
+    conda:
+        "../envs/bedtools.yml"
+    shell:
+        """
+        gunzip -c {input} | \
+        grep -v '^#' | \
+        awk -F "\t" 'OFS="\t" {{ print $1,$4,$5,$2,$3,$9 }}' | \
+        bgzip -c > {output}
+        """
+
+
 use rule download_ref as download_bench_vcf with:
     output:
         bench_src_dir / "{build_key}_bench.vcf.gz",

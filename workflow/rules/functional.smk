@@ -10,41 +10,21 @@ def func_final_path(name):
     return config.build_strat_path(func_dir, name)
 
 
-use rule download_ref as download_ftbl with:
-    output:
-        func_src_dir / "ftbl.txt.gz",
-    params:
-        src=lambda w: config.refkey_to_functional_ftbl_src(w.ref_key),
-    localrule: True
-    log:
-        func_log_build_dir / "ftbl.log",
-
-
-use rule download_ref as download_gff with:
-    output:
-        func_src_dir / "gff.txt.gz",
-    params:
-        src=lambda w: config.refkey_to_functional_gff_src(w.ref_key),
-    localrule: True
-    log:
-        func_log_build_dir / "gff.log",
-
-
-rule combine_ftbl_and_gff:
+rule filter_cds:
     input:
-        ftbl=rules.download_ftbl.output,
-        gff=rules.download_gff.output,
+        mapper=rules.ftbl_to_mapper.output[0],
+        bed=rules.gff_to_bed.output[0],
     output:
         func_inter_dir / "refseq_cds.bed.gz",
     conda:
         "../envs/bedtools.yml"
     script:
-        "../scripts/python/bedtools/functional/combine_ftbl_and_gff.py"
+        "../scripts/python/bedtools/functional/filter_cds.py"
 
 
 rule merge_functional:
     input:
-        bed=rules.combine_ftbl_and_gff.output,
+        bed=rules.filter_cds.output,
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
