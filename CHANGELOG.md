@@ -82,6 +82,9 @@ now included:
 * `OtherDifficult/CHM13_MHC.bed.gz`
 * `OtherDifficult/CHM13_VDJ.bed.gz`
 
+Note that the VDJ strats were made using the refseq annotations as updated for
+the other references (see below).
+
 ### Removals
 
 #### Segmental duplications
@@ -100,6 +103,8 @@ Additionally, the 99 percent identity file was removed:
 ### Revisions to regions
 
 #### All references
+
+##### Low Complexity
 
 For low complexity stratifications, the di/tri/quad simple repeat
 stratifications are now constructed with an upper limit of 150bp in the highest
@@ -127,6 +132,15 @@ Affected files:
 * `LowComplexity/*_SimpleRepeat_triTR_ge150_AT_slop5.bed.gz`
 * `LowComplexity/*_SimpleRepeat_triTR_ge150_GC_slop5.bed.gz`
 * `LowComplexity/*_SimpleRepeat_triTR_ge150_slop5.bed.g`
+
+##### VDJ
+
+The VDJ stratifications are now created using the refseq annotations. Note that
+for CHM13 this is a totally new stratification, and for the other references
+this replaces the previous version.
+
+Furthermore, the old VDJ stratifications for GRCh37/38 did not include the three
+T cell loci on chromosomes 7 (2 loci) and 14 (1 locus). These were also added.
 
 #### GRCh37
 
