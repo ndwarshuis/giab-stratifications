@@ -203,7 +203,7 @@ stratifications:
         # into this pipeline ;) This is a nested dictionary where the first
         # level is a key corresponding to the "other_strats" key at the toplevel
         # configuration and the next layer is the name of the stratification.
-        # Here, the file will be named "OtherDifficult/GRCh38_VDJ.bed.gz".
+        # Here, the file will be named "OtherDifficult/GRCh38_contigs_lt500kb.bed.gz".
         other_strats:
           OtherDifficult:
             contigs_lt500kb:
