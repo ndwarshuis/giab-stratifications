@@ -1,3 +1,10 @@
+# 4.1.1
+
+- remove extra tarball parent directories
+- fix comment line skipping when reading bed files
+- don't make validation directory hidden
+- remove extra static config
+
 # 4.1.0
 
 - automatically derive vdj regions from refseq
