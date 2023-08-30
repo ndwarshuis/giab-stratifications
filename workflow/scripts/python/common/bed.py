@@ -1,3 +1,4 @@
+import gzip
 import pandas as pd
 from pathlib import Path
 import common.config as cfg
@@ -18,13 +19,29 @@ def read_bed(
     in the order given starting from 3.
     """
     bedcols = [*b.bed_cols.columns, *more]
+    # NOTE: the 'comment="#"' parameter in pandas will strip everything after
+    # the '#' in the line, which if at the beginning will include the entire
+    # line and it will be skipped, and if not will only obliterate the
+    # remainder. Either way this is a problem, since I only care about initial
+    # lines starting with '#'. Bed files shouldn't have comments in the middle,
+    # and some 'bed' files use '#' as a delimiter within a field.
+    #
+    # This hacky bit will count the number of lines starting with a '#' and add
+    # to the original "skip_lines" parameter, thereby skipping all starting
+    # comments as well as the number of lines we wish to skip with 'skip_lines'.
+    total_skip = b.skip_lines
+    with gzip.open(path, "rt") as f:
+        while line := next(f, None):
+            if line.startswith("#"):
+                total_skip += 1
+            else:
+                break
     df = pd.read_table(
         path,
         header=None,
         usecols=bedcols,
         sep=b.sep,
-        comment="#",
-        skiprows=b.skip_lines,
+        skiprows=total_skip,
         # satisfy type checker :/
         dtype={
             **{k: v for k, v in b.bed_cols.columns.items()},

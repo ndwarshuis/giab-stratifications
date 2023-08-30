@@ -5,7 +5,7 @@ from common.config import CoreLevel
 
 post_inter_dir = config.intermediate_build_dir / "postprocess"
 post_log_dir = config.log_build_dir / "postprocess"
-validation_dir = config.final_root_dir / ".validation"
+validation_dir = config.final_root_dir / "validation"
 
 
 def expand_strat_targets_inner(ref_key, build_key):
@@ -299,9 +299,12 @@ rule generate_tarballs:
         _checksums=rules.generate_md5sums.output,
     output:
         config.final_root_dir / "genome-stratifications-{ref_key}@{build_key}.tar.gz",
+    params:
+        parent=lambda _, input: Path(input.all_strats[0]).parent.parent,
+        target=lambda _, input: Path(input.all_strats[0]).parent.name,
     shell:
         """
-        tar czf {output} $(dirname {input})
+        tar czf {output} -C {params.parent} {params.target}
         """
 
 
