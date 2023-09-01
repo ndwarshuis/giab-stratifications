@@ -514,34 +514,7 @@ stratifications:
               chr_pattern: {template: '%i'}
 
         comparison:
-          other: GRCh37_v31
-          replacements:
-            - [Mappability, mappability]
-            - [FunctionalTechnicallyDifficult, FunctionalTechnicallyDifficultRegions]
-          path_mapper:
-            LowComplexity/GRCh37_AllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz: LowComplexity/GRCh37_AllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
-            LowComplexity/GRCh37_AllTandemRepeats_ge10000bp_slop5.bed.gz: LowComplexity/GRCh37_AllTandemRepeats_gt10000bp_slop5.bed.gz
-            LowComplexity/GRCh37_AllTandemRepeats_ge100bp_slop5.bed.gz: LowComplexity/GRCh37_AllTandemRepeats_gt100bp_slop5.bed.gz
-            LowComplexity/GRCh37_AllTandemRepeats.bed.gz: LowComplexity/GRCh37_allTandemRepeats.bed.gz
-            LowComplexity/GRCh37_notinAllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz: LowComplexity/GRCh37_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_diTR_10to49_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_diTR_11to50_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_diTR_50to199_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_diTR_51to200_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_diTR_ge200_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_diTR_gt200_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_homopolymer_ge12_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_homopolymer_gt11_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_homopolymer_ge21_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_homopolymer_gt20_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_imperfecthomopolge11_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_imperfecthomopolgt10_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_imperfecthomopolge21_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_imperfecthomopolgt20_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_quadTR_19to49_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_quadTR_20to50_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_quadTR_50to199_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_quadTR_51to200_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_quadTR_ge200_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_quadTR_gt200_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_triTR_14to49_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_triTR_15to50_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_triTR_50to199_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_triTR_51to200_slop5.bed.gz
-            LowComplexity/GRCh37_SimpleRepeat_triTR_ge200_slop5.bed.gz: LowComplexity/GRCh37_SimpleRepeat_triTR_gt200_slop5.bed.gz
-            LowComplexity/GRCh37_AllTandemRepeats_le50bp_slop5.bed.gz: LowComplexity/GRCh37_AllTandemRepeats_lt51bp_slop5.bed.gz
-            LowComplexity/GRCh37_AllTandemRepeats_ge101bp_slop5.bed.gz: LowComplexity/GRCh37_AllTandemRepeats_gt100bp_slop5.bed.gz
-            LowComplexity/GRCh37_AllTandemRepeats_ge10001bp_slop5.bed.gz: LowComplexity/GRCh37_AllTandemRepeats_gt10000bp_slop5.bed.gz
-            Functional/GRCh37_notinrefseq_cds.bed.gz: FunctionalRegions/GRCh37_notinrefseq_cds.bed.gz
-            Functional/GRCh37_refseq_cds.bed.gz: FunctionalRegions/GRCh37_refseq_cds.bed.gz
+          other: GRCh37_v32
 
         include:
           telomeres: false
@@ -569,7 +542,7 @@ stratifications:
       simreps:
         src:
           url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
-          md5: b0e801344ba654a5146a2ba3e9973462
+          md5: aa89dad8ab80270f963f2c99f1df3697
         params:
           bed_cols: {chr: 1, start: 2, end: 3}
     xy:
@@ -959,35 +932,7 @@ stratifications:
               md5: 5f70b5f407b48e701376bad6129330e5
 
         comparison:
-          other: GRCh38_v31
-          replacements:
-            - [Mappability, mappability]
-            - [Ancestry, ancestry]
-            - [FunctionalTechnicallyDifficult, FunctionalTechnicallyDifficultRegions]
-          path_mapper:
-            LowComplexity/GRCh38_AllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz: LowComplexity/GRCh38_AllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
-            LowComplexity/GRCh38_AllTandemRepeats_ge10000bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt10000bp_slop5.bed.gz
-            LowComplexity/GRCh38_AllTandemRepeats_ge100bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt100bp_slop5.bed.gz
-            LowComplexity/GRCh38_AllTandemRepeats.bed.gz: LowComplexity/GRCh38_allTandemRepeats.bed.gz
-            LowComplexity/GRCh38_notinAllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz: LowComplexity/GRCh38_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_diTR_10to49_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_diTR_11to50_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_diTR_50to199_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_diTR_51to200_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_diTR_ge200_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_diTR_gt200_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_homopolymer_ge12_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_homopolymer_gt11_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_homopolymer_ge21_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_homopolymer_gt20_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_imperfecthomopolge11_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_imperfecthomopolgt10_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_imperfecthomopolge21_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_imperfecthomopolgt20_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_quadTR_19to49_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_quadTR_20to50_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_quadTR_50to199_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_quadTR_51to200_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_quadTR_ge200_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_quadTR_gt200_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_triTR_14to49_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_triTR_15to50_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_triTR_50to199_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_triTR_51to200_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_triTR_ge200_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_triTR_gt200_slop5.bed.gz
-            LowComplexity/GRCh38_AllTandemRepeats_le50bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_lt51bp_slop5.bed.gz
-            LowComplexity/GRCh38_AllTandemRepeats_ge101bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt100bp_slop5.bed.gz
-            LowComplexity/GRCh38_AllTandemRepeats_ge10001bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt10000bp_slop5.bed.gz
-            Functional/GRCh38_notinrefseq_cds.bed.gz: FunctionalRegions/GRCh38_notinrefseq_cds.bed.gz
-            Functional/GRCh38_refseq_cds.bed.gz: FunctionalRegions/GRCh38_refseq_cds.bed.gz
+          other: GRCh38_v32
 
         include:
           telomeres: false
@@ -999,20 +944,31 @@ stratifications:
         md5: 42b830df45df08ab63068e9128156e56
     low_complexity:
       rmsk:
+        # from https://hgdownload.soe.ucsc.edu/gbdb/hs1/t2tRepeatMasker/chm13v2.0_rmsk.bb
+        # script to run:
+        # > curl https://hgdownload.soe.ucsc.edu/gbdb/hs1/t2tRepeatMasker/chm13v2.0_rmsk.bb > rmsk.bb
+        # > bigBedToBed rmsk.bb rmsk.bed
+        # > cat rmsk.bed | cut -f1-4 | bgzip -c > rmsk.bed.gz
+        #
+        # NOTE: the class name is embedded in a larger string like "<name>#<class>/<subclass>" but
+        # this shouldn't matter since we are just filtering using grep and the class name shouldn't
+        # appear anywhere else in the line
         src:
-          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/annotation/chm13v2.0_RepeatMasker_4.1.2p1.bed
-          md5: f304b3f2a98c1772c693e3b01c33e409
-        class_col: 6
+          filepath: data/CHM13/LowComplexity/rmsk.bed.gz
+          md5: 724028cb8eb949b610766d713638484b
+        class_col: 3
       simreps:
+        # from https://hgdownload.soe.ucsc.edu/gbdb/hs1/bbi/simpleRepeat.bb
+        # converted bb to bed, renamed chromosomes to chr1/2..., and gzip-ed before using
         src:
-          # from here: https://app.globus.org/file-manager?origin_id=9db1f0a6-a05a-11ea-8f06-0a21f750d19b&origin_path=%2Fteam-segdups%2FAssembly_analysis%2FMasked%2F/T2T_CHM13v2_trf.bed
           filepath: data/CHM13/LowComplexity/trf.bed.gz
-          md5: e7b3c29aab9bce3cbbd29517f35c27f8
-      # https://t2t-consortium.slack.com/files/ULT7E06GL/F039A96RY84/t2t_censat_chm13v2.0_trackv2.0.bed
+          md5: 9fea5926dd1fad4a2e024552f82ce401
       satellites:
         src:
+          # from https://hgdownload.soe.ucsc.edu/gbdb/hs1/censat/censat.bb
+          # converted bb to bed and gzip-ed before using
           filepath: data/CHM13/LowComplexity/censat.bed.gz
-          md5: 5faa89497c10534e61e03c97a8e7392f
+          md5: aa89dad8ab80270f963f2c99f1df3697
         params:
           skip_lines: 1
         sat_col: 3
@@ -1081,34 +1037,44 @@ stratifications:
               md5: 891f3c539842f148213c6bb2ec493606
 
         comparison:
-          other: CHM13_v31
-          replacements: [[CHM13, CHM13v2.0]]
-          path_mapper:
-            LowComplexity/CHM13_AllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
-            LowComplexity/CHM13_AllTandemRepeats_ge10000bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_gt10000bp_slop5.bed.gz
-            LowComplexity/CHM13_AllTandemRepeats_ge100bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_gt100bp_slop5.bed.gz
-            LowComplexity/CHM13_AllTandemRepeats.bed.gz: LowComplexity/CHM13v2.0_allTandemRepeats.bed.gz
-            LowComplexity/CHM13_notinAllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz: LowComplexity/CHM13v2.0_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_diTR_10to49_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_diTR_11to50_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_diTR_50to199_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_diTR_51to200_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_diTR_ge200_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_diTR_gt200_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_homopolymer_ge12_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_homopolymer_gt11_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_homopolymer_ge21_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_homopolymer_gt20_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_imperfecthomopolge11_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_imperfecthomopolgt10_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_imperfecthomopolge21_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_imperfecthomopolgt20_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_quadTR_19to49_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_quadTR_20to50_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_quadTR_50to199_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_quadTR_51to200_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_quadTR_ge200_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_quadTR_gt200_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_triTR_14to49_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_triTR_15to50_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_triTR_50to199_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_triTR_51to200_slop5.bed.gz
-            LowComplexity/CHM13_SimpleRepeat_triTR_ge200_slop5.bed.gz: LowComplexity/CHM13v2.0_SimpleRepeat_triTR_gt200_slop5.bed.gz
-            LowComplexity/CHM13_AllTandemRepeats_le50bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_lt51bp_slop5.bed.gz
-            LowComplexity/CHM13_AllTandemRepeats_ge101bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_gt100bp_slop5.bed.gz
-            LowComplexity/CHM13_AllTandemRepeats_ge10001bp_slop5.bed.gz: LowComplexity/CHM13v2.0_AllTandemRepeats_gt10000bp_slop5.bed.gz
-            SegmentalDuplications/CHM13_notinsegdups.bed.gz: SegmentalDuplications/CHM13v2.0_notinSegDups.bed.gz
-            SegmentalDuplications/CHM13_segdups.bed.gz: SegmentalDuplications/CHM13v2.0_SegDups.bed.gz
+          other: CHM13_v32
 
+# NOTE: download these manually to their resource paths and remove the two toplevel directories after extraction (these were all tarred to
+# "results/final/<target>" instead of simply "<target>")
 comparison_strats:
-  GRCh37_v31: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/v3.1-genome-stratifications-GRCh37.tar.gz
-  GRCh38_v31: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/v3.1-genome-stratifications-GRCh38.tar.gz
-  CHM13_v31: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/v3.1-genome-stratifications-CHM13v2.0.tar.gz
+  GRCh37_v32: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.2/genome-stratifications-GRCh37@all.tar.gz
+  GRCh38_v32: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.2/genome-stratifications-GRCh38@all.tar.gz
+  CHM13_v32: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.2/genome-stratifications-CHM13@all.tar.gz
+
+benchmark_subsets:
+  - AllAutosomes
+  - AllTandemRepeats
+  - AllHomopolymers_ge7bp_imperfectge11bp_slop5
+  - AllTandemRepeats_201to10000bp_slop5
+  - AllTandemRepeats_51to200bp_slop5
+  - AllTandemRepeats_ge10001bp_slop5
+  - AllTandemRepeats_ge101bp_slop5
+  - AllTandemRepeats_le50bp_slop5
+  - SimpleRepeat_diTR_10to49_slop5
+  - SimpleRepeat_homopolymer_7to11_slop5
+  - SimpleRepeat_homopolymer_ge21_slop5
+  - SimpleRepeat_imperfecthomopolge11_slop5
+  - SimpleRepeat_imperfecthomopolge21_slop5
+  - SimpleRepeat_homopolymer_7to11_AT_slop5
+  - SimpleRepeat_homopolymer_ge21_AT_slop5
+  - SimpleRepeat_imperfecthomopolge11_AT_slop5
+  - SimpleRepeat_imperfecthomopolge21_AT_slop5
+  - SimpleRepeat_homopolymer_7to11_GC_slop5
+  - SimpleRepeat_homopolymer_ge21_GC_slop5
+  - SimpleRepeat_imperfecthomopolge11_GC_slop5
+  - SimpleRepeat_imperfecthomopolge21_GC_slop5
+  - alldifficultregions
+  - alllowmapandsegdupregions
+  - chrX_PAR
+  - chrX_XTR
+  - chrY_XTR
+  - notinalldifficultregions
+  - notinAllHomopolymers_ge7bp_imperfectge11bp_slop5
+  - notinAllTandemRepeatsandHomopolymers_slop5
+  - segdups
+
