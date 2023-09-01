@@ -1,7 +1,64 @@
-# 3.2
-
 All updates are summarized here. For exact versions and provenance information,
 see the configuration file at `config/all.yml`.
+
+# 3.3
+
+## Small fixes
+
+- Fixed minor bugs relating to tarball structure
+- Fixed bug that prevent validation files from uploading
+
+## Stratification updates
+
+Only CHM13 was changed in this release.
+
+### Low complexity
+
+Low complexity inputs ([repeat
+masker](https://hgdownload.soe.ucsc.edu/gbdb/hs1/t2tRepeatMasker/chm13v2.0_rmsk.bb),
+[simple repeats](https://hgdownload.soe.ucsc.edu/gbdb/hs1/bbi/simpleRepeat.bb),
+and [censat](https://hgdownload.soe.ucsc.edu/gbdb/hs1/censat/censat.bb)) are now
+sourced from UCSC tracks.
+
+In summary this vastly expanded the size of many of the low complexity
+stratifications in terms of coverage (in some cases by 3x). See the comparison
+b/t 3.2 and 3.3 under `validation/CHM13/diagnostics.tsv` for the exact changes.
+Some of these stratitifications also removed a few existing regions, but this
+was miniscule compared to what was added.
+
+Affected stratifications:
+
+`LowComplexity/CHM13_AllTandemRepeats.bed.gz`
+`LowComplexity/CHM13_AllTandemRepeats_201to10000bp_slop5.bed.gz`
+`LowComplexity/CHM13_AllTandemRepeats_51to200bp_slop5.bed.gz`
+`LowComplexity/CHM13_AllTandemRepeats_ge10001bp_slop5.bed.gz`
+`LowComplexity/CHM13_AllTandemRepeats_ge101bp_slop5.bed.gz`
+`LowComplexity/CHM13_AllTandemRepeats_le50bp_slop5.bed.gz`
+`LowComplexity/CHM13_AllTandemRepeatsandHomopolymers_slop5.bed.gz`
+`LowComplexity/CHM13_notinAllTandemRepeatsandHomopolymers_slop5.bed.gz`
+`LowComplexity/CHM13_notinallTandemRepeats.bed.gz`
+
+Additionally, these union stratifications inherited the expansions to the
+low complexity regions above:
+
+`Union/CHM13_alldifficultregions.bed.gz`
+`Union/CHM13_notinalldifficultregions.bed.gz`
+
+### Mappability
+
+Some mappability stratifications (and the union stratifications that depend on
+them) changed slightly due to non-determinism in GEM. These changes are
+miniscule and amount to several hundred bases total. They are documented here
+for completion:
+
+`Mappability/CHM13_lowmappabilityall.bed.gz`
+`Mappability/CHM13_nonunique_l100_m2_e1.bed.gz`
+`Mappability/CHM13_notinlowmappabilityall.bed.gz`
+`Union/CHM13_alllowmapandsegdupregions.bed.gz`
+`Union/CHM13_notinalllowmapandsegdupregions.bed.gz`
+
+# 3.2
+
 
 ### Changes to naming convention
 
