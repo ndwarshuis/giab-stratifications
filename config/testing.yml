@@ -55,137 +55,138 @@ stratifications:
       #   template: 'chr%i'
       #   special: {}
 
-    # A BED file containing gaps (if any) in the fasta reference. Gaps usually
-    # mean regions with 'N' or some other indeterminate base. These gaps will
-    # be subtracted off the final stratification files. If this is null, gaps
-    # are not considered.
-    gap:
-      src: 
-        # Location of the fasta (either url or filepath). This operates in the
-        # same manner as the same key for 'ref' except that these can be in
-        # either gzip or bgzip.
-        #
-        # filepath: path/to/local/file
-        # url: https://url/to/file
-        url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
-
-        # Analogous for that in 'ref' except the checksum is calculated after
-        # gzipping the file if it is not already compressed
-        md5: 4880b2f4c3f08766003855818f0db02d
-
-      # Params for the bed file
-      params:
-
-        # Analogous to chr pattern above
-        # chr_pattern:
-        #   template: chr%i
-        #   special: {}
-
-        # Number of lines to skip. If the bed file has some unconventional header
-        # it may be necessary to skip the first N lines.
-        #
-        # Default: 0
-        # skip_lines: 1
-
-        # Field separator. Some 'bed' files do not use tabs. In these cases, it is
-        # necessary to specify a field separator manually. May be a pattern as
-        # understood by python.re (for example, to match one of more spaces, which
-        # sometimes happens).
-        #
-        # Default: "\t"
-        # sep: "\s+"
-        
-        # The columns of the bed coordinates in this source file (0-indexed).
-        #
-        # Default: {chr: 0, start: 1, end: 2}
-        bed_cols: {chr: 1, start: 2, end: 3}
-
-    # Source files corresponding to low complexity stratifications.
-    low_complexity:
-
-      # Source files for Repeat Masker. 
-      rmsk:
-        src:
-          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
-          md5: e8afed8cbcfef00b6cc47059c6fb6fa2
-
-        # the column index of the repeat masker class (eg LINE, SINE, etc)
-        class_col: 11
-
-        params:
-          bed_cols: {chr: 5, start: 6, end: 7}
-
-      # Source file for satellite bed file. Analogous to gaps (see above). If
-      # null, satellites will be inferred from repeat masker (above)
-      satellites: null
-
-      # Source file for simple repeats file. Analogous to gaps (see above).
-      simreps:
+    strat_inputs:
+      # A BED file containing gaps (if any) in the fasta reference. Gaps usually
+      # mean regions with 'N' or some other indeterminate base. These gaps will
+      # be subtracted off the final stratification files. If this is null, gaps
+      # are not considered.
+      gap:
         src: 
-          url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
-          md5: b0e801344ba654a5146a2ba3e9973462
+          # Location of the fasta (either url or filepath). This operates in the
+          # same manner as the same key for 'ref' except that these can be in
+          # either gzip or bgzip.
+          #
+          # filepath: path/to/local/file
+          # url: https://url/to/file
+          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
+  
+          # Analogous for that in 'ref' except the checksum is calculated after
+          # gzipping the file if it is not already compressed
+          md5: 4880b2f4c3f08766003855818f0db02d
+  
+        # Params for the bed file
         params:
+  
+          # Analogous to chr pattern above
+          # chr_pattern:
+          #   template: chr%i
+          #   special: {}
+  
+          # Number of lines to skip. If the bed file has some unconventional
+          # header it may be necessary to skip the first N lines.
+          #
+          # Default: 0
+          # skip_lines: 1
+  
+          # Field separator. Some 'bed' files do not use tabs. In these cases,
+          # it is necessary to specify a field separator manually. May be a
+          # pattern as understood by python.re (for example, to match one of
+          # more spaces, which sometimes happens).
+          #
+          # Default: "\t"
+          # sep: "\s+"
+          
+          # The columns of the bed coordinates in this source file (0-indexed).
+          #
+          # Default: {chr: 0, start: 1, end: 2}
           bed_cols: {chr: 1, start: 2, end: 3}
-
-    # Source data and files for sex chromosomal regions.
-    xy:
-      features: 
-        # Source files for features on the X or Y chromosome. Analogous to gaps
-        # (see above) with the addition of the 'level_col' as an option.
-        x_bed:
+  
+      # Source files corresponding to low complexity stratifications.
+      low_complexity:
+  
+        # Source files for Repeat Masker. 
+        rmsk:
+          src:
+            url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
+            md5: e8afed8cbcfef00b6cc47059c6fb6fa2
+  
+          # the column index of the repeat masker class (eg LINE, SINE, etc)
+          class_col: 11
+  
+          params:
+            bed_cols: {chr: 5, start: 6, end: 7}
+  
+        # Source file for satellite bed file. Analogous to gaps (see above). If
+        # null, satellites will be inferred from repeat masker (above)
+        satellites: null
+  
+        # Source file for simple repeats file. Analogous to gaps (see above).
+        simreps:
           src: 
-            url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed
-            md5: 94acda1d4358d30753422799152f4310
-          # Column index for the feature level (eg XTR, Ampliconic, etc)
-          level_col: 3
-        y_bed:
-          src: 
-            url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
-            md5: 770682734c41f5f7c1655adf1f986cb6
-          level_col: 3
-        # Set to true if XTR regions are desired
-        xtr: true
-        # Set to true if Ampliconic regions are desired
-        ampliconic: true
-      # Data for X or Y pseudoautosomal (PAR) regions. Since these are so short
-      # it's easier to simply specify them manually here with two intervals ;)
-      x_par:
-        start: [0, 2781479]
-        end: [155701383, 156030895]
-      y_par:
-        start: [10001, 2781479]
-        end: [56887902, 57217415]
-
-    # Source files for segmental duplications. For now only superdups is used
-    # and supported.
-    segdups:
-      # Source files for superdups. Analogous to gaps (see above)
-      superdups:
-        src:
-          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/genomicSuperDups.txt.gz
-          md5: 502e2b4dd6bf0cbd8dbdd9eb373aaa8e
-        params:
-          bed_cols: {chr: 1, start: 2, end: 3}
-
-    # Source files for function regions stratifications.
-    functional:
-      # Source for the FTBL file. Analogous to gaps src (see above)
-      ftbl_src:
-        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_feature_table.txt.gz
-        md5: e8c6e0bd7a29aee17bc067d0782da065
-      # Source for the GFF file. Analogous to gaps src (see above)
-      gff_src:
-        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gff.gz
-        md5: 6b657881c2c8d2d099a1c1749299538e
-
-    # Mappability parameters for this reference
-    mappability:
-      # A list of patterns to specifify which chromosomes in the reference
-      # should be considered as "unplaced." One would normally want to include
-      # these chromosomes when assessing hard-to-map regions, as unplaced
-      # contigs by definition are hard-to-map. Note that these unplaced contigs
-      # will not be included in the final bed files.
-      unplaced_chr_patterns: ["^chrM$", "^chr.+_.+$"]
+            url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
+            md5: b0e801344ba654a5146a2ba3e9973462
+          params:
+            bed_cols: {chr: 1, start: 2, end: 3}
+  
+      # Source data and files for sex chromosomal regions.
+      xy:
+        features: 
+          # Source files for features on the X or Y chromosome. Analogous to gaps
+          # (see above) with the addition of the 'level_col' as an option.
+          x_bed:
+            src: 
+              url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed
+              md5: 94acda1d4358d30753422799152f4310
+            # Column index for the feature level (eg XTR, Ampliconic, etc)
+            level_col: 3
+          y_bed:
+            src: 
+              url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
+              md5: 770682734c41f5f7c1655adf1f986cb6
+            level_col: 3
+          # Set to true if XTR regions are desired
+          xtr: true
+          # Set to true if Ampliconic regions are desired
+          ampliconic: true
+        # Data for X or Y pseudoautosomal (PAR) regions. Since these are so short
+        # it's easier to simply specify them manually here with two intervals ;)
+        x_par:
+          start: [0, 2781479]
+          end: [155701383, 156030895]
+        y_par:
+          start: [10001, 2781479]
+          end: [56887902, 57217415]
+  
+      # Source files for segmental duplications. For now only superdups is used
+      # and supported.
+      segdups:
+        # Source files for superdups. Analogous to gaps (see above)
+        superdups:
+          src:
+            url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/genomicSuperDups.txt.gz
+            md5: 502e2b4dd6bf0cbd8dbdd9eb373aaa8e
+          params:
+            bed_cols: {chr: 1, start: 2, end: 3}
+  
+      # Source files for function regions stratifications.
+      functional:
+        # Source for the FTBL file. Analogous to gaps src (see above)
+        ftbl_src:
+          url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_feature_table.txt.gz
+          md5: e8c6e0bd7a29aee17bc067d0782da065
+        # Source for the GFF file. Analogous to gaps src (see above)
+        gff_src:
+          url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gff.gz
+          md5: 6b657881c2c8d2d099a1c1749299538e
+  
+      # Mappability parameters for this reference
+      mappability:
+        # A list of patterns to specifify which chromosomes in the reference
+        # should be considered as "unplaced." One would normally want to include
+        # these chromosomes when assessing hard-to-map regions, as unplaced
+        # contigs by definition are hard-to-map. Note that these unplaced contigs
+        # will not be included in the final bed files.
+        unplaced_chr_patterns: ["^chrM$", "^chr.+_.+$"]
 
     # Builds for this stratification. In this example we have two builds (named
     # 'test_autosome' and 'test_xy') which have difference directives for what
@@ -362,67 +363,68 @@ stratifications:
         md5: 12a0bed94078e2d9e8c00da793bbc84e
       chr_pattern:
         template: '%i'
-    gap:
-      src: 
-        url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/gap.txt.gz
-        md5: ec81040d83fd92b431d5abdf3bb0271a
-      params:
-        bed_cols: {chr: 1, start: 2, end: 3}
-    low_complexity:
-      rmsk:
-        src:
-          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/rmsk.txt.gz
-          md5: 540d385787030f6dcecd15e6f7229c32
-        class_col: 11
-        params:
-          bed_cols: {chr: 5, start: 6, end: 7}
-      satellites: null
-      simreps:
+    strat_inputs:
+      gap:
         src: 
-          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/simpleRepeat.txt.gz
-          md5: b8d13e59e6887c9f471ff1ceef92fcb1
+          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/gap.txt.gz
+          md5: ec81040d83fd92b431d5abdf3bb0271a
         params:
           bed_cols: {chr: 1, start: 2, end: 3}
-    xy:
-      features: 
-        x_bed:
-          src: 
-            url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/hg19/chrX_genomic_features_hg19.bed
-            md5: 5af632ccd4a5b0398ca4c0964c93276b
-          level_col: 3
+      low_complexity:
+        rmsk:
+          src:
+            url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/rmsk.txt.gz
+            md5: 540d385787030f6dcecd15e6f7229c32
+          class_col: 11
           params:
-            sep: "\\s+"
-        y_bed:
+            bed_cols: {chr: 5, start: 6, end: 7}
+        satellites: null
+        simreps:
           src: 
-            url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/hg19/chrY_genomic_features_hg19.bed
-            md5: 195dbf25e9b46a4daf528ede71070f74
-          level_col: 3
+            url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/simpleRepeat.txt.gz
+            md5: b8d13e59e6887c9f471ff1ceef92fcb1
           params:
-            sep: "\\s+"
-        xtr: true
-        ampliconic: true
-      x_par:
-        start: [60001, 2699520]
-        end: [154931044, 155260560]
-      y_par:
-        start: [0, 2749806]
-        end: [59133470, 59373566]
-    segdups:
-      superdups:
-        src:
-          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/genomicSuperDups.txt.gz
-          md5: f71d6df1a4c04a15997cf58c6334a4e6
-        params:
-          bed_cols: {chr: 1, start: 2, end: 3}
-    functional:
-      ftbl_src:
-        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.25_GRCh37.p13/GCF_000001405.25_GRCh37.p13_feature_table.txt.gz
-        md5: 3c960463f838d4406e639596d89ae3ca
-      gff_src:
-        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.25_GRCh37.p13/GCF_000001405.25_GRCh37.p13_genomic.gff.gz
-        md5: 2832fbf82812309349a82ebc681d1fdb
-    mappability:
-      unplaced_chr_patterns: ["^chrMT$", "^GL.+$", "^hs37d5$"]
+            bed_cols: {chr: 1, start: 2, end: 3}
+      xy:
+        features: 
+          x_bed:
+            src: 
+              url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/hg19/chrX_genomic_features_hg19.bed
+              md5: 5af632ccd4a5b0398ca4c0964c93276b
+            level_col: 3
+            params:
+              sep: "\\s+"
+          y_bed:
+            src: 
+              url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/hg19/chrY_genomic_features_hg19.bed
+              md5: 195dbf25e9b46a4daf528ede71070f74
+            level_col: 3
+            params:
+              sep: "\\s+"
+          xtr: true
+          ampliconic: true
+        x_par:
+          start: [60001, 2699520]
+          end: [154931044, 155260560]
+        y_par:
+          start: [0, 2749806]
+          end: [59133470, 59373566]
+      segdups:
+        superdups:
+          src:
+            url: https://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/genomicSuperDups.txt.gz
+            md5: f71d6df1a4c04a15997cf58c6334a4e6
+          params:
+            bed_cols: {chr: 1, start: 2, end: 3}
+      functional:
+        ftbl_src:
+          url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.25_GRCh37.p13/GCF_000001405.25_GRCh37.p13_feature_table.txt.gz
+          md5: 3c960463f838d4406e639596d89ae3ca
+        gff_src:
+          url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.25_GRCh37.p13/GCF_000001405.25_GRCh37.p13_genomic.gff.gz
+          md5: 2832fbf82812309349a82ebc681d1fdb
+      mappability:
+        unplaced_chr_patterns: ["^chrMT$", "^GL.+$", "^hs37d5$"]
     builds:
       test-autosome:
         chr_filter: [21, 22]
@@ -443,26 +445,27 @@ stratifications:
       src:
         url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/analysis_set/chm13v2.0.fa.gz
         md5: 42b830df45df08ab63068e9128156e56
-    low_complexity:
-      rmsk:
-        src:
-          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/annotation/chm13v2.0_RepeatMasker_4.1.2p1.bed
-          md5: f304b3f2a98c1772c693e3b01c33e409
-        class_col: 6
-      simreps:
-        src:
-          # from here: https://app.globus.org/file-manager?origin_id=9db1f0a6-a05a-11ea-8f06-0a21f750d19b&origin_path=%2Fteam-segdups%2FAssembly_analysis%2FMasked%2F/T2T_CHM13v2_trf.bed
-          filepath: test/data/CHM13/LowComplexity/trf21and22.bed.gz
-          md5: 73c59d8c9f062fbc75d834b851e2d738
-      # https://t2t-consortium.slack.com/files/ULT7E06GL/F039A96RY84/t2t_censat_chm13v2.0_trackv2.0.bed
-      satellites:
-        src:
-          filepath: test/data/CHM13/LowComplexity/censat21and22.bed.gz
-          md5: cf0ca1d84f41263b25ba1863bca99b5b
-        params:
-          skip_lines: 1
-        # the column with the type of satellite in it (for filtering)
-        sat_col: 3
+    strat_inputs:
+      low_complexity:
+        rmsk:
+          src:
+            url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/CHM13/assemblies/annotation/chm13v2.0_RepeatMasker_4.1.2p1.bed
+            md5: f304b3f2a98c1772c693e3b01c33e409
+          class_col: 6
+        simreps:
+          src:
+            # from here: https://app.globus.org/file-manager?origin_id=9db1f0a6-a05a-11ea-8f06-0a21f750d19b&origin_path=%2Fteam-segdups%2FAssembly_analysis%2FMasked%2F/T2T_CHM13v2_trf.bed
+            filepath: test/data/CHM13/LowComplexity/trf21and22.bed.gz
+            md5: 73c59d8c9f062fbc75d834b851e2d738
+        # https://t2t-consortium.slack.com/files/ULT7E06GL/F039A96RY84/t2t_censat_chm13v2.0_trackv2.0.bed
+        satellites:
+          src:
+            filepath: test/data/CHM13/LowComplexity/censat21and22.bed.gz
+            md5: cf0ca1d84f41263b25ba1863bca99b5b
+          params:
+            skip_lines: 1
+          # the column with the type of satellite in it (for filtering)
+          sat_col: 3
     xy:
       # from a slack thread w/ Melissa Wilson
       features:
@@ -512,23 +515,30 @@ stratifications:
 
   HG002:
     ref:
-      src:
-        url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v0.9.mat_Y_EBV_MT.fasta
-      chr_pattern:
-        template: 'chr%i_MATERNAL'
-    low_complexity:
-      rmsk: null
-      simreps: null
-      satellites: null
-    xy:
-      features: null
-      x_par: null
-      y_par: null
-    segdups:
-      superdups: null
-    functional: null
-    mappability:
-      unplaced_chr_patterns: ["^chr(MT|EBV)$"]
+      hap1:
+        src:
+          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.mat_Y_EBV_MT.fasta
+        chr_pattern:
+          template: 'chr%i_MATERNAL'
+      hap2:
+        src:
+          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.mat_X_EBV_MT.fasta
+        chr_pattern:
+          template: 'chr%i_PATERNAL'
+    strat_inputs:
+      low_complexity:
+        rmsk: null
+        simreps: null
+        satellites: null
+      xy:
+        features: null
+        x_par: null
+        y_par: null
+      segdups:
+        superdups: null
+      functional: null
+      mappability:
+        unplaced_chr_patterns: ["^chr(MT|EBV)$"]
     builds:
       test-autosome:
         chr_filter: [21, 22]
@@ -537,6 +547,7 @@ stratifications:
           segdups: false
           functional: false
           mappability: []
+          hets: false
 
 comparison_strats:
   GRCh38_v31: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/v3.1-genome-stratifications-GRCh38.tar.gz

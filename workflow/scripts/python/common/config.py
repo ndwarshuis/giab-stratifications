@@ -12,21 +12,53 @@ from typing import (
     cast,
     Annotated,
     Generic,
+    Union,
 )
-from typing_extensions import Self
+from typing_extensions import Self, assert_never
 from more_itertools import unzip, unique_everseen
 from common.io import is_gzip, is_bgzip
 
+W = TypeVar("W")
 X = TypeVar("X")
 Y = TypeVar("Y")
+Z = TypeVar("Z")
+
 
 Percent = Annotated[int, Field(ge=0, le=100)]
 
-BuildKey = NewType("BuildKey", str)
-RefKey = NewType("RefKey", str)
+
+# class wrapper so I can pattern match on them (which newtype won't allow)
+class HaploidBuildKey(str):
+    pass
+
+
+class HaploidRefKey(str):
+    pass
+
+
+class DiploidBuildKey(str):
+    pass
+
+
+class DiploidRefKey(str):
+    pass
+
+
+class BuildPair_(NamedTuple, Generic[X, Y]):
+    ref: X
+    build: Y
+
+
+BuildKey = HaploidBuildKey | DiploidBuildKey
+RefKey = HaploidRefKey | DiploidRefKey
+HaploidBuildPair = BuildPair_[HaploidRefKey, HaploidBuildKey]
+DiploidBuildPair = BuildPair_[DiploidRefKey, DiploidBuildKey]
+BuildPair = HaploidBuildPair | DiploidBuildPair
+
 CompareKey = NewType("CompareKey", str)
 OtherLevelKey = NewType("OtherLevelKey", str)
 OtherStratKey = NewType("OtherStratKey", str)
+
 
 CHR_PLACEHOLDER = "%i"
 
@@ -303,12 +335,28 @@ class SatFile(BedFile):
     sat_col: NonNegativeInt
 
 
-class LowComplexity(BaseModel):
+class Diploid_(BaseModel, Generic[X]):
+    hap1: X
+    hap2: X
+
+
+HaploidOrDiploid = Union[X, Diploid_[X]]
+
+
+class LowComplexity_(BaseModel, Generic[X, Y, Z]):
     """Configuration for low complexity stratification."""
 
-    rmsk: RMSKFile | None
-    simreps: BedFile | None
-    satellites: SatFile | None
+    rmsk: X | None
+    simreps: Y | None
+    satellites: Z | None
+
+
+HaploidLowComplexity = LowComplexity_[RMSKFile, BedFile, SatFile]
+DiploidLowComplexity = LowComplexity_[
+    HaploidOrDiploid[RMSKFile],
+    HaploidOrDiploid[BedFile],
+    HaploidOrDiploid[SatFile],
+]
 
 
 class XYFile(BedFile):
@@ -462,7 +510,7 @@ class GCParams(BaseModel):
         return (bounds[-1], bounds[:-1])
 
 
-class Include(BaseModel):
+class IncludeHaploid(BaseModel):
     """Flags to control which stratification levels are included."""
 
     low_complexity: bool = True
@@ -478,6 +526,12 @@ class Include(BaseModel):
         LowMapParams(length=100, mismatches=2, indels=1),
     }
     gc: GCParams | None = GCParams()
+
+
+class IncludeDiploid(IncludeHaploid):
+    """Flags to control which stratification levels are included."""
+
+    hets: bool = True
 
 
 class OtherBedFile(BedFile):
@@ -505,21 +559,33 @@ class BuildCompare(BaseModel):
     ignore_generated: list[str] = []
 
 
-class Build(BaseModel):
+class HaploidBuild(BaseModel):
     """Spec for a stratification build."""
 
     chr_filter: set[ChrIndex]
-    include: Include = Include()
+    include: IncludeHaploid = IncludeHaploid()
     other_strats: OtherStrats = {}
     bench: Bench | None = None
     comparison: BuildCompare | None = None
 
 
-class RefFile(BaseModel):
-    """Specification for reference file."""
+class DiploidBuild(BaseModel):
+    """Spec for a stratification build."""
+
+    chr_filter: set[ChrIndex]
+    include: IncludeDiploid = IncludeDiploid()
+    bench: Bench | None = None
+    comparison: BuildCompare | None = None
+
+
+class RefFileHaploid(BaseModel):
+    """Specification for a haploid reference file."""
 
     src: RefSrc
     chr_pattern: ChrPattern = ChrPattern()
+
+
+RefFileDiploid = Diploid_[RefFileHaploid]
 
 
 class Functional(BaseModel):
@@ -529,17 +595,41 @@ class Functional(BaseModel):
     gff_src: BedSrc
 
 
-class Stratification(BaseModel):
-    """Configuration for stratifications for a given reference."""
-
-    ref: RefFile
-    gap: BedFile | None
-    low_complexity: LowComplexity
+class StratInputs_(BaseModel, Generic[W, X, Y, Z]):
+    gap: W | None
+    low_complexity: X
     xy: XY
     mappability: Mappability | None
-    segdups: SegDups
-    functional: Functional | None
-    builds: dict[BuildKey, Build]
+    segdups: Y
+    functional: Z | None
+
+
+HaploidStratInputs = StratInputs_[
+    BedFile,
+    HaploidLowComplexity,
+    SegDups,
+    Functional,
+]
+DiploidStratInputs = StratInputs_[
+    HaploidOrDiploid[BedFile],
+    DiploidLowComplexity,
+    HaploidOrDiploid[SegDups],
+    HaploidOrDiploid[Functional],
+]
+AnyStratInputs = HaploidStratInputs | DiploidStratInputs
+
+
+class Stratification(BaseModel, Generic[X, Y, Z]):
+    """Configuration for stratifications for a given reference."""
+
+    ref: X
+    strat_inputs: Y
+    builds: dict[BuildKey, Z]
+
+
+HaploidStratification = Stratification[RefFileHaploid, HaploidStratInputs, HaploidBuild]
+DiploidStratification = Stratification[RefFileDiploid, DiploidStratInputs, DiploidBuild]
+AnyStratification = HaploidStratification | DiploidStratification
 
 
 class GiabStrats(BaseModel):
@@ -553,7 +643,8 @@ class GiabStrats(BaseModel):
     ]
     paths: Paths = Paths()
     tools: Tools = Tools()
-    stratifications: dict[RefKey, Stratification]
+    haploid_stratifications: dict[HaploidRefKey, HaploidStratification]
+    diploid_stratifications: dict[DiploidRefKey, DiploidStratification]
     comparison_strats: dict[CompareKey, HttpUrl] = {}
     benchmark_subsets: list[str] = [
         "AllAutosomes",
@@ -586,9 +677,9 @@ class GiabStrats(BaseModel):
     @validator("stratifications", each_item=True)
     def builds_have_valid_existing(
         cls,
-        v: Stratification,
+        v: HaploidStratification,
         values: dict[str, Any],
-    ) -> Stratification:
+    ) -> HaploidStratification:
         try:
             levels = cast(list[OtherLevelKey], values["other_levels"])
             bad = [
@@ -605,12 +696,12 @@ class GiabStrats(BaseModel):
             pass
         return v
 
-    @validator("stratifications", each_item=True)
+    @validator("haploid_stratifications", each_item=True)
     def builds_have_valid_old_version(
         cls,
-        v: Stratification,
+        v: HaploidStratification,
         values: dict[str, Any],
-    ) -> Stratification:
+    ) -> HaploidStratification:
         try:
             prev = cast(dict[CompareKey, HttpUrl], values["previous"])
             bad = [
@@ -731,292 +822,302 @@ class GiabStrats(BaseModel):
 
     # general accessors
 
-    def refkey_to_strat(self, k: RefKey) -> Stratification:
-        return self.stratifications[k]
+    def refkey_to_strat(self, k: RefKey) -> AnyStratification:
+        if isinstance(k, HaploidRefKey):
+            return self.haploid_stratifications[k]
+        elif isinstance(k, DiploidRefKey):
+            return self.diploid_stratifications[k]
+        else:
+            assert_never(k)
 
     def refkey_to_mappability_patterns(self, k: RefKey) -> list[str]:
-        if (m := self.refkey_to_strat(k).mappability) is None:
+        if (m := self.refkey_to_strat(k).strat_inputs.mappability) is None:
             return []
         else:
             return m.unplaced_chr_patterns
 
-    def buildkey_to_build(self, rk: RefKey, bk: BuildKey) -> Build:
-        return self.stratifications[rk].builds[bk]
+    def buildkey_to_build(self, p: BuildPair) -> HaploidBuild | DiploidBuild:
+        return self.refkey_to_strat(p.ref).builds[p.build]
 
-    def buildkey_to_include(self, rk: RefKey, bk: BuildKey) -> Include:
-        return self.buildkey_to_build(rk, bk).include
+    def buildkey_to_include(self, p: BuildPair) -> IncludeHaploid:
+        return self.buildkey_to_build(p).include
 
-    def buildkey_to_chr_indices(self, rk: RefKey, bk: BuildKey) -> set[ChrIndex]:
-        cs = self.stratifications[rk].builds[bk].chr_filter
+    def buildkey_to_chr_indices(self, p: BuildPair) -> set[ChrIndex]:
+        cs = self.buildkey_to_build(p).chr_filter
         return set([x for x in ChrIndex]) if len(cs) == 0 else cs
 
     def otherkey_to_bed(
         self,
-        rk: RefKey,
-        bk: BuildKey,
+        p: HaploidBuildPair,
         lk: OtherLevelKey,
         sk: OtherStratKey,
     ) -> OtherBedFile:
-        return self.buildkey_to_build(rk, bk).other_strats[lk][sk]
+        return self.buildkey_to_build(p).other_strats[lk][sk]
 
     # src getters (for use in downloading inputs)
 
-    def refkey_to_ref_src(self, k: RefKey) -> RefSrc:
-        return self.refkey_to_strat(k).ref.src
+    def refkey_to_haploid_ref_src(self, k: HaploidRefKey) -> RefSrc:
+        return self.haploid_stratifications[k].ref.src
 
-    def refkey_to_bench_vcf_src(self, rk: RefKey, bk: BuildKey) -> BedSrc | None:
-        return fmap_maybe(
-            lambda x: x.bench_vcf.src, self.buildkey_to_build(rk, bk).bench
-        )
+    def refkey_to_bench_vcf_src(self, p: BuildPair) -> BedSrc | None:
+        return fmap_maybe(lambda x: x.bench_vcf.src, self.buildkey_to_build(p).bench)
 
-    def refkey_to_bench_bed_src(self, rk: RefKey, bk: BuildKey) -> BedSrc | None:
-        return fmap_maybe(
-            lambda x: x.bench_bed.src, self.buildkey_to_build(rk, bk).bench
-        )
+    def refkey_to_bench_bed_src(self, p: BuildPair) -> BedSrc | None:
+        return fmap_maybe(lambda x: x.bench_bed.src, self.buildkey_to_build(p).bench)
 
-    def refkey_to_query_vcf_src(self, rk: RefKey, bk: BuildKey) -> BedSrc | None:
-        return fmap_maybe(
-            lambda x: x.query_vcf.src, self.buildkey_to_build(rk, bk).bench
-        )
+    def refkey_to_query_vcf_src(self, p: BuildPair) -> BedSrc | None:
+        return fmap_maybe(lambda x: x.query_vcf.src, self.buildkey_to_build(p).bench)
 
     def refkey_to_gap_src(self, k: RefKey) -> BedSrc | None:
-        return fmap_maybe(lambda x: x.src, self.stratifications[k].gap)
+        return fmap_maybe(
+            lambda x: x.src, self.haploid_stratifications[k].strat_inputs.gap
+        )
 
     def refkey_to_x_features_src(self, k: RefKey) -> BedSrc | None:
-        return fmap_maybe(lambda x: x.x_bed.src, self.stratifications[k].xy.features)
+        return fmap_maybe(
+            lambda x: x.x_bed.src,
+            self.haploid_stratifications[k].strat_inputs.xy.features,
+        )
 
     def refkey_to_y_features_src(self, k: RefKey) -> BedSrc | None:
-        return fmap_maybe(lambda x: x.y_bed.src, self.stratifications[k].xy.features)
+        return fmap_maybe(
+            lambda x: x.y_bed.src,
+            self.haploid_stratifications[k].strat_inputs.xy.features,
+        )
 
     def refkey_to_x_PAR(self, k: RefKey) -> XYPar | None:
-        return self.stratifications[k].xy.x_par
+        return self.haploid_stratifications[k].strat_inputs.xy.x_par
 
     def refkey_to_y_PAR(self, k: RefKey) -> XYPar | None:
-        return self.stratifications[k].xy.y_par
+        return self.haploid_stratifications[k].strat_inputs.xy.y_par
 
     def refkey_to_simreps_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(
-            lambda x: x.src, self.stratifications[k].low_complexity.simreps
+            lambda x: x.src,
+            self.haploid_stratifications[k].strat_inputs.low_complexity.simreps,
         )
 
     def refkey_to_rmsk_src(self, k: RefKey) -> BedSrc | None:
-        return fmap_maybe(lambda x: x.src, self.stratifications[k].low_complexity.rmsk)
+        return fmap_maybe(
+            lambda x: x.src,
+            self.haploid_stratifications[k].strat_inputs.low_complexity.rmsk,
+        )
 
     def refkey_to_satellite_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(
             lambda x: fmap_maybe(lambda x: x.src, x.satellites),
-            self.stratifications[k].low_complexity,
+            self.haploid_stratifications[k].strat_inputs.low_complexity,
         )
 
     def refkey_to_superdups_src(self, k: RefKey) -> BedSrc | None:
         return fmap_maybe(
             lambda x: fmap_maybe(lambda x: x.src, x.superdups),
-            self.stratifications[k].segdups,
+            self.haploid_stratifications[k].strat_inputs.segdups,
         )
 
     def refkey_to_functional_ftbl_src(self, k: RefKey) -> BedSrc | None:
-        return fmap_maybe(lambda x: x.ftbl_src, self.stratifications[k].functional)
+        return fmap_maybe(
+            lambda x: x.ftbl_src,
+            self.haploid_stratifications[k].strat_inputs.functional,
+        )
 
     def refkey_to_functional_gff_src(self, k: RefKey) -> BedSrc | None:
-        return fmap_maybe(lambda x: x.gff_src, self.stratifications[k].functional)
+        return fmap_maybe(
+            lambda x: x.gff_src, self.haploid_stratifications[k].strat_inputs.functional
+        )
 
     def otherkey_to_src(
         self,
-        rk: RefKey,
-        bk: BuildKey,
+        p: BuildPair,
         lk: OtherLevelKey,
         sk: OtherStratKey,
-    ) -> BedSrc:
-        return self.otherkey_to_bed(rk, bk, lk, sk).src
+    ) -> BedSrc | None:
+        return fmap_maybe(lambda x: x.src, self.otherkey_to_bed(p, lk, sk))
 
     # chromosome standardization
 
     def refkey_to_final_chr_pattern(self, k: RefKey) -> ChrPattern:
-        return self.stratifications[k].ref.chr_pattern
+        return self.haploid_stratifications[k].ref.chr_pattern
 
-    def refkey_to_bench_chr_pattern(
-        self, rk: RefKey, bk: BuildKey
-    ) -> ChrPattern | None:
+    def refkey_to_bench_chr_pattern(self, p: BuildPair) -> ChrPattern | None:
         return fmap_maybe(
-            lambda x: x.bench_vcf.chr_pattern, self.buildkey_to_build(rk, bk).bench
+            lambda x: x.bench_vcf.chr_pattern,
+            self.buildkey_to_build(p).bench,
         )
 
-    def refkey_to_query_chr_pattern(
-        self, rk: RefKey, bk: BuildKey
-    ) -> ChrPattern | None:
+    def refkey_to_query_chr_pattern(self, p: BuildPair) -> ChrPattern | None:
         return fmap_maybe(
-            lambda x: x.query_vcf.chr_pattern, self.buildkey_to_build(rk, bk).bench
+            lambda x: x.query_vcf.chr_pattern,
+            self.buildkey_to_build(p).bench,
         )
 
     def buildkey_to_chr_conversion(
         self,
-        rk: RefKey,
-        bk: BuildKey,
+        p: BuildPair,
         fromChr: ChrPattern,
     ) -> ChrConversion:
-        toChr = self.refkey_to_final_chr_pattern(rk)
-        cis = self.buildkey_to_chr_indices(rk, bk)
+        toChr = self.refkey_to_final_chr_pattern(p.ref)
+        cis = self.buildkey_to_chr_indices(p)
         return ChrConversion(fromChr, toChr, cis)
 
-    def buildkey_to_final_chr_mapping(self, rk: RefKey, bk: BuildKey) -> dict[int, str]:
-        p = self.refkey_to_final_chr_pattern(rk)
-        cs = self.buildkey_to_chr_indices(rk, bk)
-        return {c.value: c.chr_name_full(p) for c in cs}
+    def buildkey_to_final_chr_mapping(self, p: BuildPair) -> dict[int, str]:
+        pat = self.refkey_to_final_chr_pattern(p.ref)
+        cs = self.buildkey_to_chr_indices(p)
+        return {c.value: c.chr_name_full(pat) for c in cs}
 
     def buildkey_to_mappability(
-        self,
-        rk: RefKey,
-        bk: BuildKey,
+        self, p: BuildPair
     ) -> tuple[list[int], list[int], list[int]]:
-        ms = self.buildkey_to_include(rk, bk).mappability
+        ms = self.buildkey_to_include(p).mappability
         l, m, e = unzip((m.length, m.mismatches, m.indels) for m in ms)
         return ([*l], [*m], [*e])
 
-    def buildkey_to_comparison(
-        self,
-        rk: RefKey,
-        bk: BuildKey,
-    ) -> BuildCompare | None:
-        return self.buildkey_to_build(rk, bk).comparison
+    def buildkey_to_comparison(self, p: BuildPair) -> BuildCompare | None:
+        return self.buildkey_to_build(p).comparison
 
-    def buildkey_to_comparekey(
-        self,
-        rk: RefKey,
-        bk: BuildKey,
-    ) -> CompareKey | None:
-        return fmap_maybe(lambda x: x.other, self.buildkey_to_comparison(rk, bk))
+    def buildkey_to_comparekey(self, p: BuildPair) -> CompareKey | None:
+        return fmap_maybe(lambda x: x.other, self.buildkey_to_comparison(p))
 
     # include switches (for controlling which snakemake rules to activate)
 
     def has_low_complexity_rmsk(self, rk: RefKey) -> bool:
-        return self.stratifications[rk].low_complexity.rmsk is not None
+        return self.refkey_to_strat(rk).strat_inputs.low_complexity.rmsk is not None
 
     def has_low_complexity_simreps(self, rk: RefKey) -> bool:
-        return self.stratifications[rk].low_complexity.simreps is not None
+        return self.refkey_to_strat(rk).strat_inputs.low_complexity.simreps is not None
 
     def has_low_complexity_censat(self, rk: RefKey) -> bool:
-        return self.stratifications[rk].low_complexity.satellites is not None
+        return (
+            self.refkey_to_strat(rk).strat_inputs.low_complexity.satellites is not None
+        )
 
-    def _want_chr_index(self, rk: RefKey, bk: BuildKey, i: ChrIndex) -> bool:
-        cis = self.buildkey_to_chr_indices(rk, bk)
+    def _want_chr_index(self, p: BuildPair, i: ChrIndex) -> bool:
+        cis = self.buildkey_to_chr_indices(p)
         return i in cis
 
-    def want_xy_x(self, rk: RefKey, bk: BuildKey) -> bool:
-        return (
-            self._want_chr_index(rk, bk, ChrIndex.CHRX)
-            and self.buildkey_to_include(rk, bk).xy
-        )
+    def want_xy_x(self, p: BuildPair) -> bool:
+        return self._want_chr_index(p, ChrIndex.CHRX) and self.buildkey_to_include(p).xy
 
-    def want_xy_y(self, rk: RefKey, bk: BuildKey) -> bool:
-        return (
-            self._want_chr_index(rk, bk, ChrIndex.CHRY)
-            and self.buildkey_to_include(rk, bk).xy
-        )
+    def want_xy_y(self, p: BuildPair) -> bool:
+        return self._want_chr_index(p, ChrIndex.CHRY) and self.buildkey_to_include(p).xy
 
-    def wanted_xy_chr_names(self, rk: RefKey, bk: BuildKey) -> list[str]:
+    def wanted_xy_chr_names(self, p: BuildPair) -> list[str]:
         return [
             i.chr_name
             for i in [ChrIndex.CHRX, ChrIndex.CHRY]
-            if self._want_chr_index(rk, bk, i)
+            if self._want_chr_index(p, i)
         ]
 
     # def want_xy_sex(self, rk: RefKey, bk: BuildKey) -> bool:
     #     return self.want_xy_x(rk, bk) and self.want_xy_y(rk, bk)
 
-    def want_x_PAR(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.want_xy_x(rk, bk) and self.refkey_to_x_PAR(rk) is not None
+    def want_x_PAR(self, p: BuildPair) -> bool:
+        return self.want_xy_x(p) and self.refkey_to_x_PAR(p.ref) is not None
 
-    def want_y_PAR(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.want_xy_y(rk, bk) and self.refkey_to_y_PAR(rk) is not None
+    def want_y_PAR(self, p: BuildPair) -> bool:
+        return self.want_xy_y(p) and self.refkey_to_y_PAR(p.ref) is not None
 
-    def want_xy_auto(self, rk: RefKey, bk: BuildKey) -> bool:
-        cis = self.buildkey_to_chr_indices(rk, bk)
+    def want_xy_auto(self, p: BuildPair) -> bool:
+        cis = self.buildkey_to_chr_indices(p)
         return len(cis - set([ChrIndex.CHRX, ChrIndex.CHRY])) > 0
 
     def want_xy_XTR(self, rk: RefKey) -> bool:
-        f = self.refkey_to_strat(rk).xy.features
+        f = self.refkey_to_strat(rk).strat_inputs.xy.features
         return f is not None and f.xtr
 
     def want_xy_ampliconic(self, rk: RefKey) -> bool:
-        f = self.refkey_to_strat(rk).xy.features
+        f = self.refkey_to_strat(rk).strat_inputs.xy.features
         return f is not None and f.ampliconic
 
-    def want_low_complexity(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_include(rk, bk).low_complexity
+    def want_low_complexity(self, p: BuildPair) -> bool:
+        return self.buildkey_to_include(p).low_complexity
 
-    def want_gc(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_include(rk, bk).gc is not None
+    def want_gc(self, p: BuildPair) -> bool:
+        return self.buildkey_to_include(p).gc is not None
 
-    def want_functional(self, rk: RefKey, bk: BuildKey) -> bool:
+    def want_functional(self, p: BuildPair) -> bool:
         return (
-            self.buildkey_to_include(rk, bk).functional
-            and self.refkey_to_functional_ftbl_src(rk) is not None
-            and self.refkey_to_functional_gff_src(rk) is not None
+            self.buildkey_to_include(p).functional
+            and self.refkey_to_functional_ftbl_src(p.ref) is not None
+            and self.refkey_to_functional_gff_src(p.ref) is not None
         )
 
-    def want_telomeres(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_include(rk, bk).telomeres
+    def want_telomeres(self, p: BuildPair) -> bool:
+        return self.buildkey_to_include(p).telomeres
 
-    def want_segdups(self, rk: RefKey, bk: BuildKey) -> bool:
+    def want_segdups(self, p: BuildPair) -> bool:
         return (
-            self.refkey_to_superdups_src(rk) is not None
-            and self.buildkey_to_include(rk, bk).segdups
+            self.refkey_to_superdups_src(p.ref) is not None
+            and self.buildkey_to_include(p).segdups
         )
 
-    def _want_union(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_include(rk, bk).union
+    def _want_union(self, p: BuildPair) -> bool:
+        return self.buildkey_to_include(p).union
 
-    def want_mappability(self, rk: RefKey, bk: BuildKey) -> bool:
+    def want_mappability(self, p: BuildPair) -> bool:
         return (
-            self.refkey_to_strat(rk).mappability is not None
-            and len(self.buildkey_to_include(rk, bk).mappability) > 0
+            self.refkey_to_strat(p.ref).strat_inputs.mappability is not None
+            and len(self.buildkey_to_include(p).mappability) > 0
         )
 
-    def want_segdup_and_map(self, rk: RefKey, bk: BuildKey) -> bool:
+    def want_segdup_and_map(self, p: BuildPair) -> bool:
         return (
-            self.buildkey_to_include(rk, bk).union
-            and self.want_segdups(rk, bk)
-            and self.want_mappability(rk, bk)
+            self.buildkey_to_include(p).union
+            and self.want_segdups(p)
+            and self.want_mappability(p)
         )
 
-    def want_alldifficult(self, rk: RefKey, bk: BuildKey) -> bool:
+    def want_alldifficult(self, p: BuildPair) -> bool:
         return (
-            self.want_segdup_and_map(rk, bk)
-            and self.want_low_complexity(rk, bk)
-            and self.want_gc(rk, bk)
+            self.want_segdup_and_map(p)
+            and self.want_low_complexity(p)
+            and self.want_gc(p)
         )
 
-    def want_benchmark(self, rk: RefKey, bk: BuildKey) -> bool:
-        return self.buildkey_to_build(rk, bk).bench is not None
+    def want_benchmark(self, p: BuildPair) -> bool:
+        return self.buildkey_to_build(p).bench is not None
 
     def want_gaps(self, rk: RefKey) -> bool:
-        return self.stratifications[rk].gap is not None
+        return self.refkey_to_strat(rk).strat_inputs.gap is not None
 
-    def want_vdj(self, rk: RefKey, bk: BuildKey) -> bool:
-        cis = self.buildkey_to_chr_indices(rk, bk)
+    def want_vdj(self, p: BuildPair) -> bool:
+        cis = self.buildkey_to_chr_indices(p)
         vdj_chrs = {ChrIndex(i) for i in [2, 7, 14, 22]}
         return (
-            self.buildkey_to_include(rk, bk).vdj
-            and self.refkey_to_functional_ftbl_src(rk) is not None
-            and self.refkey_to_functional_gff_src(rk) is not None
+            self.buildkey_to_include(p).vdj
+            and self.refkey_to_functional_ftbl_src(p.ref) is not None
+            and self.refkey_to_functional_gff_src(p.ref) is not None
             and len(cis & vdj_chrs) > 0
         )
 
     # key lists for downloading resources
 
     @property
-    def _all_builds(self) -> list[tuple[RefKey, BuildKey]]:
-        return [(rk, bk) for rk, s in self.stratifications.items() for bk in s.builds]
+    def _all_haploid_builds(self) -> list[HaploidBuildPair]:
+        return [
+            HaploidBuildPair(rk, bk)
+            for rk, s in self.haploid_stratifications.items()
+            for bk in s.builds
+        ]
+
+    @property
+    def _all_builds(self) -> list[BuildPair]:
+        return [
+            BuildPair(rk, bk)
+            for rk, s in list(self.haploid_stratifications.items())
+            + list(self.diploid_stratifications.items())
+            for bk in s.builds
+        ]
 
     @property
     def all_refkeys(self) -> list[RefKey]:
-        return [*self.stratifications]
+        return [*self.haploid_stratifications] + [*self.diploid_stratifications]
 
     def _all_refkey_from_want(
         self,
-        f: Callable[[RefKey, BuildKey], bool],
+        f: Callable[[BuildPair], bool],
     ) -> list[RefKey]:
-        return [*unique_everseen(x[0] for x in self._all_builds if f(*x))]
+        return [*unique_everseen(x[0] for x in self._all_builds if f(x))]
 
     @property
     def all_refkey_gap(self) -> list[RefKey]:
@@ -1025,8 +1126,8 @@ class GiabStrats(BaseModel):
     @property
     def all_refkey_rmsk(self) -> list[RefKey]:
         return self._all_refkey_from_want(
-            lambda r, b: self.want_low_complexity(r, b)
-            and self.has_low_complexity_simreps(r)
+            lambda p: self.want_low_complexity(p)
+            and self.has_low_complexity_simreps(p.ref)
         )
 
     @property
