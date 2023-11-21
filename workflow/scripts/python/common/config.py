@@ -1,6 +1,7 @@
 from pathlib import Path
 from pydantic import BaseModel as BaseModel_
 from pydantic import validator, HttpUrl, FilePath, NonNegativeInt, Field
+from dataclasses import dataclass
 from enum import Enum, unique
 from typing import (
     NewType,
@@ -13,7 +14,6 @@ from typing import (
     Annotated,
     Generic,
     Union,
-    Sequence,
 )
 from typing_extensions import Self, assert_never
 from more_itertools import unzip, unique_everseen
@@ -66,9 +66,11 @@ BuildKeyT = TypeVar("BuildKeyT", HaploidBuildKey, DiploidBuildKey)
 CompareKey = NewType("CompareKey", str)
 OtherLevelKey = NewType("OtherLevelKey", str)
 OtherStratKey = NewType("OtherStratKey", str)
+HaplotypeName = NewType("HaplotypeName", str)
 
 
-CHR_PLACEHOLDER = "%i"
+CHR_INDEX_PLACEHOLDER = "%i"
+CHR_HAP_PLACEHOLDER = "%h"
 
 
 def fmap_maybe(
@@ -96,14 +98,27 @@ class BaseModel(BaseModel_):
         extra = "forbid"
 
 
-class ChrPattern_(BaseModel, Generic[X]):
-    template: str = "chr%i"
-    special: dict[X, str] = {}
+class Diploid_(BaseModel, Generic[X]):
+    hap1: X
+    hap2: X
 
-    @validator("template")
-    def is_valid_template(cls, v: str) -> str:
-        assert v.count(CHR_PLACEHOLDER) == 1, "chr template must have '%i' in it"
-        return v
+
+class Haplotype(Enum):
+    HAP1: int = 0
+    HAP2: int = 1
+
+    def from_either(self, left: X, right: X) -> X:
+        if self is Haplotype.HAP1:
+            return left
+        elif self is Haplotype.HAP2:
+            return right
+        else:
+            assert_never(self)
+
+
+# dummy Identity type to make higher-order types more consistent
+HaploidOnly = Union[X]
+HaploidOrDiploid = Union[X, Diploid_[X]]
 
 
 @unique
@@ -131,14 +146,66 @@ class ChrIndex(Enum):
     def __init__(self, i: int) -> None:
         self.chr_name: str = "X" if i == 23 else ("Y" if i == 24 else str(i))
 
-    def chr_name_full(self, pattern: ChrPattern_[Self]) -> str:
-        try:
-            return pattern.special[self.value]
-        except KeyError:
-            return pattern.template.replace(CHR_PLACEHOLDER, self.chr_name)
+    def chr_name_full(self, p: "HapChrPattern") -> str | None:
+        return p.to_chr_name(self)
+
+    def chr_name_full_dip(self, p: "DipChrPattern", hap: Haplotype) -> str | None:
+        return p.to_chr_name(self, hap)
 
 
-ChrPattern = ChrPattern_[ChrIndex]
+class HapChrPattern(BaseModel):
+    template: str = "chr%i"
+    special: dict[ChrIndex, str] = {}
+    exclusions: list[ChrIndex] = []
+
+    @validator("template")
+    def is_valid_template(cls, v: str) -> str:
+        assert v.count(CHR_INDEX_PLACEHOLDER) == 1, "chr template must have '%i' in it"
+        return v
+
+    def to_chr_name(self, i: ChrIndex) -> str | None:
+        if i.value in self.exclusions:
+            return None
+        elif i.value in self.special:
+            return self.special[i.value]
+        else:
+            return self.template.replace(CHR_INDEX_PLACEHOLDER, i.chr_name)
+
+
+class DipChrPattern(BaseModel):
+    template: str = "chr%i_%h"
+    special: dict[ChrIndex, str] = {}
+    hapnames: Diploid_[HaplotypeName] = Diploid_(
+        hap1=HaplotypeName("PATERNAL"),
+        hap2=HaplotypeName("MATERNAL"),
+    )
+    exclusions: Diploid_[list[ChrIndex]] = Diploid_(
+        hap1=[ChrIndex.CHRX],
+        hap2=[ChrIndex.CHRY],
+    )
+
+    @validator("template")
+    def is_valid_template(cls, v: str) -> str:
+        assert (
+            v.count(CHR_INDEX_PLACEHOLDER) == 1 and v.count(CHR_HAP_PLACEHOLDER) == 1
+        ), "chr template must have '%i' and '%h' in it"
+        return v
+
+    def to_chr_name(self, i: ChrIndex, h: Haplotype) -> str | None:
+        xs = self.exclusions
+        ns = self.hapnames
+        exc, name = h.from_either((xs.hap1, ns.hap1), (xs.hap2, ns.hap2))
+        if i.value in exc:
+            return None
+        elif i.value in self.special:
+            return self.special[i.value]
+        else:
+            return self.template.replace(CHR_INDEX_PLACEHOLDER, i.chr_name).replace(
+                CHR_HAP_PLACEHOLDER, name
+            )
+
+
+AnyChrPatternT = TypeVar("AnyChrPatternT", HapChrPattern, DipChrPattern)
 
 
 @unique
@@ -163,40 +230,81 @@ class CoreLevel(Enum):
     OtherDifficult = "OtherDifficult"
 
 
-class ChrConversion(NamedTuple):
-    """Data to filter, sort, and standardize chromosome names.
+# class ChrConversion(NamedTuple, Generic[AnyChrPatternT]):
+#     """Data to filter, sort, and standardize chromosome names.
 
-    Members:
-    fromPattern - chr pattern of input file (usually a bed file)
-    toPattern - chr pattern of output stratification file (should match ref)
-    indices - the desired chromosome indices to keep
-    """
+#     Members:
+#     fromPattern - chr pattern of input file (usually a bed file)
+#     toPattern - chr pattern of output stratification file (should match ref)
+#     indices - the desired chromosome indices to keep
+#     """
 
-    fromPattern: ChrPattern
-    toPattern: ChrPattern
+#     fromPattern: AnyChrPatternT
+#     toPattern: AnyChrPatternT
+#     indices: set[tuple[Haplotype, ChrIndex]]
+
+
+class ChrConversion_:
+    @classmethod
+    def _init_mapper(cls, xs: list[tuple[str | None, ChrIndex]]) -> dict[str, int]:
+        return {n: i.value for n, i in xs if n is not None}
+
+    @classmethod
+    def _final_mapper(cls, xs: list[tuple[str | None, ChrIndex]]) -> dict[int, str]:
+        return {i.value: n for n, i in xs if n is not None}
+
+    @property
+    def pairs(self) -> list[tuple[str | None, ChrIndex]]:
+        return NotImplemented
+
+    @property
+    def init_mapper(self) -> dict[str, int]:
+        return self._init_mapper(self.pairs)
+
+    @property
+    def final_mapper(self) -> dict[int, str]:
+        return self._final_mapper(self.pairs)
+
+
+@dataclass
+class HapChrConversion(ChrConversion_):
+    fromPattern: HapChrPattern
+    toPattern: HapChrPattern
     indices: set[ChrIndex]
+
+    @property
+    def pairs(self) -> list[tuple[str | None, ChrIndex]]:
+        return [(self.fromPattern.to_chr_name(i), i) for i in self.indices]
+
+
+@dataclass
+class DipChrConversion(ChrConversion_):
+    fromPattern: Diploid_[HapChrPattern] | DipChrPattern
+    toPattern: DipChrPattern
+    indices: set[tuple[Haplotype, ChrIndex]]
+
+    def _from(self, i: ChrIndex, h: Haplotype) -> str | None:
+        p = self.fromPattern
+        if isinstance(p, Diploid_):
+            return h.from_either(p.hap1, p.hap2).to_chr_name(i)
+        elif isinstance(p, DipChrPattern):
+            return p.to_chr_name(i, h)
+        else:
+            assert_never(p)
+
+    @property
+    def pairs(self) -> list[tuple[str | None, ChrIndex]]:
+        return [(self._from(i, h), i) for (h, i) in self.indices]
 
 
 # For instances where we simply need to sort all the chromosomes and they are
 # already named appropriately
-def fullset_conv(pattern: ChrPattern) -> ChrConversion:
-    return ChrConversion(pattern, pattern, set([i for i in ChrIndex]))
+def fullset_hap_conv(p: HapChrPattern) -> HapChrConversion:
+    return HapChrConversion(p, p, set([i for i in ChrIndex]))
 
 
-def conversion_to_init_mapper(c: ChrConversion) -> dict[str, int]:
-    return {i.chr_name_full(c.fromPattern): i.value for i in c.indices}
-
-
-def conversion_to_final_mapper(c: ChrConversion) -> dict[int, str]:
-    return {i.value: i.chr_name_full(c.toPattern) for i in c.indices}
-
-
-class Diploid_(BaseModel, Generic[X]):
-    hap1: X
-    hap2: X
-
-
-HaploidOrDiploid = Union[X, Diploid_[X]]
+def fullset_dip_conv(p: DipChrPattern) -> DipChrConversion:
+    return DipChrConversion(p, p, set([(h, i) for i in ChrIndex for h in Haplotype]))
 
 
 class Paths(BaseModel):
@@ -322,23 +430,16 @@ class BedFileParams(BaseModel):
     sep - column separator regexp (for "beds" with spaces instead of tabs)
     """
 
-    chr_pattern: ChrPattern = ChrPattern()
+    chr_pattern: HapChrPattern = HapChrPattern()
     bed_cols: BedColumns = BedColumns()
     skip_lines: NonNegativeInt = 0
     sep: str = "\t"
 
 
-HaploidBedSrc = BedSrc
-DiploidBedSrc = HaploidOrDiploid[BedSrc]
-AnyBedSrc = DiploidBedSrc
-
-AnyBedSrcT = TypeVar("AnyBedSrcT", HaploidBedSrc, DiploidBedSrc)
-
-
-class BedFile_(BaseModel, Generic[AnyBedSrcT]):
+class BedFile(BaseModel):
     """Inport specs for a bed-like file."""
 
-    src: AnyBedSrcT
+    src: BedSrc
     params: BedFileParams = BedFileParams()
 
     @property
@@ -346,19 +447,14 @@ class BedFile_(BaseModel, Generic[AnyBedSrcT]):
         return diploid_to_list(self.src)
 
 
-HaploidBedFile = BedFile_[HaploidBedSrc]
-DiploidBedFile = BedFile_[DiploidBedSrc]
-AnyBedFile = HaploidBedFile | DiploidBedFile
-
-
 class VCFFile(BaseModel):
     """Inport specs for a vcf file."""
 
     src: BedSrc
-    chr_pattern: ChrPattern = ChrPattern()
+    chr_pattern: HapChrPattern = HapChrPattern()
 
 
-class RMSKFile(BedFile_[AnyBedSrcT], Generic[AnyBedSrcT]):
+class RMSKFile(BedFile):
     """Input file for repeat masker stratification."""
 
     class_col: NonNegativeInt
@@ -376,10 +472,26 @@ class RMSKFile(BedFile_[AnyBedSrcT], Generic[AnyBedSrcT]):
         return v
 
 
-class SatFile(BedFile_[AnyBedSrcT], Generic[AnyBedSrcT]):
+class SatFile(BedFile):
     """Configuration for a satellites file."""
 
     sat_col: NonNegativeInt
+
+
+# TODO clean this up with real polymorphism when mypy catches up with Haskell
+# 98, see https://github.com/python/typing/issues/548
+AnyBedT = TypeVar("AnyBedT", HaploidOnly[BedFile], HaploidOrDiploid[BedFile])
+AnyRMSKFileT = TypeVar(
+    "AnyRMSKFileT",
+    HaploidOnly[RMSKFile],
+    HaploidOrDiploid[RMSKFile],
+)
+AnySatFileT = TypeVar(
+    "AnySatFileT",
+    Union[SatFile],
+    HaploidOrDiploid[SatFile],
+)
+AnySrcT = TypeVar("AnySrcT", HaploidOnly[BedSrc], HaploidOrDiploid[BedSrc])
 
 
 def diploid_to_list(x: HaploidOrDiploid[X]) -> list[X]:
@@ -389,19 +501,19 @@ def diploid_to_list(x: HaploidOrDiploid[X]) -> list[X]:
         return [x]
 
 
-class LowComplexity_(BaseModel, Generic[AnyBedSrcT]):
+def map_diploid(f: Callable[[X], Y], x: HaploidOrDiploid[X]) -> list[Y]:
+    return [f(y) for y in diploid_to_list(x)]
+
+
+class LowComplexity(BaseModel, Generic[AnyBedT, AnyRMSKFileT, AnySatFileT]):
     """Configuration for low complexity stratification."""
 
-    rmsk: RMSKFile[AnyBedSrcT] | None
-    simreps: BedFile_[AnyBedSrcT] | None
-    satellites: SatFile[AnyBedSrcT] | None
+    rmsk: AnyRMSKFileT | None
+    simreps: AnyBedT | None
+    satellites: AnySatFileT | None
 
 
-HaploidLowComplexity = LowComplexity_[HaploidBedSrc]
-DiploidLowComplexity = LowComplexity_[DiploidBedSrc]
-
-
-class XYFile(HaploidBedFile):
+class XYFile(BedFile):
     """Bed file input for XY features."""
 
     level_col: NonNegativeInt
@@ -439,7 +551,7 @@ class XYPar(BaseModel):
         assert v[1] > v[0], "End must be greater than start"
         return v
 
-    def fmt(self, i: ChrIndex, pattern: ChrPattern) -> str:
+    def fmt(self, i: ChrIndex, pattern: HapChrPattern) -> str:
         # TODO this smells like something I'll be doing alot
         c = i.chr_name_full(pattern)
         return "\n".join(
@@ -457,10 +569,10 @@ class XY(BaseModel):
     x_par: XYPar | None
     y_par: XYPar | None
 
-    def fmt_x_par(self, pattern: ChrPattern) -> str | None:
+    def fmt_x_par(self, pattern: HapChrPattern) -> str | None:
         return fmap_maybe(lambda x: x.fmt(ChrIndex.CHRX, pattern), self.x_par)
 
-    def fmt_y_par(self, pattern: ChrPattern) -> str | None:
+    def fmt_y_par(self, pattern: HapChrPattern) -> str | None:
         return fmap_maybe(lambda x: x.fmt(ChrIndex.CHRY, pattern), self.y_par)
 
 
@@ -476,14 +588,10 @@ class Mappability(BaseModel):
     unplaced_chr_patterns: list[str]
 
 
-class SegDups_(BaseModel, Generic[AnyBedSrcT]):
+class SegDups(BaseModel, Generic[AnyBedT]):
     """Configuration for Segdup stratifications."""
 
-    superdups: BedFile_[AnyBedSrcT] | None
-
-
-HaploidSegDups = SegDups_[HaploidBedSrc]
-DiploidSegDups = SegDups_[DiploidBedSrc]
+    superdups: AnyBedT | None
 
 
 class LowMapParams(BaseModel):
@@ -580,18 +688,18 @@ class IncludeDiploid(IncludeHaploid):
     hets: bool = True
 
 
-class OtherBedFile(BedFile_[AnyBedSrcT], Generic[AnyBedSrcT]):
+class OtherBedFile(BedFile, Generic[AnyBedT]):
     remove_gaps: bool = False
 
 
-OtherStrats = dict[OtherLevelKey, dict[OtherStratKey, OtherBedFile[AnyBedSrcT]]]
+OtherStrats = dict[OtherLevelKey, dict[OtherStratKey, OtherBedFile[AnyBedT]]]
 
 
 class Bench(BaseModel):
     """Configuration for benchmark to use when validating stratifications."""
 
     bench_vcf: VCFFile
-    bench_bed: HaploidBedFile
+    bench_bed: BedFile
     query_vcf: VCFFile
 
 
@@ -610,7 +718,7 @@ class HaploidBuild(BaseModel):
 
     chr_filter: set[ChrIndex]
     include: IncludeHaploid = IncludeHaploid()
-    other_strats: OtherStrats[HaploidBedSrc] = {}
+    other_strats: OtherStrats[BedFile] = {}
     bench: Bench | None = None
     comparison: BuildCompare | None = None
 
@@ -620,41 +728,97 @@ class DiploidBuild(BaseModel):
 
     chr_filter: set[ChrIndex]
     include: IncludeDiploid = IncludeDiploid()
-    other_strats: OtherStrats[DiploidBedSrc] = {}
+    other_strats: OtherStrats[HaploidOrDiploid[BedFile]] = {}
     bench: Bench | None = None
     comparison: BuildCompare | None = None
 
 
+class HapChrSource(BaseModel, Generic[X]):
+    """Specification for a haploid source file."""
+
+    src: X
+    chr_pattern: HapChrPattern = HapChrPattern()
+
+
+class DipChrSource1(BaseModel, Generic[X]):
+    """Specification for a combined diploid source file.
+
+    The 'src' is assumed to have all chromosomes for both haplotypes in one
+    file, which implies they are labeled so as to distinguish the haps. The
+    pattern will match both the chromosome number and the haplotype within the
+    chromosome name.
+    """
+
+    src: X
+    chr_pattern: DipChrPattern = DipChrPattern()
+
+
+class DipChrSource2(BaseModel, Generic[X]):
+    """Specification for split diploid source file.
+
+    Each source may or may not have each haplotype labeled; the identity of each
+    haplotype in either source file is determined based on the configuration key
+    under which it appears (hap1 or hap2). The chromosome names are matched with
+    the corresponding entry in 'init_chr_patterns' to determine the chromosome
+    number, and the final chromosome name is determined from the corresponding
+    entry in 'chr_pattern' which will add the haplotype name.
+    """
+
+    src: Diploid_[X]
+    init_chr_patterns: Diploid_[HapChrPattern] = Diploid_(
+        hap1=HapChrPattern(
+            template="chr%i_PATERNAL",
+            special={ChrIndex.CHRX: "chrX_MATERNAL"},
+        ),
+        hap2=HapChrPattern(
+            template="chr%i_MATERNAL",
+            special={ChrIndex.CHRX: "chrY_MATERNAL"},
+        ),
+    )
+    chr_pattern: DipChrPattern = DipChrPattern()
+
+
+class RefFile(BaseModel, Generic[X, Y]):
+    """Specification for a reference file."""
+
+    src: X
+    chr_pattern: Y
+
+
 class RefFileHaploid(BaseModel):
-    """Specification for a haploid reference file."""
+    """Specification for a reference file."""
 
     src: RefSrc
-    chr_pattern: ChrPattern = ChrPattern()
+    chr_pattern: HapChrPattern = HapChrPattern()
 
 
 RefFileDiploid = Diploid_[RefFileHaploid]
 
 
-class Functional(BaseModel, Generic[AnyBedSrcT]):
+class Functional(BaseModel, Generic[AnySrcT]):
     """Configuration for Functional stratifications."""
 
-    ftbl_src: AnyBedSrcT
-    gff_src: AnyBedSrcT
+    ftbl_src: AnySrcT
+    gff_src: AnySrcT
 
 
-class StratInputs_(BaseModel, Generic[AnyBedSrcT]):
-    gap: BedFile_[AnyBedSrcT] | None
-    low_complexity: LowComplexity_[AnyBedSrcT]
+class StratInputs_(BaseModel, Generic[AnyBedT, AnySrcT, AnyRMSKFileT, AnySatFileT]):
+    gap: AnyBedT | None
+    low_complexity: LowComplexity[AnyBedT, AnyRMSKFileT, AnySatFileT]
     xy: XY
     mappability: Mappability | None
-    segdups: SegDups_[AnyBedSrcT]
-    functional: Functional[AnyBedSrcT] | None
+    segdups: SegDups[AnyBedT]
+    functional: Functional[AnySrcT] | None
 
     def _to_bed_src(
         self,
-        f: Callable[[Self], BedFile_[AnyBedSrcT] | None],
+        f: Callable[[Self], AnyBedT | None],
     ) -> list[BedSrc]:
-        return fmap_maybe_def([], lambda x: x.src_list, f(self))
+        x = f(self)
+        if x is None:
+            return []
+        else:
+            return map_diploid(lambda y: y.src, x)
 
     @property
     def gap_src(self) -> list[BedSrc]:
@@ -662,7 +826,12 @@ class StratInputs_(BaseModel, Generic[AnyBedSrcT]):
 
     @property
     def rmsk_src(self) -> list[BedSrc]:
-        return self._to_bed_src(lambda x: x.low_complexity.rmsk)
+        # TODO fix when python gets real polymorphism
+        x = self.low_complexity.rmsk
+        if x is None:
+            return []
+        else:
+            return map_diploid(lambda y: y.src, x)
 
     @property
     def simreps_src(self) -> list[BedSrc]:
@@ -670,7 +839,11 @@ class StratInputs_(BaseModel, Generic[AnyBedSrcT]):
 
     @property
     def satellites_src(self) -> list[BedSrc]:
-        return self._to_bed_src(lambda x: x.low_complexity.satellites)
+        x = self.low_complexity.satellites
+        if x is None:
+            return []
+        else:
+            return map_diploid(lambda y: y.src, x)
 
     @property
     def superdups_src(self) -> list[BedSrc]:
@@ -687,8 +860,13 @@ class StratInputs_(BaseModel, Generic[AnyBedSrcT]):
         return fmap_maybe_def([], lambda x: diploid_to_list(x.gff_src), self.functional)
 
 
-HaploidStratInputs = StratInputs_[HaploidBedSrc]
-DiploidStratInputs = StratInputs_[DiploidBedSrc]
+HaploidStratInputs = StratInputs_[BedFile, BedSrc, RMSKFile, SatFile]
+DiploidStratInputs = StratInputs_[
+    HaploidOrDiploid[BedFile],
+    HaploidOrDiploid[BedSrc],
+    HaploidOrDiploid[RMSKFile],
+    HaploidOrDiploid[SatFile],
+]
 AnyStratInputs = HaploidStratInputs | DiploidStratInputs
 
 
@@ -933,7 +1111,7 @@ class GiabStrats(BaseModel):
         p: BuildPair,
         lk: OtherLevelKey,
         sk: OtherStratKey,
-    ) -> OtherBedFile[HaploidBedSrc] | OtherBedFile[DiploidBedSrc]:
+    ) -> OtherBedFile[BedFile] | OtherBedFile[HaploidOrDiploid[BedFile]]:
         return self.buildkey_to_build(p).other_strats[lk][sk]
 
     # src getters (for use in downloading inputs)
@@ -1057,16 +1235,16 @@ class GiabStrats(BaseModel):
 
     # chromosome standardization
 
-    def refkey_to_final_chr_pattern(self, k: RefKey) -> ChrPattern:
+    def refkey_to_final_chr_pattern(self, k: RefKey) -> HapChrPattern:
         return self.haploid_stratifications[k].ref.chr_pattern
 
-    def refkey_to_bench_chr_pattern(self, p: BuildPair) -> ChrPattern | None:
+    def refkey_to_bench_chr_pattern(self, p: BuildPair) -> HapChrPattern | None:
         return fmap_maybe(
             lambda x: x.bench_vcf.chr_pattern,
             self.buildkey_to_build(p).bench,
         )
 
-    def refkey_to_query_chr_pattern(self, p: BuildPair) -> ChrPattern | None:
+    def refkey_to_query_chr_pattern(self, p: BuildPair) -> HapChrPattern | None:
         return fmap_maybe(
             lambda x: x.query_vcf.chr_pattern,
             self.buildkey_to_build(p).bench,
@@ -1075,7 +1253,7 @@ class GiabStrats(BaseModel):
     def buildkey_to_chr_conversion(
         self,
         p: BuildPair,
-        fromChr: ChrPattern,
+        fromChr: HapChrPattern,
     ) -> ChrConversion:
         toChr = self.refkey_to_final_chr_pattern(p.ref)
         cis = self.buildkey_to_chr_indices(p)
@@ -1230,10 +1408,10 @@ class GiabStrats(BaseModel):
         ]
 
     @property
-    def _all_builds(self) -> Sequence[BuildPair]:
-        a: Sequence[BuildPair] = self._all_haploid_builds
-        b: Sequence[BuildPair] = self._all_diploid_builds
-        return a + b
+    def _all_builds(self) -> list[BuildPair]:
+        a = self._all_haploid_builds
+        b = self._all_diploid_builds
+        return list(a) + list(b)
 
     @property
     def all_refkeys(self) -> list[RefKey]:
