@@ -108,26 +108,72 @@ def filter_sort_bed_inner(
 
 
 def filter_sort_bed(
-    conv: cfg.ChrConversion,
+    conv: cfg.ChrConversion_,
     df: pd.DataFrame,
 ) -> pd.DataFrame:
     """Filter and sort a bed file from a dataframe."""
-    from_map = cfg.conversion_to_init_mapper(conv)
-    to_map = cfg.conversion_to_final_mapper(conv)
+    from_map = conv.init_mapper
+    to_map = conv.final_mapper
+    # from_map = cfg.conversion_to_init_mapper(conv)
+    # to_map = cfg.conversion_to_final_mapper(conv)
     return filter_sort_bed_inner(from_map, to_map, df)
 
 
-def read_filter_sort_bed(
+def read_filter_sort_hap_bed(
     sconf: cfg.GiabStrats,
     ipath: Path,
     opath: Path,
     bp: cfg.BedFileParams,
-    rk: cfg.RefKey,
-    bk: cfg.BuildKey,
+    p: cfg.HaploidBuildPair,
+    pat: cfg.HapChrPattern,
     more: list[int] = [],
 ) -> None:
-    """Read a bed file, sort it, and write it in bgzip format."""
-    conv = sconf.buildkey_to_chr_conversion(rk, bk, bp.chr_pattern)
+    """Read a haploid bed file, sort it, and write it in bgzip format."""
+    conv = sconf.buildkey_to_hap_chr_conversion(p, pat)
     df = read_bed(ipath, bp, more)
     df_ = filter_sort_bed(conv, df)
     write_bed(opath, df_)
+
+
+def read_filter_sort_dip1_bed(
+    sconf: cfg.GiabStrats,
+    ipath: Path,
+    opath: Path,
+    bp: cfg.BedFileParams,
+    p: cfg.DiploidBuildPair,
+    pat: cfg.DipChrPattern,
+    more: list[int] = [],
+) -> None:
+    """Read a diploid bed file, sort it, and write it in bgzip format."""
+    conv = sconf.buildkey_to_dip_chr_conversion1(p, pat)
+    df = read_bed(ipath, bp, more)
+    df_ = filter_sort_bed(conv, df)
+    write_bed(opath, df_)
+
+
+# TODO these bed files should not be combined
+def read_filter_sort_dip2_bed(
+    sconf: cfg.GiabStrats,
+    ipath: tuple[Path, Path],
+    opath: Path,
+    bp: cfg.BedFileParams,
+    p: cfg.DiploidBuildPair,
+    pat: cfg.Diploid_[cfg.HapChrPattern],
+    more: list[int] = [],
+) -> None:
+    """Read two haploid bed files, combine and sort them as diploid, and write
+    it in bgzip format.
+    """
+
+    def go(i: Path, h: cfg.Haplotype) -> pd.DataFrame:
+        df = read_bed(i, bp, more)
+        conv = sconf.buildkey_to_dip_chr_conversion2(p, pat, h)
+        return filter_sort_bed(conv, df)
+
+    df = pd.concat(
+        [
+            go(*x)
+            for x in [(ipath[0], cfg.Haplotype.HAP1), (ipath[1], cfg.Haplotype.HAP2)]
+        ]
+    )
+    write_bed(opath, df)

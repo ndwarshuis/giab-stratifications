@@ -174,6 +174,10 @@ rule write_chr_name_mapper:
                     f.write("\t".join(line) + "\n")
 
 
+# TODO not sure how to make this work with diploid/haploid yet, my first
+# instinct is to just run it as haploid twice in the case of diploid just so I
+# don't need to add more logic to the Rmd. This will also inform how the above
+# dataframe hack should change (if at all)
 rule validate_strats:
     input:
         # this first input isn't actually used, but ensures the unit tests pass
