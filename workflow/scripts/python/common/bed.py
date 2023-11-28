@@ -134,12 +134,15 @@ def read_filter_sort_hap_bed(
     ipath: Path,
     opath: Path,
     bp: cfg.BedFileParams,
-    p: cfg.HaploidBuildPair,
+    rk: cfg.HaploidRefKey,
+    bk: cfg.HaploidBuildKey,
     pat: cfg.HapChrPattern,
     more: list[int] = [],
 ) -> None:
     """Read a haploid bed file, sort it, and write it in bgzip format."""
-    conv = sconf.haploid_stratifications.buildkey_to_chr_conversion(p.ref, p.build, pat)
+    conv = sconf.haploid_stratifications.to_build_data_unsafe(rk, bk).chr_conversion(
+        pat
+    )
     df = read_bed(ipath, bp, more)
     df_ = filter_sort_bed(conv, df)
     write_bed(opath, df_)
@@ -151,13 +154,14 @@ def read_filter_sort_half_hap_bed(
     ipath: Path,
     opath: tuple[Path, Path],
     bp: cfg.BedFileParams,
-    p: cfg.Diploid2BuildPair,
+    rk: cfg.Diploid2RefKey,
+    bk: cfg.Diploid2BuildKey,
     pat: cfg.DipChrPattern,
     more: list[int] = [],
 ) -> None:
-    conv = sconf.diploid2_stratifications.buildkey_to_dip_chr_conversion(
-        p.ref, p.build, pat
-    )
+    conv = sconf.diploid2_stratifications.to_build_data_unsafe(
+        rk, bk
+    ).dip_chr_conversion(pat)
     imap, splitter = conv.init_mapper
     fmap0, fmap1 = conv.final_mapper
 
@@ -202,14 +206,15 @@ def read_filter_sort_dip1_bed(
     ipath: Path,
     opath: Path,
     bp: cfg.BedFileParams,
-    p: cfg.Diploid1BuildPair,
+    rk: cfg.Diploid1RefKey,
+    bk: cfg.Diploid1BuildKey,
     pat: cfg.DipChrPattern,
     more: list[int] = [],
 ) -> None:
     """Read a diploid bed file, sort it, and write it in bgzip format."""
-    conv = sconf.diploid1_stratifications.buildkey_to_dip_chr_conversion(
-        p.ref, p.build, pat
-    )
+    conv = sconf.diploid1_stratifications.to_build_data_unsafe(
+        rk, bk
+    ).dip_chr_conversion(pat)
     df = read_bed(ipath, bp, more)
     df_ = filter_sort_bed(conv, df)
     write_bed(opath, df_)
@@ -220,16 +225,17 @@ def read_filter_sort_dip2_bed(
     ipath: tuple[Path, Path],
     opath: Path,
     bp: cfg.BedFileParams,
-    p: cfg.Diploid1BuildPair,
+    rk: cfg.Diploid1RefKey,
+    bk: cfg.Diploid1BuildKey,
     pat: cfg.Diploid_[cfg.HapChrPattern],
     more: list[int] = [],
 ) -> None:
     """Read two haploid bed files, combine and sort them as diploid, and write
     it in bgzip format.
     """
-    conv = sconf.diploid1_stratifications.buildkey_to_hap_chr_conversion(
-        p.ref, p.build, pat
-    )
+    conv = sconf.diploid1_stratifications.to_build_data_unsafe(
+        rk, bk
+    ).hap_chr_conversion(pat)
     imap1, imap2 = conv.init_mapper
     fmap = conv.final_mapper
 

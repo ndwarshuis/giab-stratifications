@@ -1,7 +1,11 @@
+import pandas as pd
+import csv
+import gzip
+from Bio import bgzf  # type: ignore
 from pathlib import Path
 from pydantic import BaseModel as BaseModel_
 from pydantic import validator, HttpUrl, FilePath, NonNegativeInt, Field
-from dataclasses import dataclass
+from dataclasses import dataclass, astuple
 from enum import Enum, unique
 from typing import (
     NewType,
@@ -505,26 +509,6 @@ class DipToDipChrConversion(ChrConversion_):
 
 
 @dataclass
-class AssymChrConversion_(ChrConversion_):
-    indices: set[ChrIndex]
-    haplotype: Haplotype
-
-    # def from_name(self, i: ChrIndex) -> str | None:
-    #     return NotImplemented
-
-    # def to_name(self, i: ChrIndex) -> str | None:
-    #     return NotImplemented
-
-    # @property
-    # def from_pairs(self) -> list[tuple[str | None, ChrIndex, Haplotype]]:
-    #     return [(self.from_name(i), i, Haplotype.HAP1) for i in self.indices]
-
-    # @property
-    # def to_pairs(self) -> list[tuple[str | None, ChrIndex, Haplotype]]:
-    #     return [(self.to_name(i), i, Haplotype.HAP1) for i in self.indices]
-
-
-@dataclass
 class HapToDipChrConversion:
     fromPattern: Diploid_[HapChrPattern]
     toPattern: DipChrPattern
@@ -684,6 +668,51 @@ class BedFileParams(BaseModel):
     bed_cols: BedColumns = BedColumns()
     skip_lines: NonNegativeInt = 0
     sep: str = "\t"
+
+    # def read(
+    #     self,
+    #     path: Path,
+    #     more: list[int] = [],
+    # ) -> pd.DataFrame:
+    #     """Read a bed file as a pandas dataframe.
+
+    #     Return a dataframe where the first three columns are numbered 0, 1, 2 and
+    #     typed str, int, int (first is str regardless of how the chr names are
+    #     formated). Columns from 'more' are appended to the end of the dataframe
+    #     in the order given starting from 3.
+    #     """
+    #     bedcols = [*self.bed_cols.columns, *more]
+    #     # NOTE: the 'comment="#"' parameter in pandas will strip everything after
+    #     # the '#' in the line, which if at the beginning will include the entire
+    #     # line and it will be skipped, and if not will only obliterate the
+    #     # remainder. Either way this is a problem, since I only care about initial
+    #     # lines starting with '#'. Bed files shouldn't have comments in the middle,
+    #     # and some 'bed' files use '#' as a delimiter within a field.
+    #     #
+    #     # This hacky bit will count the number of lines starting with a '#' and add
+    #     # to the original "skip_lines" parameter, thereby skipping all starting
+    #     # comments as well as the number of lines we wish to skip with 'skip_lines'.
+    #     total_skip = self.skip_lines
+    #     with gzip.open(path, "rt") as f:
+    #         while line := next(f, None):
+    #             if line.startswith("#"):
+    #                 total_skip += 1
+    #             else:
+    #                 break
+    #     df = pd.read_table(
+    #         path,
+    #         header=None,
+    #         usecols=bedcols,
+    #         sep=self.sep,
+    #         skiprows=total_skip,
+    #         # satisfy type checker :/
+    #         dtype={
+    #             **{k: v for k, v in self.bed_cols.columns.items()},
+    #             **{m: str for m in more},
+    #         },
+    #     )
+    #     df.columns = pd.Index(range(len(bedcols)))
+    #     return df
 
 
 class BedFile(BaseModel, Generic[AnyBedT]):
@@ -1100,12 +1129,346 @@ RefSourceT = TypeVar(
 )
 
 
+@dataclass
+class BuildData_(Generic[W, StratInputT, BuildT]):
+    ref: W
+    strat_inputs: StratInputT
+    build: BuildT
+
+    # @property
+    # def include(self) -> IncludeHaploid:
+    #     return self.build.include
+
+    @property
+    def chr_indices(self) -> set[ChrIndex]:
+        cs = self.build.chr_filter
+        return set([x for x in ChrIndex]) if len(cs) == 0 else cs
+
+    @property
+    def bench_vcf_src(self) -> BedSrc | None:
+        return fmap_maybe(lambda x: x.bench_vcf.src, self.build.bench)
+
+    @property
+    def bench_bed_src(self) -> BedSrc | None:
+        return fmap_maybe(lambda x: x.bench_bed.data.src, self.build.bench)
+
+    @property
+    def query_vcf_src(self) -> BedSrc | None:
+        return fmap_maybe(lambda x: x.query_vcf.src, self.build.bench)
+
+
+# TODO where to put these?
+def read_bed(
+    path: Path,
+    b: BedFileParams = BedFileParams(),
+    more: list[int] = [],
+) -> pd.DataFrame:
+    """Read a bed file as a pandas dataframe.
+
+    Return a dataframe where the first three columns are numbered 0, 1, 2 and
+    typed str, int, int (first is str regardless of how the chr names are
+    formated). Columns from 'more' are appended to the end of the dataframe
+    in the order given starting from 3.
+    """
+    bedcols = [*b.bed_cols.columns, *more]
+    # NOTE: the 'comment="#"' parameter in pandas will strip everything after
+    # the '#' in the line, which if at the beginning will include the entire
+    # line and it will be skipped, and if not will only obliterate the
+    # remainder. Either way this is a problem, since I only care about initial
+    # lines starting with '#'. Bed files shouldn't have comments in the middle,
+    # and some 'bed' files use '#' as a delimiter within a field.
+    #
+    # This hacky bit will count the number of lines starting with a '#' and add
+    # to the original "skip_lines" parameter, thereby skipping all starting
+    # comments as well as the number of lines we wish to skip with 'skip_lines'.
+    total_skip = b.skip_lines
+    with gzip.open(path, "rt") as f:
+        while line := next(f, None):
+            if line.startswith("#"):
+                total_skip += 1
+            else:
+                break
+    df = pd.read_table(
+        path,
+        header=None,
+        usecols=bedcols,
+        sep=b.sep,
+        skiprows=total_skip,
+        # satisfy type checker :/
+        dtype={
+            **{k: v for k, v in b.bed_cols.columns.items()},
+            **{m: str for m in more},
+        },
+    )
+    df.columns = pd.Index(range(len(bedcols)))
+    return df
+
+
+def write_bed(path: Path, df: pd.DataFrame) -> None:
+    """Write a bed file in bgzip format from a dataframe.
+
+    Dataframe is not checked to make sure it is a "real" bed file.
+    """
+    with bgzf.open(path, "w") as f:
+        w = csv.writer(f, delimiter="\t")
+        for r in df.itertuples(index=False):
+            w.writerow(r)
+
+
+def sort_bed_numerically(df: pd.DataFrame, n: int) -> pd.DataFrame:
+    """Sort a bed file encoded by a dataframe.
+
+    Assumes the first three columns correspond to coordinates, and that all are
+    integer typed. Use 'n = 2' to sort only by chr/start, and 'n=1' to sort only
+    by chr.
+
+    """
+    cols = df.columns.tolist()
+    bycols = [cols[i] for i in range(0, n)]
+    return df.sort_values(
+        by=bycols,
+        axis=0,
+        ignore_index=True,
+    )
+
+
+def filter_sort_bed_inner(
+    from_map: dict[str, int],
+    to_map: dict[int, str],
+    df: pd.DataFrame,
+    n: int = 3,
+) -> pd.DataFrame:
+    """Filter and sort a bed file.
+
+    Arguments:
+    from_map - dict containing chr name -> int mappings (int = order)
+    to_map - dict containing int -> chr name mappings
+    df - dataframe to sort
+
+    Assumes the first three columns correspond to the coordinates of a bed
+    file.
+
+    Any chr name not specified in 'from_map' will be removed (hence the filter).
+    Furthermore, 'to_map' should contain at least all corresponding entries
+    from 'from_map', otherwise the final df will have NaNs.
+    """
+    chr_col = df.columns.tolist()[0]
+    df[chr_col] = df[chr_col].map(from_map)
+    df = sort_bed_numerically(df.dropna(subset=[chr_col]), n)
+    df[chr_col] = df[chr_col].map(to_map)
+    return df
+
+
+def split_bed(
+    split_map: dict[str, bool],
+    df: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    # TODO doc string
+    chr_col = df.columns.tolist()[0]
+    sp = df[chr_col].map(split_map)
+    return df[sp], df[~sp]
+
+
+def filter_sort_bed(
+    conv: ChrConversion_,
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """Filter and sort a bed file from a dataframe."""
+    from_map = conv.init_mapper
+    to_map = conv.final_mapper
+    # from_map = cfg.conversion_to_init_mapper(conv)
+    # to_map = cfg.conversion_to_final_mapper(conv)
+    return filter_sort_bed_inner(from_map, to_map, df)
+
+
+@dataclass
+class HaploidBuildData(
+    BuildData_[HapChrSource[RefSrc], HaploidStratInputs, HaploidBuild]
+):
+    def chr_conversion(
+        self,
+        fromChr: HapChrPattern,
+    ) -> HapToHapChrConversion:
+        return HapToHapChrConversion(
+            fromChr,
+            self.ref.chr_pattern,
+            self.chr_indices,
+        )
+
+    def read_filter_sort_hap_bed(
+        self,
+        ipath: Path,
+        opath: Path,
+        bp: BedFileParams,
+        pat: HapChrPattern,
+        more: list[int] = [],
+    ) -> None:
+        """Read a haploid bed file, sort it, and write it in bgzip format."""
+        conv = self.chr_conversion(pat)
+        df = read_bed(ipath, bp, more)
+        df_ = filter_sort_bed(conv, df)
+        write_bed(opath, df_)
+
+
+@dataclass
+class Diploid1BuildData(
+    BuildData_[DipChrSource1[RefSrc], DiploidStratInputs, DiploidBuild]
+):
+    def hap_chr_conversion(
+        self,
+        fromChr: Diploid_[HapChrPattern],
+    ) -> HapToDipChrConversion:
+        return HapToDipChrConversion(
+            fromChr,
+            self.ref.chr_pattern,
+            self.chr_indices,
+        )
+
+    def dip_chr_conversion(
+        self,
+        fromChr: DipChrPattern,
+    ) -> DipToDipChrConversion:
+        return DipToDipChrConversion(
+            fromChr,
+            self.ref.chr_pattern,
+            self.chr_indices,
+        )
+
+    def read_filter_sort_hap_bed(
+        self,
+        ipath: tuple[Path, Path],
+        opath: Path,
+        bp: BedFileParams,
+        pat: Diploid_[HapChrPattern],
+        more: list[int] = [],
+    ) -> None:
+        """Read two haploid bed files, combine and sort them as diploid, and write
+        it in bgzip format.
+        """
+        conv = self.hap_chr_conversion(pat)
+        imap1, imap2 = conv.init_mapper
+        fmap = conv.final_mapper
+
+        def go(i: Path, imap: dict[str, int]) -> pd.DataFrame:
+            df = read_bed(i, bp, more)
+            return filter_sort_bed_inner(imap, fmap, df)
+
+        df = pd.concat(
+            [
+                go(*x)
+                for x in [
+                    (ipath[0], imap1),
+                    (ipath[1], imap2),
+                ]
+            ]
+        )
+        write_bed(opath, df)
+
+    def read_filter_sort_dip_bed(
+        self,
+        ipath: Path,
+        opath: Path,
+        bp: BedFileParams,
+        pat: DipChrPattern,
+        more: list[int] = [],
+    ) -> None:
+        """Read a diploid bed file, sort it, and write it in bgzip format."""
+        conv = self.dip_chr_conversion(pat)
+        df = read_bed(ipath, bp, more)
+        df_ = filter_sort_bed(conv, df)
+        write_bed(opath, df_)
+
+
+@dataclass
+class Diploid2BuildData(
+    BuildData_[DipChrSource2[RefSrc], DiploidStratInputs, DiploidBuild]
+):
+    def hap_chr_conversion(
+        self,
+        fromChr: Diploid_[HapChrPattern],
+    ) -> tuple[HapToHapChrConversion, HapToHapChrConversion]:
+        toChr = self.ref.chr_pattern
+        cis = self.chr_indices
+        return (
+            HapToHapChrConversion(fromChr.hap1, toChr.hap1, cis),
+            HapToHapChrConversion(fromChr.hap2, toChr.hap2, cis),
+        )
+
+    def dip_chr_conversion(
+        self,
+        fromChr: DipChrPattern,
+    ) -> DipToHapChrConversion:
+        return DipToHapChrConversion(
+            fromChr,
+            self.ref.chr_pattern,
+            self.chr_indices,
+        )
+
+    def read_filter_sort_hap_bed(
+        self,
+        ipath: Path,
+        opath: Path,
+        bp: BedFileParams,
+        pat: Diploid_[HapChrPattern],
+        hap: Haplotype,
+        more: list[int] = [],
+    ) -> None:
+        conv = self.hap_chr_conversion(pat)
+        df = read_bed(ipath, bp, more)
+        df_ = filter_sort_bed(hap.from_either(conv[0], conv[1]), df)
+        write_bed(opath, df_)
+
+    def read_filter_sort_dip_bed(
+        self,
+        ipath: Path,
+        opath: tuple[Path, Path],
+        bp: BedFileParams,
+        pat: DipChrPattern,
+        more: list[int] = [],
+    ) -> None:
+        conv = self.dip_chr_conversion(pat)
+        imap, splitter = conv.init_mapper
+        fmap0, fmap1 = conv.final_mapper
+
+        def go(
+            o: Path,
+            df: pd.DataFrame,
+            fmap: dict[int, str],
+        ) -> None:
+            df_ = filter_sort_bed_inner(imap, fmap, df)
+            write_bed(o, df_)
+
+        df = read_bed(ipath, bp, more)
+        df0, df1 = split_bed(splitter, df)
+        go(opath[0], df0, fmap0)
+        go(opath[1], df1, fmap1)
+
+
 class StratDict_(
     dict[RefKeyT, Stratification[RefSourceT, StratInputT, BuildKeyT, BuildT]],
     Generic[RefKeyT, RefSourceT, StratInputT, BuildKeyT, BuildT],
 ):
-    def refkey_to_ref(self, rk: RefKeyT) -> RefSourceT:
-        return self[rk].ref
+    def to_build_data_unsafe(
+        self,
+        rk: RefKeyT,
+        bk: BuildKeyT,
+    ) -> BuildData_[RefSourceT, StratInputT, BuildT]:
+        s = self[rk]
+        b = s.builds[bk]
+        return BuildData_(s.ref, s.strat_inputs, b)
+
+    def to_build_data(
+        self,
+        rk: RefKeyT,
+        bk: BuildKeyT,
+    ) -> BuildData_[RefSourceT, StratInputT, BuildT] | None:
+        try:
+            return self.to_build_data_unsafe(rk, bk)
+        except KeyError:
+            return None
+
+    # def refkey_to_ref(self, rk: RefKeyT) -> RefSourceT:
+    #     return self[rk].ref
 
     def buildkey_to_build(self, rk: RefKeyT, bk: BuildKeyT) -> BuildT:
         return self[rk].builds[bk]
@@ -1334,15 +1697,22 @@ class HaploidStratDict(
         HaploidBuild,
     ]
 ):
-    def buildkey_to_chr_conversion(
+    def to_build_data_unsafe(
         self,
         rk: HaploidRefKey,
         bk: HaploidBuildKey,
-        fromChr: HapChrPattern,
-    ) -> HapToHapChrConversion:
-        toChr = self[rk].ref.chr_pattern
-        cis = self.buildkey_to_chr_indices(rk, bk)
-        return HapToHapChrConversion(fromChr, toChr, cis)
+    ) -> HaploidBuildData:
+        return HaploidBuildData(*astuple(super().to_build_data_unsafe(rk, bk)))
+
+    def to_build_data(
+        self,
+        rk: HaploidRefKey,
+        bk: HaploidBuildKey,
+    ) -> HaploidBuildData | None:
+        try:
+            return self.to_build_data_unsafe(rk, bk)
+        except KeyError:
+            return None
 
 
 class Diploid1StratDict(
@@ -1354,25 +1724,22 @@ class Diploid1StratDict(
         DiploidBuild,
     ]
 ):
-    def buildkey_to_hap_chr_conversion(
+    def to_build_data_unsafe(
         self,
         rk: Diploid1RefKey,
         bk: Diploid1BuildKey,
-        fromChr: Diploid_[HapChrPattern],
-    ) -> HapToDipChrConversion:
-        toChr = self[rk].ref.chr_pattern
-        cis = self.buildkey_to_chr_indices(rk, bk)
-        return HapToDipChrConversion(fromChr, toChr, cis)
+    ) -> Diploid1BuildData:
+        return Diploid1BuildData(*astuple(super().to_build_data_unsafe(rk, bk)))
 
-    def buildkey_to_dip_chr_conversion(
+    def to_build_data(
         self,
         rk: Diploid1RefKey,
         bk: Diploid1BuildKey,
-        fromChr: DipChrPattern,
-    ) -> DipToDipChrConversion:
-        toChr = self[rk].ref.chr_pattern
-        cis = self.buildkey_to_chr_indices(rk, bk)
-        return DipToDipChrConversion(fromChr, toChr, cis)
+    ) -> Diploid1BuildData | None:
+        try:
+            return self.to_build_data_unsafe(rk, bk)
+        except KeyError:
+            return None
 
 
 class Diploid2StratDict(
@@ -1384,30 +1751,25 @@ class Diploid2StratDict(
         DiploidBuild,
     ]
 ):
-    def buildkey_to_hap_chr_conversion(
+    def to_build_data_unsafe(
         self,
         rk: Diploid2RefKey,
         bk: Diploid2BuildKey,
-        fromChr: Diploid_[HapChrPattern],
-    ) -> tuple[HapToHapChrConversion, HapToHapChrConversion]:
-        toChr = self[rk].ref.chr_pattern
-        cis = self.buildkey_to_chr_indices(rk, bk)
-        return (
-            HapToHapChrConversion(fromChr.hap1, toChr.hap1, cis),
-            HapToHapChrConversion(fromChr.hap2, toChr.hap2, cis),
-        )
+    ) -> Diploid2BuildData:
+        return Diploid2BuildData(*astuple(super().to_build_data_unsafe(rk, bk)))
 
-    def buildkey_to_dip_chr_conversion(
+    def to_build_data(
         self,
         rk: Diploid2RefKey,
         bk: Diploid2BuildKey,
-        fromChr: DipChrPattern,
-    ) -> DipToHapChrConversion:
-        toChr = self[rk].ref.chr_pattern
-        cis = self.buildkey_to_chr_indices(rk, bk)
-        return DipToHapChrConversion(fromChr, toChr, cis)
+    ) -> Diploid2BuildData | None:
+        try:
+            return self.to_build_data_unsafe(rk, bk)
+        except KeyError:
+            return None
 
 
+# TODO add validator to ensure none of the keys in the strat/build dicts overlap
 class GiabStrats(BaseModel):
     """Top level stratification object."""
 
@@ -2021,15 +2383,61 @@ class GiabStrats(BaseModel):
             + [*self.diploid2_stratifications]
         )
 
-    def strat_dict(
-        self, rk: str, bk: str
-    ) -> HaploidStratification | Diploid1Stratification | Diploid2Stratification:
-        if rk in self.haploid_stratifications:
-            return self.haploid_stratifications[HaploidRefKey(rk)]
-        elif rk in self.diploid1_stratifications:
-            return self.diploid1_stratifications[Diploid1RefKey(rk)]
-        elif rk in self.diploid2_stratifications:
-            return self.diploid2_stratifications[Diploid2RefKey(rk)]
+    # def strat_dict(
+    #     self, rk: str, bk: str
+    # ) -> (
+    #     tuple[HaploidRefKey, HaploidBuildKey, HaploidStratification]
+    #     | tuple[Diploid1RefKey, Diploid1BuildKey, Diploid1Stratification]
+    #     | tuple[Diploid2RefKey, Diploid2BuildKey, Diploid2Stratification]
+    # ):
+    #     if rk in self.haploid_stratifications:
+    #         _rk0 = HaploidRefKey(rk)
+    #         return (
+    #             _rk0,
+    #             HaploidBuildKey(bk),
+    #             self.haploid_stratifications[_rk0],
+    #         )
+    #     elif rk in self.diploid1_stratifications:
+    #         _rk1 = Diploid1RefKey(rk)
+    #         return (
+    #             _rk1,
+    #             Diploid1BuildKey(bk),
+    #             self.diploid1_stratifications[_rk1],
+    #         )
+    #     elif rk in self.diploid2_stratifications:
+    #         _rk2 = Diploid2RefKey(rk)
+    #         return (
+    #             _rk2,
+    #             Diploid2BuildKey(bk),
+    #             self.diploid2_stratifications[_rk2],
+    #         )
+    #     else:
+    #         # TODO this seems sloppy, not sure if I want it here
+    #         assert False, "this should not happen"
+
+    def to_build_data(
+        self,
+        rk: str,
+        bk: str,
+    ) -> HaploidBuildData | Diploid1BuildData | Diploid2BuildData:
+        if (
+            h0 := self.haploid_stratifications.to_build_data(
+                HaploidRefKey(rk), HaploidBuildKey(bk)
+            )
+        ) is not None:
+            return h0
+        if (
+            h1 := self.diploid1_stratifications.to_build_data(
+                Diploid1RefKey(rk), Diploid1BuildKey(bk)
+            )
+        ) is not None:
+            return h1
+        if (
+            h2 := self.diploid2_stratifications.to_build_data(
+                Diploid2RefKey(rk), Diploid2BuildKey(bk)
+            )
+        ) is not None:
+            return h2
         else:
             # TODO this seems sloppy, not sure if I want it here
             assert False, "this should not happen"
