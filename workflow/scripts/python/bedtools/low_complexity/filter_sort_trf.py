@@ -6,38 +6,39 @@ import common.config as cfg
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
-    o = smk.output[0]
     ws: dict[str, str] = smk.wildcards
+    ons: list[Path] = smk.output[0]
     ins: list[Path] = smk.input
     bd = sconf.to_build_data(ws["ref_key"], ws["build_key"])
     hap = cfg.to_haplotype(ws["hap"])
-    match ins:
-        case [i]:
+    match (ins, ons):
+        case ([i], [o]):
             # one haplotype for both bed and ref (no combine)
             if isinstance(bd, cfg.HaploidBuildData) and hap is None:
                 bd.read_filter_sort_hap_bed(lambda si: si.low_complexity.simreps, i, o)
             # one bed with both haps in it; one reference with both haps (no combine)
             elif isinstance(bd, cfg.Diploid1BuildData) and hap is None:
                 bd.read_filter_sort_dip_bed(lambda si: si.low_complexity.simreps, i, o)
-            # two beds for both haps; one reference with both haps (combine)
+            # one bed with both haps in it; two references for both haps (split)
             elif isinstance(bd, cfg.Diploid2BuildData) and hap is not None:
                 bd.read_filter_sort_hap_bed(
                     lambda si: si.low_complexity.simreps, i, o, hap
                 )
+        case ([i], [o0, o1]):
+            # one bed and one ref for a single haplotype in a diploid reference
+            if isinstance(bd, cfg.Diploid2BuildData) and hap is None:
+                bd.read_filter_sort_dip_bed(
+                    lambda si: si.low_complexity.simreps,
+                    i,
+                    (o0, o1),
+                )
             else:
                 assert False, "this should not happen"
-        case [i0, i1]:
-            # one bed with both haps in it; two references for both haps (split)
+        case ([i0, i1], [o]):
+            # two beds for both haps; one reference with both haps (combine)
             if isinstance(bd, cfg.Diploid1BuildData) and hap is None:
                 bd.read_filter_sort_hap_bed(
                     lambda si: si.low_complexity.simreps, (i0, i1), o
-                )
-            # one bed and one ref for a single haplotype in a diploid reference
-            elif isinstance(bd, cfg.Diploid2BuildData) and hap is not None:
-                bd.read_filter_sort_dip_bed(
-                    lambda si: si.low_complexity.simreps,
-                    hap.from_either(i0, i1),
-                    o,
                 )
             else:
                 assert False, "this should not happen"

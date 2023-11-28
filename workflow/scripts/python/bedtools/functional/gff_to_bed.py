@@ -3,6 +3,8 @@ from typing import Any
 import common.config as cfg
 from common.bed import write_bed
 
+# TODO this file is not used
+
 JOIN_KEY = "genomic_accession"
 
 

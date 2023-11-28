@@ -1,7 +1,4 @@
 import pandas as pd
-import csv
-import gzip
-from Bio import bgzf  # type: ignore
 from pathlib import Path
 from pydantic import BaseModel as BaseModel_
 from pydantic import validator, HttpUrl, FilePath, NonNegativeInt, Field
@@ -22,6 +19,7 @@ from typing import (
 from typing_extensions import Self, assert_never
 from more_itertools import unzip, unique_everseen
 from common.io import is_gzip, is_bgzip
+import common.bed as bed
 
 A = TypeVar("A")
 B = TypeVar("B")
@@ -193,6 +191,8 @@ class ChrIndex(Enum):
     respectively). These integers reflect the sort order in output bed files.
     """
 
+    # NOTE: these start at 1 not 0 to conincide with the names of (most)
+    # the chromosomes
     CHR1: int = 1
     CHR2: int = 2
     CHR3: int = 3
@@ -234,6 +234,9 @@ class ChrIndex(Enum):
     def chr_name_full_dip(self, p: "DipChrPattern", hap: Haplotype) -> str | None:
         return p.to_chr_name(self, hap)
 
+    def to_internal_index(self, hap: Haplotype) -> bed.InternalChrIndex:
+        return bed.InternalChrIndex(hap.value * 24 + self.value - 1)
+
 
 class ChrPattern:
     def to_chr_names(self, i: ChrIndex) -> list[str]:
@@ -258,8 +261,27 @@ class HapChrPattern(BaseModel, ChrPattern):
         else:
             return self.template.replace(CHR_INDEX_PLACEHOLDER, i.chr_name)
 
-    def to_chr_names(self, i: ChrIndex) -> list[str]:
-        return fmap_maybe_def([], lambda x: [x], self.to_chr_name(i))
+    def init_mapper(
+        self,
+        cs: set[ChrIndex],
+        hap: Haplotype = Haplotype.HAP1,
+    ) -> bed.InitMapper:
+        return {
+            n: c.to_internal_index(hap)
+            for c in cs
+            if (n := self.to_chr_name(c)) is not None
+        }
+
+    def final_mapper(
+        self,
+        cs: set[ChrIndex],
+        hap: Haplotype = Haplotype.HAP1,
+    ) -> bed.FinalMapper:
+        return {
+            c.to_internal_index(hap): n
+            for c in cs
+            if (n := self.to_chr_name(c)) is not None
+        }
 
 
 class DipChrPattern(BaseModel, ChrPattern):
@@ -294,8 +316,21 @@ class DipChrPattern(BaseModel, ChrPattern):
                 CHR_HAP_PLACEHOLDER, name
             )
 
-    def to_chr_names(self, i: ChrIndex) -> list[str]:
-        return [x for h in Haplotype if (x := self.to_chr_name(i, h)) is not None]
+    def init_mapper(self, cs: set[ChrIndex]) -> bed.InitMapper:
+        return {
+            n: c.to_internal_index(h)
+            for c in cs
+            for h in Haplotype
+            if (n := self.to_chr_name(c, h)) is not None
+        }
+
+    def final_mapper(self, cs: set[ChrIndex]) -> bed.FinalMapper:
+        return {
+            c.to_internal_index(h): n
+            for c in cs
+            for h in Haplotype
+            if (n := self.to_chr_name(c, h)) is not None
+        }
 
 
 AnyChrPatternT = TypeVar("AnyChrPatternT", HapChrPattern, DipChrPattern)
@@ -438,80 +473,34 @@ class CoreLevel(Enum):
     OtherDifficult = "OtherDifficult"
 
 
-class ChrConversion_:
-    @classmethod
-    def _to_index(cls, i: ChrIndex, h: Haplotype) -> int:
-        return i.value + len(ChrIndex) * h.value
-
-    @classmethod
-    def _init_mapper(
-        cls, xs: list[tuple[str | None, ChrIndex, Haplotype]]
-    ) -> dict[str, int]:
-        return {n: cls._to_index(i, h) for n, i, h in xs if n is not None}
-
-    @classmethod
-    def _final_mapper(
-        cls, xs: list[tuple[str | None, ChrIndex, Haplotype]]
-    ) -> dict[int, str]:
-        return {cls._to_index(i, h): n for n, i, h in xs if n is not None}
-
-    @property
-    def from_pairs(self) -> list[tuple[str | None, ChrIndex, Haplotype]]:
-        return NotImplemented
-
-    @property
-    def to_pairs(self) -> list[tuple[str | None, ChrIndex, Haplotype]]:
-        return NotImplemented
-
-    @property
-    def init_mapper(self) -> dict[str, int]:
-        return self._init_mapper(self.from_pairs)
-
-    @property
-    def final_mapper(self) -> dict[int, str]:
-        return self._final_mapper(self.to_pairs)
-
-
 @dataclass
-class HapToHapChrConversion(ChrConversion_):
+class HapToHapChrConversion:
     fromPattern: HapChrPattern
     toPattern: HapChrPattern
     indices: set[ChrIndex]
 
     @property
-    def from_pairs(self) -> list[tuple[str | None, ChrIndex, Haplotype]]:
-        return [
-            (self.fromPattern.to_chr_name(i), i, Haplotype.HAP1) for i in self.indices
-        ]
+    def init_mapper(self) -> bed.InitMapper:
+        return self.fromPattern.init_mapper(self.indices)
 
     @property
-    def to_pairs(self) -> list[tuple[str | None, ChrIndex, Haplotype]]:
-        return [
-            (self.toPattern.to_chr_name(i), i, Haplotype.HAP1) for i in self.indices
-        ]
+    def final_mapper(self) -> bed.FinalMapper:
+        return self.toPattern.final_mapper(self.indices)
 
 
 @dataclass
-class DipToDipChrConversion(ChrConversion_):
+class DipToDipChrConversion:
     fromPattern: DipChrPattern
     toPattern: DipChrPattern
     indices: set[ChrIndex]
 
     @property
-    def from_pairs(self) -> list[tuple[str | None, ChrIndex, Haplotype]]:
-        return [
-            (self.fromPattern.to_chr_name(i, h), i, h)
-            for i in self.indices
-            for h in Haplotype
-        ]
+    def init_mapper(self) -> bed.InitMapper:
+        return self.fromPattern.init_mapper(self.indices)
 
     @property
-    def to_pairs(self) -> list[tuple[str | None, ChrIndex, Haplotype]]:
-        return [
-            (self.toPattern.to_chr_name(i, h), i, h)
-            for i in self.indices
-            for h in Haplotype
-        ]
+    def final_mapper(self) -> bed.FinalMapper:
+        return self.toPattern.final_mapper(self.indices)
 
 
 @dataclass
@@ -520,35 +509,15 @@ class HapToDipChrConversion:
     toPattern: DipChrPattern
     indices: set[ChrIndex]
 
-    def _from_name(self, i: ChrIndex, h: Haplotype) -> str | None:
+    @property
+    def init_mapper(self) -> tuple[bed.InitMapper, bed.InitMapper]:
         p = self.fromPattern
-        return h.from_either(p.hap1, p.hap2).to_chr_name(i)
-
-    def _to_name(self, i: ChrIndex, h: Haplotype) -> str | None:
-        return self.toPattern.to_chr_name(i, h)
+        i = self.indices
+        return (p.hap1.init_mapper(i), p.hap2.init_mapper(i))
 
     @property
-    def init_mapper(self) -> tuple[dict[str, int], dict[str, int]]:
-        xs = [
-            (n, i.value, h)
-            for i in self.indices
-            for h in Haplotype
-            if (n := self._from_name(i, h)) is not None
-        ]
-        # TODO not DRY
-        return (
-            {n: i * h.value for n, i, h in xs if h is Haplotype.HAP1},
-            {n: i * h.value for n, i, h in xs if h is Haplotype.HAP2},
-        )
-
-    @property
-    def final_mapper(self) -> dict[int, str]:
-        return {
-            i.value * h.value: n
-            for i in self.indices
-            for h in Haplotype
-            if (n := self._to_name(i, h)) is not None
-        }
+    def final_mapper(self) -> bed.FinalMapper:
+        return self.toPattern.final_mapper(self.indices)
 
 
 @dataclass
@@ -557,35 +526,17 @@ class DipToHapChrConversion:
     toPattern: Diploid_[HapChrPattern]
     indices: set[ChrIndex]
 
-    def _from_name(self, i: ChrIndex, h: Haplotype) -> str | None:
-        return self.fromPattern.to_chr_name(i, h)
+    @property
+    def init_mapper(self) -> tuple[bed.InitMapper, bed.SplitMapper]:
+        im = self.fromPattern.init_mapper(self.indices)
+        fm0 = self.toPattern.hap1.final_mapper(self.indices)
+        return (im, bed.make_split_mapper(im, fm0))
 
-    def _to_name(self, i: ChrIndex, h: Haplotype) -> str | None:
+    @property
+    def final_mapper(self) -> tuple[bed.FinalMapper, bed.FinalMapper]:
         p = self.toPattern
-        return h.from_either(p.hap1, p.hap2).to_chr_name(i)
-
-    @property
-    def init_mapper(self) -> tuple[dict[str, int], dict[str, bool]]:
-        xs = [
-            (n, i.value, h)
-            for i in self.indices
-            for h in Haplotype
-            if (n := self._from_name(i, h)) is not None
-        ]
-        return {n: i for n, i, _ in xs}, {n: h is Haplotype.HAP1 for n, _, h in xs}
-
-    @property
-    def final_mapper(self) -> tuple[dict[int, str], dict[int, str]]:
-        xs = [
-            (n, i.value, h)
-            for i in self.indices
-            for h in Haplotype
-            if (n := self._to_name(i, h)) is not None
-        ]
-        return (
-            {i: n for n, i, h in xs if h is Haplotype.HAP1},
-            {i: n for n, i, h in xs if h is Haplotype.HAP2},
-        )
+        i = self.indices
+        return (p.hap1.final_mapper(i), p.hap2.final_mapper(i))
 
 
 # For instances where we simply need to sort all the chromosomes and they are
@@ -690,48 +641,8 @@ class BedFile(BaseModel, Generic[AnyBedT]):
         return self._read(path, [])
 
     def _read(self, path: Path, more: list[int] = []) -> pd.DataFrame:
-        """Read a bed file as a pandas dataframe.
-
-        Return a dataframe where the first three columns are numbered 0, 1, 2 and
-        typed str, int, int (first is str regardless of how the chr names are
-        formated). Columns from 'more' are appended to the end of the dataframe
-        in the order given starting from 3.
-        """
         p = self.params
-        # TODO not sure why we need the type here
-        cs: list[int] = list(p.bed_cols.columns)
-        bedcols = [*cs, *more]
-        # NOTE: the 'comment="#"' parameter in pandas will strip everything after
-        # the '#' in the line, which if at the beginning will include the entire
-        # line and it will be skipped, and if not will only obliterate the
-        # remainder. Either way this is a problem, since I only care about initial
-        # lines starting with '#'. Bed files shouldn't have comments in the middle,
-        # and some 'bed' files use '#' as a delimiter within a field.
-        #
-        # This hacky bit will count the number of lines starting with a '#' and add
-        # to the original "skip_lines" parameter, thereby skipping all starting
-        # comments as well as the number of lines we wish to skip with 'skip_lines'.
-        total_skip = p.skip_lines
-        with gzip.open(path, "rt") as f:
-            while line := next(f, None):
-                if line.startswith("#"):
-                    total_skip += 1
-                else:
-                    break
-        df = pd.read_table(
-            path,
-            header=None,
-            usecols=bedcols,
-            sep=p.sep,
-            skiprows=total_skip,
-            # satisfy type checker :/
-            dtype={
-                **{k: v for k, v in p.bed_cols.columns.items()},
-                **{m: str for m in more},
-            },
-        )
-        df.columns = pd.Index(range(len(bedcols)))
-        return df
+        return bed.read_bed(path, p.bed_cols.columns, p.skip_lines, p.sep, more)
 
 
 class VCFFile(BaseModel):
@@ -1171,87 +1082,22 @@ class BuildData_(Generic[W, StratInputT, BuildT]):
         return fmap_maybe(lambda x: x.query_vcf.src, self.build.bench)
 
 
-def write_bed(path: Path, df: pd.DataFrame) -> None:
-    """Write a bed file in bgzip format from a dataframe.
-
-    Dataframe is not checked to make sure it is a "real" bed file.
-    """
-    with bgzf.open(path, "w") as f:
-        w = csv.writer(f, delimiter="\t")
-        for r in df.itertuples(index=False):
-            w.writerow(r)
-
-
-def sort_bed_numerically(df: pd.DataFrame, n: int) -> pd.DataFrame:
-    """Sort a bed file encoded by a dataframe.
-
-    Assumes the first three columns correspond to coordinates, and that all are
-    integer typed. Use 'n = 2' to sort only by chr/start, and 'n=1' to sort only
-    by chr.
-
-    """
-    cols = df.columns.tolist()
-    bycols = [cols[i] for i in range(0, n)]
-    return df.sort_values(
-        by=bycols,
-        axis=0,
-        ignore_index=True,
-    )
-
-
-def filter_sort_bed_inner(
-    from_map: dict[str, int],
-    to_map: dict[int, str],
-    df: pd.DataFrame,
-    n: int = 3,
-) -> pd.DataFrame:
-    """Filter and sort a bed file.
-
-    Arguments:
-    from_map - dict containing chr name -> int mappings (int = order)
-    to_map - dict containing int -> chr name mappings
-    df - dataframe to sort
-
-    Assumes the first three columns correspond to the coordinates of a bed
-    file.
-
-    Any chr name not specified in 'from_map' will be removed (hence the filter).
-    Furthermore, 'to_map' should contain at least all corresponding entries
-    from 'from_map', otherwise the final df will have NaNs.
-    """
-    chr_col = df.columns.tolist()[0]
-    df[chr_col] = df[chr_col].map(from_map)
-    df = sort_bed_numerically(df.dropna(subset=[chr_col]), n)
-    df[chr_col] = df[chr_col].map(to_map)
-    return df
-
-
-def split_bed(
-    split_map: dict[str, bool],
-    df: pd.DataFrame,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
-    # TODO doc string
-    chr_col = df.columns.tolist()[0]
-    sp = df[chr_col].map(split_map)
-    return df[sp], df[~sp]
-
-
-def filter_sort_bed(
-    conv: ChrConversion_,
-    df: pd.DataFrame,
-) -> pd.DataFrame:
-    """Filter and sort a bed file from a dataframe."""
-    from_map = conv.init_mapper
-    to_map = conv.final_mapper
-    # from_map = cfg.conversion_to_init_mapper(conv)
-    # to_map = cfg.conversion_to_final_mapper(conv)
-    return filter_sort_bed_inner(from_map, to_map, df)
+# TODO wrap this in the instance classes for the chromosome converters
+# def filter_sort_bed_conv(conv: HapToHapChrConversion, df: pd.DataFrame) -> pd.DataFrame:
+#     """Filter and sort a bed file from a dataframe."""
+#     from_map = conv.init_mapper
+#     to_map = conv.final_mapper
+#     return bed.filter_sort_bed(from_map, to_map, df)
 
 
 @dataclass
 class HaploidBuildData(
     BuildData_[HapChrSource[RefSrc], HaploidStratInputs, HaploidBuild]
 ):
+    @property
+    def final_mapper(self) -> bed.FinalMapper:
+        return self.ref.chr_pattern.final_mapper(self.chr_indices)
+
     def chr_conversion(
         self,
         fromChr: HapChrPattern,
@@ -1271,19 +1117,23 @@ class HaploidBuildData(
         # more: list[int] = [],
     ) -> None:
         """Read a haploid bed file, sort it, and write it in bgzip format."""
-        bed = f(self.strat_inputs)
+        bf = f(self.strat_inputs)
         # TODO do better here?
-        assert bed is not None
-        conv = self.chr_conversion(bed.data.chr_pattern)
-        df = bed.read(ipath)
-        df_ = filter_sort_bed(conv, df)
-        write_bed(opath, g(df_))
+        assert bf is not None
+        conv = self.chr_conversion(bf.data.chr_pattern)
+        df = bf.read(ipath)
+        df_ = bed.filter_sort_bed(conv.init_mapper, conv.final_mapper, df)
+        bed.write_bed(opath, g(df_))
 
 
 @dataclass
 class Diploid1BuildData(
     BuildData_[DipChrSource1[RefSrc], DiploidStratInputs, DiploidBuild]
 ):
+    @property
+    def final_mapper(self) -> bed.FinalMapper:
+        return self.ref.chr_pattern.final_mapper(self.chr_indices)
+
     def hap_chr_conversion(
         self,
         fromChr: Diploid_[HapChrPattern],
@@ -1317,28 +1167,28 @@ class Diploid1BuildData(
         """
 
         def go(
-            b: BedFile[DipChrSource[BedSrc]], i: Path, imap: dict[str, int]
+            b: BedFile[DipChrSource[BedSrc]], i: Path, imap: bed.InitMapper
         ) -> pd.DataFrame:
             df = b.read(i)
-            return filter_sort_bed_inner(imap, fmap, df)
+            return bed.filter_sort_bed(imap, fmap, df)
 
-        bed = f(self.strat_inputs)
+        bf = f(self.strat_inputs)
         # TODO make this better
-        assert bed is not None and isinstance(bed.data, DipChrSource2)
-        conv = self.hap_chr_conversion(bed.data.chr_pattern)
+        assert bf is not None and isinstance(bf.data, DipChrSource2)
+        conv = self.hap_chr_conversion(bf.data.chr_pattern)
         imap1, imap2 = conv.init_mapper
         fmap = conv.final_mapper
 
         df = pd.concat(
             [
-                go(bed, *x)
+                go(bf, *x)
                 for x in [
                     (ipath[0], imap1),
                     (ipath[1], imap2),
                 ]
             ]
         )
-        write_bed(opath, g(df))
+        bed.write_bed(opath, g(df))
 
     def read_filter_sort_dip_bed(
         self,
@@ -1349,18 +1199,24 @@ class Diploid1BuildData(
         # more: list[int] = [],
     ) -> None:
         """Read a diploid bed file, sort it, and write it in bgzip format."""
-        bed = f(self.strat_inputs)
-        assert bed is not None and isinstance(bed.data, DipChrSource1)
-        conv = self.dip_chr_conversion(bed.data.chr_pattern)
-        df = bed.read(ipath)
-        df_ = filter_sort_bed(conv, df)
-        write_bed(opath, g(df_))
+        bf = f(self.strat_inputs)
+        assert bf is not None and isinstance(bf.data, DipChrSource1)
+        conv = self.dip_chr_conversion(bf.data.chr_pattern)
+        df = bf.read(ipath)
+        df_ = bed.filter_sort_bed(conv.init_mapper, conv.final_mapper, df)
+        bed.write_bed(opath, g(df_))
 
 
 @dataclass
 class Diploid2BuildData(
     BuildData_[DipChrSource2[RefSrc], DiploidStratInputs, DiploidBuild]
 ):
+    @property
+    def final_mapper(self) -> tuple[bed.FinalMapper, bed.FinalMapper]:
+        p = self.ref.chr_pattern
+        i = self.chr_indices
+        return (p.hap1.final_mapper(i), p.hap2.final_mapper(i))
+
     def hap_chr_conversion(
         self,
         fromChr: Diploid_[HapChrPattern],
@@ -1391,12 +1247,13 @@ class Diploid2BuildData(
         g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
         # more: list[int] = [],
     ) -> None:
-        bed = f(self.strat_inputs)
-        assert bed is not None and isinstance(bed.data, DipChrSource2)
-        conv = self.hap_chr_conversion(bed.data.chr_pattern)
-        df = bed.read(ipath)
-        df_ = filter_sort_bed(hap.from_either(conv[0], conv[1]), df)
-        write_bed(opath, g(df_))
+        bf = f(self.strat_inputs)
+        assert bf is not None and isinstance(bf.data, DipChrSource2)
+        conv = self.hap_chr_conversion(bf.data.chr_pattern)
+        df = bf.read(ipath)
+        conv_ = hap.from_either(conv[0], conv[1])
+        df_ = bed.filter_sort_bed(conv_.init_mapper, conv_.final_mapper, df)
+        bed.write_bed(opath, g(df_))
 
     def read_filter_sort_dip_bed(
         self,
@@ -1406,22 +1263,22 @@ class Diploid2BuildData(
         g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
         # more: list[int] = [],
     ) -> None:
-        bed = f(self.strat_inputs)
-        assert bed is not None and isinstance(bed.data, DipChrSource1)
-        conv = self.dip_chr_conversion(bed.data.chr_pattern)
+        bf = f(self.strat_inputs)
+        assert bf is not None and isinstance(bf.data, DipChrSource1)
+        conv = self.dip_chr_conversion(bf.data.chr_pattern)
         imap, splitter = conv.init_mapper
         fmap0, fmap1 = conv.final_mapper
 
         def go(
             o: Path,
             df: pd.DataFrame,
-            fmap: dict[int, str],
+            fmap: bed.FinalMapper,
         ) -> None:
-            df_ = filter_sort_bed_inner(imap, fmap, df)
-            write_bed(o, df_)
+            df_ = bed.filter_sort_bed(imap, fmap, df)
+            bed.write_bed(o, df_)
 
-        df = bed.read(ipath)
-        df0, df1 = split_bed(splitter, df)
+        df = bf.read(ipath)
+        df0, df1 = bed.split_bed(splitter, df)
         go(opath[0], g(df0), fmap0)
         go(opath[1], g(df1), fmap1)
 

@@ -1,15 +1,26 @@
 import gzip
 import pandas as pd
+from typing import Type, NewType
 from pathlib import Path
-import common.config as cfg
 from Bio import bgzf  # type: ignore
 import csv
+
+InternalChrIndex = NewType("InternalChrIndex", int)
+InitMapper = dict[str, InternalChrIndex]
+FinalMapper = dict[InternalChrIndex, str]
+SplitMapper = dict[str, bool]
+
+
+def make_split_mapper(im: InitMapper, fm: FinalMapper) -> SplitMapper:
+    return {n: i in fm for n, i in im.items()}
 
 
 def read_bed(
     path: Path,
-    b: cfg.BedFileParams = cfg.BedFileParams(),
-    more: list[int] = [],
+    columns: dict[int, Type[int | str]],
+    skip_lines: int,
+    sep: str,
+    more: list[int],
 ) -> pd.DataFrame:
     """Read a bed file as a pandas dataframe.
 
@@ -18,7 +29,7 @@ def read_bed(
     formated). Columns from 'more' are appended to the end of the dataframe
     in the order given starting from 3.
     """
-    bedcols = [*b.bed_cols.columns, *more]
+    bedcols = [*columns, *more]
     # NOTE: the 'comment="#"' parameter in pandas will strip everything after
     # the '#' in the line, which if at the beginning will include the entire
     # line and it will be skipped, and if not will only obliterate the
@@ -29,7 +40,7 @@ def read_bed(
     # This hacky bit will count the number of lines starting with a '#' and add
     # to the original "skip_lines" parameter, thereby skipping all starting
     # comments as well as the number of lines we wish to skip with 'skip_lines'.
-    total_skip = b.skip_lines
+    total_skip = skip_lines
     with gzip.open(path, "rt") as f:
         while line := next(f, None):
             if line.startswith("#"):
@@ -40,11 +51,11 @@ def read_bed(
         path,
         header=None,
         usecols=bedcols,
-        sep=b.sep,
+        sep=sep,
         skiprows=total_skip,
         # satisfy type checker :/
         dtype={
-            **{k: v for k, v in b.bed_cols.columns.items()},
+            **{k: v for k, v in columns.items()},
             **{m: str for m in more},
         },
     )
@@ -80,9 +91,9 @@ def sort_bed_numerically(df: pd.DataFrame, n: int) -> pd.DataFrame:
     )
 
 
-def filter_sort_bed_inner(
-    from_map: dict[str, int],
-    to_map: dict[int, str],
+def filter_sort_bed(
+    from_map: InitMapper,
+    to_map: FinalMapper,
     df: pd.DataFrame,
     n: int = 3,
 ) -> pd.DataFrame:
@@ -108,7 +119,7 @@ def filter_sort_bed_inner(
 
 
 def split_bed(
-    split_map: dict[str, bool],
+    split_map: SplitMapper,
     df: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     # TODO doc string
@@ -117,139 +128,139 @@ def split_bed(
     return df[sp], df[~sp]
 
 
-def filter_sort_bed(
-    conv: cfg.ChrConversion_,
-    df: pd.DataFrame,
-) -> pd.DataFrame:
-    """Filter and sort a bed file from a dataframe."""
-    from_map = conv.init_mapper
-    to_map = conv.final_mapper
-    # from_map = cfg.conversion_to_init_mapper(conv)
-    # to_map = cfg.conversion_to_final_mapper(conv)
-    return filter_sort_bed_inner(from_map, to_map, df)
+# def filter_sort_bed(
+#     conv: cfg.ChrConversion_,
+#     df: pd.DataFrame,
+# ) -> pd.DataFrame:
+#     """Filter and sort a bed file from a dataframe."""
+#     from_map = conv.init_mapper
+#     to_map = conv.final_mapper
+#     # from_map = cfg.conversion_to_init_mapper(conv)
+#     # to_map = cfg.conversion_to_final_mapper(conv)
+#     return filter_sort_bed_inner(from_map, to_map, df)
 
 
-def read_filter_sort_hap_bed(
-    sconf: cfg.GiabStrats,
-    ipath: Path,
-    opath: Path,
-    bp: cfg.BedFileParams,
-    rk: cfg.HaploidRefKey,
-    bk: cfg.HaploidBuildKey,
-    pat: cfg.HapChrPattern,
-    more: list[int] = [],
-) -> None:
-    """Read a haploid bed file, sort it, and write it in bgzip format."""
-    conv = sconf.haploid_stratifications.to_build_data_unsafe(rk, bk).chr_conversion(
-        pat
-    )
-    df = read_bed(ipath, bp, more)
-    df_ = filter_sort_bed(conv, df)
-    write_bed(opath, df_)
-
-
-# one diploid bed to be split into two haplotypes
-def read_filter_sort_half_hap_bed(
-    sconf: cfg.GiabStrats,
-    ipath: Path,
-    opath: tuple[Path, Path],
-    bp: cfg.BedFileParams,
-    rk: cfg.Diploid2RefKey,
-    bk: cfg.Diploid2BuildKey,
-    pat: cfg.DipChrPattern,
-    more: list[int] = [],
-) -> None:
-    conv = sconf.diploid2_stratifications.to_build_data_unsafe(
-        rk, bk
-    ).dip_chr_conversion(pat)
-    imap, splitter = conv.init_mapper
-    fmap0, fmap1 = conv.final_mapper
-
-    def go(
-        o: Path,
-        df: pd.DataFrame,
-        fmap: dict[int, str],
-    ) -> None:
-        df_ = filter_sort_bed_inner(imap, fmap, df)
-        write_bed(o, df_)
-
-    df = read_bed(ipath, bp, more)
-    df0, df1 = split_bed(splitter, df)
-    go(opath[0], df0, fmap0)
-    go(opath[1], df1, fmap1)
-
-
-# def read_filter_sort_full_hap_bed(
+# def read_filter_sort_hap_bed(
 #     sconf: cfg.GiabStrats,
 #     ipath: Path,
 #     opath: Path,
 #     bp: cfg.BedFileParams,
-#     p: cfg.Diploid2BuildPair,
-#     pat: cfg.Diploid_[cfg.HapChrPattern],
+#     rk: cfg.HaploidRefKey,
+#     bk: cfg.HaploidBuildKey,
+#     pat: cfg.HapChrPattern,
 #     more: list[int] = [],
 # ) -> None:
-#     conv = sconf.diploid2_stratifications.buildkey_to_hap_chr_conversion(
-#         p.ref, p.build, pat
+#     """Read a haploid bed file, sort it, and write it in bgzip format."""
+#     conv = sconf.haploid_stratifications.to_build_data_unsafe(rk, bk).chr_conversion(
+#         pat
 #     )
 #     df = read_bed(ipath, bp, more)
 #     df_ = filter_sort_bed(conv, df)
 #     write_bed(opath, df_)
-#     # conv = sconf.buildkey_to_dip_chr_conversion(p, pat)
-#     # df = read_bed(ipath, bp, more)
-#     # df_ = filter_sort_bed(conv, df)
-#     # write_bed(opath, df_)
-#     pass
 
 
-def read_filter_sort_dip1_bed(
-    sconf: cfg.GiabStrats,
-    ipath: Path,
-    opath: Path,
-    bp: cfg.BedFileParams,
-    rk: cfg.Diploid1RefKey,
-    bk: cfg.Diploid1BuildKey,
-    pat: cfg.DipChrPattern,
-    more: list[int] = [],
-) -> None:
-    """Read a diploid bed file, sort it, and write it in bgzip format."""
-    conv = sconf.diploid1_stratifications.to_build_data_unsafe(
-        rk, bk
-    ).dip_chr_conversion(pat)
-    df = read_bed(ipath, bp, more)
-    df_ = filter_sort_bed(conv, df)
-    write_bed(opath, df_)
+# # one diploid bed to be split into two haplotypes
+# def read_filter_sort_half_hap_bed(
+#     sconf: cfg.GiabStrats,
+#     ipath: Path,
+#     opath: tuple[Path, Path],
+#     bp: cfg.BedFileParams,
+#     rk: cfg.Diploid2RefKey,
+#     bk: cfg.Diploid2BuildKey,
+#     pat: cfg.DipChrPattern,
+#     more: list[int] = [],
+# ) -> None:
+#     conv = sconf.diploid2_stratifications.to_build_data_unsafe(
+#         rk, bk
+#     ).dip_chr_conversion(pat)
+#     imap, splitter = conv.init_mapper
+#     fmap0, fmap1 = conv.final_mapper
+
+#     def go(
+#         o: Path,
+#         df: pd.DataFrame,
+#         fmap: dict[int, str],
+#     ) -> None:
+#         df_ = filter_sort_bed_inner(imap, fmap, df)
+#         write_bed(o, df_)
+
+#     df = read_bed(ipath, bp, more)
+#     df0, df1 = split_bed(splitter, df)
+#     go(opath[0], df0, fmap0)
+#     go(opath[1], df1, fmap1)
 
 
-def read_filter_sort_dip2_bed(
-    sconf: cfg.GiabStrats,
-    ipath: tuple[Path, Path],
-    opath: Path,
-    bp: cfg.BedFileParams,
-    rk: cfg.Diploid1RefKey,
-    bk: cfg.Diploid1BuildKey,
-    pat: cfg.Diploid_[cfg.HapChrPattern],
-    more: list[int] = [],
-) -> None:
-    """Read two haploid bed files, combine and sort them as diploid, and write
-    it in bgzip format.
-    """
-    conv = sconf.diploid1_stratifications.to_build_data_unsafe(
-        rk, bk
-    ).hap_chr_conversion(pat)
-    imap1, imap2 = conv.init_mapper
-    fmap = conv.final_mapper
+# # def read_filter_sort_full_hap_bed(
+# #     sconf: cfg.GiabStrats,
+# #     ipath: Path,
+# #     opath: Path,
+# #     bp: cfg.BedFileParams,
+# #     p: cfg.Diploid2BuildPair,
+# #     pat: cfg.Diploid_[cfg.HapChrPattern],
+# #     more: list[int] = [],
+# # ) -> None:
+# #     conv = sconf.diploid2_stratifications.buildkey_to_hap_chr_conversion(
+# #         p.ref, p.build, pat
+# #     )
+# #     df = read_bed(ipath, bp, more)
+# #     df_ = filter_sort_bed(conv, df)
+# #     write_bed(opath, df_)
+# #     # conv = sconf.buildkey_to_dip_chr_conversion(p, pat)
+# #     # df = read_bed(ipath, bp, more)
+# #     # df_ = filter_sort_bed(conv, df)
+# #     # write_bed(opath, df_)
+# #     pass
 
-    def go(i: Path, imap: dict[str, int]) -> pd.DataFrame:
-        df = read_bed(i, bp, more)
-        return filter_sort_bed_inner(imap, fmap, df)
 
-    df = pd.concat(
-        [
-            go(*x)
-            for x in [
-                (ipath[0], imap1),
-                (ipath[1], imap2),
-            ]
-        ]
-    )
-    write_bed(opath, df)
+# def read_filter_sort_dip1_bed(
+#     sconf: cfg.GiabStrats,
+#     ipath: Path,
+#     opath: Path,
+#     bp: cfg.BedFileParams,
+#     rk: cfg.Diploid1RefKey,
+#     bk: cfg.Diploid1BuildKey,
+#     pat: cfg.DipChrPattern,
+#     more: list[int] = [],
+# ) -> None:
+#     """Read a diploid bed file, sort it, and write it in bgzip format."""
+#     conv = sconf.diploid1_stratifications.to_build_data_unsafe(
+#         rk, bk
+#     ).dip_chr_conversion(pat)
+#     df = read_bed(ipath, bp, more)
+#     df_ = filter_sort_bed(conv, df)
+#     write_bed(opath, df_)
+
+
+# def read_filter_sort_dip2_bed(
+#     sconf: cfg.GiabStrats,
+#     ipath: tuple[Path, Path],
+#     opath: Path,
+#     bp: cfg.BedFileParams,
+#     rk: cfg.Diploid1RefKey,
+#     bk: cfg.Diploid1BuildKey,
+#     pat: cfg.Diploid_[cfg.HapChrPattern],
+#     more: list[int] = [],
+# ) -> None:
+#     """Read two haploid bed files, combine and sort them as diploid, and write
+#     it in bgzip format.
+#     """
+#     conv = sconf.diploid1_stratifications.to_build_data_unsafe(
+#         rk, bk
+#     ).hap_chr_conversion(pat)
+#     imap1, imap2 = conv.init_mapper
+#     fmap = conv.final_mapper
+
+#     def go(i: Path, imap: dict[str, int]) -> pd.DataFrame:
+#         df = read_bed(i, bp, more)
+#         return filter_sort_bed_inner(imap, fmap, df)
+
+#     df = pd.concat(
+#         [
+#             go(*x)
+#             for x in [
+#                 (ipath[0], imap1),
+#                 (ipath[1], imap2),
+#             ]
+#         ]
+#     )
+#     write_bed(opath, df)
