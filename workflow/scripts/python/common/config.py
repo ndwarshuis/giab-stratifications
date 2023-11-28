@@ -396,7 +396,13 @@ BedSrc = BedFileSrc | BedHttpSrc
 
 # TODO clean this up with real polymorphism when mypy catches up with Haskell
 # 98, see https://github.com/python/typing/issues/548
-AnyBedT = TypeVar("AnyBedT", HapChrSource[BedSrc], DipChrSource[BedSrc])
+AnyBedT = TypeVar(
+    "AnyBedT",
+    HapChrSource[BedSrc],
+    DipChrSource[BedSrc],
+    # DipChrSource1[BedSrc],
+    # DipChrSource2[BedSrc],
+)
 # AnyRMSKFileT = TypeVar(
 #     "AnyRMSKFileT",
 #     HaploidOnly[RMSKFile],
@@ -669,51 +675,6 @@ class BedFileParams(BaseModel):
     skip_lines: NonNegativeInt = 0
     sep: str = "\t"
 
-    # def read(
-    #     self,
-    #     path: Path,
-    #     more: list[int] = [],
-    # ) -> pd.DataFrame:
-    #     """Read a bed file as a pandas dataframe.
-
-    #     Return a dataframe where the first three columns are numbered 0, 1, 2 and
-    #     typed str, int, int (first is str regardless of how the chr names are
-    #     formated). Columns from 'more' are appended to the end of the dataframe
-    #     in the order given starting from 3.
-    #     """
-    #     bedcols = [*self.bed_cols.columns, *more]
-    #     # NOTE: the 'comment="#"' parameter in pandas will strip everything after
-    #     # the '#' in the line, which if at the beginning will include the entire
-    #     # line and it will be skipped, and if not will only obliterate the
-    #     # remainder. Either way this is a problem, since I only care about initial
-    #     # lines starting with '#'. Bed files shouldn't have comments in the middle,
-    #     # and some 'bed' files use '#' as a delimiter within a field.
-    #     #
-    #     # This hacky bit will count the number of lines starting with a '#' and add
-    #     # to the original "skip_lines" parameter, thereby skipping all starting
-    #     # comments as well as the number of lines we wish to skip with 'skip_lines'.
-    #     total_skip = self.skip_lines
-    #     with gzip.open(path, "rt") as f:
-    #         while line := next(f, None):
-    #             if line.startswith("#"):
-    #                 total_skip += 1
-    #             else:
-    #                 break
-    #     df = pd.read_table(
-    #         path,
-    #         header=None,
-    #         usecols=bedcols,
-    #         sep=self.sep,
-    #         skiprows=total_skip,
-    #         # satisfy type checker :/
-    #         dtype={
-    #             **{k: v for k, v in self.bed_cols.columns.items()},
-    #             **{m: str for m in more},
-    #         },
-    #     )
-    #     df.columns = pd.Index(range(len(bedcols)))
-    #     return df
-
 
 class BedFile(BaseModel, Generic[AnyBedT]):
     """Inport specs for a bed-like file."""
@@ -724,6 +685,53 @@ class BedFile(BaseModel, Generic[AnyBedT]):
     @property
     def src_list(self) -> list[BedSrc]:
         return diploid_to_list(self.data)
+
+    def read(self, path: Path) -> pd.DataFrame:
+        return self._read(path, [])
+
+    def _read(self, path: Path, more: list[int] = []) -> pd.DataFrame:
+        """Read a bed file as a pandas dataframe.
+
+        Return a dataframe where the first three columns are numbered 0, 1, 2 and
+        typed str, int, int (first is str regardless of how the chr names are
+        formated). Columns from 'more' are appended to the end of the dataframe
+        in the order given starting from 3.
+        """
+        p = self.params
+        # TODO not sure why we need the type here
+        cs: list[int] = list(p.bed_cols.columns)
+        bedcols = [*cs, *more]
+        # NOTE: the 'comment="#"' parameter in pandas will strip everything after
+        # the '#' in the line, which if at the beginning will include the entire
+        # line and it will be skipped, and if not will only obliterate the
+        # remainder. Either way this is a problem, since I only care about initial
+        # lines starting with '#'. Bed files shouldn't have comments in the middle,
+        # and some 'bed' files use '#' as a delimiter within a field.
+        #
+        # This hacky bit will count the number of lines starting with a '#' and add
+        # to the original "skip_lines" parameter, thereby skipping all starting
+        # comments as well as the number of lines we wish to skip with 'skip_lines'.
+        total_skip = p.skip_lines
+        with gzip.open(path, "rt") as f:
+            while line := next(f, None):
+                if line.startswith("#"):
+                    total_skip += 1
+                else:
+                    break
+        df = pd.read_table(
+            path,
+            header=None,
+            usecols=bedcols,
+            sep=p.sep,
+            skiprows=total_skip,
+            # satisfy type checker :/
+            dtype={
+                **{k: v for k, v in p.bed_cols.columns.items()},
+                **{m: str for m in more},
+            },
+        )
+        df.columns = pd.Index(range(len(bedcols)))
+        return df
 
 
 class VCFFile(BaseModel):
@@ -752,11 +760,17 @@ class RMSKFile(BedFile[AnyBedT]):
             pass
         return v
 
+    def read(self, path: Path) -> pd.DataFrame:
+        return super()._read(path, [self.class_col])
+
 
 class SatFile(BedFile[AnyBedT]):
     """Configuration for a satellites file."""
 
     sat_col: NonNegativeInt
+
+    def read(self, path: Path) -> pd.DataFrame:
+        return super()._read(path, [self.sat_col])
 
 
 # def either_diploid(left: Callable) -> list[X]:
@@ -1157,53 +1171,6 @@ class BuildData_(Generic[W, StratInputT, BuildT]):
         return fmap_maybe(lambda x: x.query_vcf.src, self.build.bench)
 
 
-# TODO where to put these?
-def read_bed(
-    path: Path,
-    b: BedFileParams = BedFileParams(),
-    more: list[int] = [],
-) -> pd.DataFrame:
-    """Read a bed file as a pandas dataframe.
-
-    Return a dataframe where the first three columns are numbered 0, 1, 2 and
-    typed str, int, int (first is str regardless of how the chr names are
-    formated). Columns from 'more' are appended to the end of the dataframe
-    in the order given starting from 3.
-    """
-    bedcols = [*b.bed_cols.columns, *more]
-    # NOTE: the 'comment="#"' parameter in pandas will strip everything after
-    # the '#' in the line, which if at the beginning will include the entire
-    # line and it will be skipped, and if not will only obliterate the
-    # remainder. Either way this is a problem, since I only care about initial
-    # lines starting with '#'. Bed files shouldn't have comments in the middle,
-    # and some 'bed' files use '#' as a delimiter within a field.
-    #
-    # This hacky bit will count the number of lines starting with a '#' and add
-    # to the original "skip_lines" parameter, thereby skipping all starting
-    # comments as well as the number of lines we wish to skip with 'skip_lines'.
-    total_skip = b.skip_lines
-    with gzip.open(path, "rt") as f:
-        while line := next(f, None):
-            if line.startswith("#"):
-                total_skip += 1
-            else:
-                break
-    df = pd.read_table(
-        path,
-        header=None,
-        usecols=bedcols,
-        sep=b.sep,
-        skiprows=total_skip,
-        # satisfy type checker :/
-        dtype={
-            **{k: v for k, v in b.bed_cols.columns.items()},
-            **{m: str for m in more},
-        },
-    )
-    df.columns = pd.Index(range(len(bedcols)))
-    return df
-
-
 def write_bed(path: Path, df: pd.DataFrame) -> None:
     """Write a bed file in bgzip format from a dataframe.
 
@@ -1297,17 +1264,20 @@ class HaploidBuildData(
 
     def read_filter_sort_hap_bed(
         self,
+        f: Callable[[HaploidStratInputs], BedFile[HapChrSource[BedSrc]] | None],
         ipath: Path,
         opath: Path,
-        bp: BedFileParams,
-        pat: HapChrPattern,
-        more: list[int] = [],
+        g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
+        # more: list[int] = [],
     ) -> None:
         """Read a haploid bed file, sort it, and write it in bgzip format."""
-        conv = self.chr_conversion(pat)
-        df = read_bed(ipath, bp, more)
+        bed = f(self.strat_inputs)
+        # TODO do better here?
+        assert bed is not None
+        conv = self.chr_conversion(bed.data.chr_pattern)
+        df = bed.read(ipath)
         df_ = filter_sort_bed(conv, df)
-        write_bed(opath, df_)
+        write_bed(opath, g(df_))
 
 
 @dataclass
@@ -1336,47 +1306,55 @@ class Diploid1BuildData(
 
     def read_filter_sort_hap_bed(
         self,
+        f: Callable[[DiploidStratInputs], BedFile[DipChrSource[BedSrc]] | None],
         ipath: tuple[Path, Path],
         opath: Path,
-        bp: BedFileParams,
-        pat: Diploid_[HapChrPattern],
-        more: list[int] = [],
+        # more: list[int] = [],
+        g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
     ) -> None:
         """Read two haploid bed files, combine and sort them as diploid, and write
         it in bgzip format.
         """
-        conv = self.hap_chr_conversion(pat)
+
+        def go(
+            b: BedFile[DipChrSource[BedSrc]], i: Path, imap: dict[str, int]
+        ) -> pd.DataFrame:
+            df = b.read(i)
+            return filter_sort_bed_inner(imap, fmap, df)
+
+        bed = f(self.strat_inputs)
+        # TODO make this better
+        assert bed is not None and isinstance(bed.data, DipChrSource2)
+        conv = self.hap_chr_conversion(bed.data.chr_pattern)
         imap1, imap2 = conv.init_mapper
         fmap = conv.final_mapper
 
-        def go(i: Path, imap: dict[str, int]) -> pd.DataFrame:
-            df = read_bed(i, bp, more)
-            return filter_sort_bed_inner(imap, fmap, df)
-
         df = pd.concat(
             [
-                go(*x)
+                go(bed, *x)
                 for x in [
                     (ipath[0], imap1),
                     (ipath[1], imap2),
                 ]
             ]
         )
-        write_bed(opath, df)
+        write_bed(opath, g(df))
 
     def read_filter_sort_dip_bed(
         self,
+        f: Callable[[DiploidStratInputs], BedFile[DipChrSource[BedSrc]] | None],
         ipath: Path,
         opath: Path,
-        bp: BedFileParams,
-        pat: DipChrPattern,
-        more: list[int] = [],
+        g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
+        # more: list[int] = [],
     ) -> None:
         """Read a diploid bed file, sort it, and write it in bgzip format."""
-        conv = self.dip_chr_conversion(pat)
-        df = read_bed(ipath, bp, more)
+        bed = f(self.strat_inputs)
+        assert bed is not None and isinstance(bed.data, DipChrSource1)
+        conv = self.dip_chr_conversion(bed.data.chr_pattern)
+        df = bed.read(ipath)
         df_ = filter_sort_bed(conv, df)
-        write_bed(opath, df_)
+        write_bed(opath, g(df_))
 
 
 @dataclass
@@ -1406,27 +1384,31 @@ class Diploid2BuildData(
 
     def read_filter_sort_hap_bed(
         self,
+        f: Callable[[DiploidStratInputs], BedFile[DipChrSource[BedSrc]] | None],
         ipath: Path,
         opath: Path,
-        bp: BedFileParams,
-        pat: Diploid_[HapChrPattern],
         hap: Haplotype,
-        more: list[int] = [],
+        g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
+        # more: list[int] = [],
     ) -> None:
-        conv = self.hap_chr_conversion(pat)
-        df = read_bed(ipath, bp, more)
+        bed = f(self.strat_inputs)
+        assert bed is not None and isinstance(bed.data, DipChrSource2)
+        conv = self.hap_chr_conversion(bed.data.chr_pattern)
+        df = bed.read(ipath)
         df_ = filter_sort_bed(hap.from_either(conv[0], conv[1]), df)
-        write_bed(opath, df_)
+        write_bed(opath, g(df_))
 
     def read_filter_sort_dip_bed(
         self,
+        f: Callable[[DiploidStratInputs], BedFile[DipChrSource[BedSrc]] | None],
         ipath: Path,
         opath: tuple[Path, Path],
-        bp: BedFileParams,
-        pat: DipChrPattern,
-        more: list[int] = [],
+        g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
+        # more: list[int] = [],
     ) -> None:
-        conv = self.dip_chr_conversion(pat)
+        bed = f(self.strat_inputs)
+        assert bed is not None and isinstance(bed.data, DipChrSource1)
+        conv = self.dip_chr_conversion(bed.data.chr_pattern)
         imap, splitter = conv.init_mapper
         fmap0, fmap1 = conv.final_mapper
 
@@ -1438,10 +1420,10 @@ class Diploid2BuildData(
             df_ = filter_sort_bed_inner(imap, fmap, df)
             write_bed(o, df_)
 
-        df = read_bed(ipath, bp, more)
+        df = bed.read(ipath)
         df0, df1 = split_bed(splitter, df)
-        go(opath[0], df0, fmap0)
-        go(opath[1], df1, fmap1)
+        go(opath[0], g(df0), fmap0)
+        go(opath[1], g(df1), fmap1)
 
 
 class StratDict_(
