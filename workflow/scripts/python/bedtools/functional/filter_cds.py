@@ -1,7 +1,7 @@
 import pandas as pd
 from pathlib import Path
 import json
-from typing import Any
+from typing import Any, NamedTuple
 import common.config as cfg
 from common.bed import (
     filter_sort_bed,
@@ -11,6 +11,11 @@ from common.bed import (
     make_split_mapper,
     split_bed,
 )
+
+
+class CDSInput(NamedTuple):
+    bed: Path
+    mapper: Path
 
 
 def load_init_mapper(p: Path) -> InitMapper:
@@ -36,54 +41,56 @@ def write_df(path: Path, df: pd.DataFrame) -> None:
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
-    ons: list[Path] = smk.output[0]
-
     ws: dict[str, str] = smk.wildcards
-    bed_ins: list[Path] = smk.input["bed"]
-    map_ins: list[Path] = smk.input["mapper"]
-    bd = sconf.to_build_data(ws["ref_key"], ws["build_key"])
-    hap = cfg.to_haplotype(ws["hap"])
-    match (bed_ins, map_ins, ons):
-        case ([bi], [mi], [o]):
-            # one haplotype for both bed and ref (no combine)
-            if isinstance(bd, cfg.HaploidBuildData) and hap is None:
-                df = read_df(bi, mi, bd.final_mapper)
-            # one bed with both haps in it; one reference with both haps (no combine)
-            elif isinstance(bd, cfg.Diploid1BuildData) and hap is None:
-                df = read_df(bi, mi, bd.final_mapper)
-            # one bed with both haps in it; two references for both haps (split)
-            elif isinstance(bd, cfg.Diploid2BuildData) and hap is not None:
-                fmap = bd.final_mapper
-                df = read_df(bi, mi, hap.from_either(fmap[0], fmap[1]))
-            else:
-                assert False, "this should not happen"
-            write_df(o, df)
-        case ([bi], [mi], [o0, o1]):
-            # one bed and one ref for a single haplotype in a diploid reference
-            if isinstance(bd, cfg.Diploid2BuildData) and hap is not None:
-                # TODO bleh....
-                im = load_init_mapper(mi)
-                df = _read_df(bi)
-                fmap0, fmap1 = bd.final_mapper
-                sm = make_split_mapper(im, fmap0)
-                df0, df1 = split_bed(sm, df)
-                df0_ = filter_sort_bed(im, fmap0, df0)
-                df1_ = filter_sort_bed(im, fmap1, df1)
-                write_df(o0, df0_)
-                write_df(o1, df1_)
-            else:
-                assert False, "this should not happen"
 
-        case ([bi0, bi1], [mi0, mi1], [o]):
-            # two beds for both haps; one reference with both haps (combine)
-            if isinstance(bd, cfg.Diploid1BuildData) and hap is None:
-                df0 = read_df(bi0, mi0, bd.final_mapper)
-                df1 = read_df(bi1, mi1, bd.final_mapper)
-                write_df(o, pd.concat([df0, df1]))
-            else:
-                assert False, "this should not happen"
-        case _:
-            assert False, "this should not happen"
+    def hap(i: CDSInput, o: Path, bd: cfg.HaploidBuildData) -> None:
+        write_df(o, read_df(i.bed, i.mapper, bd.final_mapper))
+
+    def dip_to_dip(i: CDSInput, o: Path, bd: cfg.Diploid1BuildData) -> None:
+        write_df(o, read_df(i.bed, i.mapper, bd.final_mapper))
+
+    def hap_to_hap(
+        i: CDSInput,
+        o: Path,
+        hap: cfg.Haplotype,
+        bd: cfg.Diploid2BuildData,
+    ) -> None:
+        fmap = bd.final_mapper
+        write_df(o, read_df(i.bed, i.mapper, hap.from_either(fmap[0], fmap[1])))
+
+    def dip_to_hap(
+        i: CDSInput,
+        os: tuple[Path, Path],
+        bd: cfg.Diploid2BuildData,
+    ) -> None:
+        df = _read_df(i.bed)
+        im = load_init_mapper(i.mapper)
+        fmap0, fmap1 = bd.final_mapper
+        sm = make_split_mapper(im, fmap0)
+        df0, df1 = split_bed(sm, df)
+        for o, df_, fmap_ in zip(os, (df0, df1), (fmap0, fmap1)):
+            write_df(o, filter_sort_bed(im, fmap_, df_))
+
+    def hap_to_dip(
+        i: tuple[CDSInput, CDSInput],
+        o: Path,
+        bd: cfg.Diploid1BuildData,
+    ) -> None:
+        df = pd.concat([read_df(bed, mapper, bd.final_mapper) for bed, mapper in i])
+        write_df(o, df)
+
+    sconf.with_build_data_unsafe(
+        ws["ref_key"],
+        ws["build_key"],
+        [CDSInput(b, m) for b, m in zip(smk.input["bed"], smk.input["mapper"])],
+        smk.output,
+        cfg.to_haplotype(ws["hap"]),
+        hap,
+        dip_to_dip,
+        hap_to_hap,
+        dip_to_hap,
+        hap_to_dip,
+    )
 
 
 main(snakemake, snakemake.config)  # type: ignore

@@ -19,14 +19,16 @@ def read_ftbl(path: str) -> "pd.Series[str]":
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
-    rk = cfg.RefKey(smk.wildcards["ref_key"])
-    bk = cfg.BuildKey(smk.wildcards["build_key"])
-    cis = sconf.buildkey_to_chr_indices(rk, bk)
+    bd = sconf.to_build_data(smk.wildcards["ref_key"], smk.wildcards["build_key"])
+    cis = bd.chr_indices
 
     # if this fails then something is wrong with the ftbl (eg it doesn't have
     # a complete set of chromosomes)
     ser = read_ftbl(smk.input[0])
-    mapper = {ser[i.chr_name]: i.value for i in cis}
+    try:
+        mapper = {ser[i.chr_name]: i.value for i in cis}
+    except KeyError:
+        assert False, "FTBL file does not have a complete set of chromosomes"
 
     with open(smk.output[0], "w") as f:
         json.dump(mapper, f)

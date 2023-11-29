@@ -434,21 +434,16 @@ BedSrc = BedFileSrc | BedHttpSrc
 AnyBedT = TypeVar(
     "AnyBedT",
     HapChrSource[BedSrc],
-    DipChrSource[BedSrc],
-    # DipChrSource1[BedSrc],
-    # DipChrSource2[BedSrc],
+    # DipChrSource[BedSrc],
+    DipChrSource1[BedSrc],
+    DipChrSource2[BedSrc],
 )
-# AnyRMSKFileT = TypeVar(
-#     "AnyRMSKFileT",
-#     HaploidOnly[RMSKFile],
-#     HaploidOrDiploid[RMSKFile],
-# )
-# AnySatFileT = TypeVar(
-#     "AnySatFileT",
-#     Union[SatFile],
-#     HaploidOrDiploid[SatFile],
-# )
-# AnySrcT = TypeVar("AnySrcT", HaploidOnly[BedSrc], HaploidOrDiploid[BedSrc])
+AnyBedT_ = TypeVar(
+    "AnyBedT_",
+    HapChrSource[BedSrc],
+    DipChrSource1[BedSrc],
+    DipChrSource2[BedSrc],
+)
 
 
 @unique
@@ -643,6 +638,14 @@ class BedFile(BaseModel, Generic[AnyBedT]):
     def _read(self, path: Path, more: list[int] = []) -> pd.DataFrame:
         p = self.params
         return bed.read_bed(path, p.bed_cols.columns, p.skip_lines, p.sep, more)
+
+
+# class BedFile(BedFile_[AnyBedT]):
+#     data: AnyBedT
+
+
+# class SubBedFile(BedFile_[AnyBedT_]):
+#     data: AnyBedT_
 
 
 class VCFFile(BaseModel):
@@ -918,18 +921,18 @@ class Build_(BaseModel):
     comparison: BuildCompare | None = None
 
 
-class HaploidBuild(Build_):
+class HaploidBuild(Build_, Generic[AnyBedT]):
     """Spec for a stratification build."""
 
     include: IncludeHaploid = IncludeHaploid()
     other_strats: OtherStrats[HapChrSource[BedSrc]] = {}
 
 
-class DiploidBuild(Build_):
+class DiploidBuild(Build_, Generic[AnyBedT]):
     """Spec for a stratification build."""
 
     include: IncludeDiploid = IncludeDiploid()
-    other_strats: OtherStrats[DipChrSource[BedSrc]] = {}
+    other_strats: OtherStrats[AnyBedT] = {}
 
 
 # RefFile = AnyChrSource[RefSrc]
@@ -1154,12 +1157,11 @@ class Diploid1BuildData(
             self.chr_indices,
         )
 
-    def read_filter_sort_hap_bed(
+    def read_filter_sort_hap_bed_unsafe(
         self,
         f: Callable[[DiploidStratInputs], BedFile[DipChrSource[BedSrc]] | None],
         ipath: tuple[Path, Path],
         opath: Path,
-        # more: list[int] = [],
         g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
     ) -> None:
         """Read two haploid bed files, combine and sort them as diploid, and write
@@ -1175,6 +1177,39 @@ class Diploid1BuildData(
         bf = f(self.strat_inputs)
         # TODO make this better
         assert bf is not None and isinstance(bf.data, DipChrSource2)
+        conv = self.hap_chr_conversion(bf.data.chr_pattern)
+        imap1, imap2 = conv.init_mapper
+        fmap = conv.final_mapper
+
+        df = pd.concat(
+            [
+                go(bf, *x)
+                for x in [
+                    (ipath[0], imap1),
+                    (ipath[1], imap2),
+                ]
+            ]
+        )
+        bed.write_bed(opath, g(df))
+
+    def read_filter_sort_hap_bed(
+        self,
+        f: Callable[[DiploidStratInputs], BedFile[DipChrSource2[BedSrc]]],
+        ipath: tuple[Path, Path],
+        opath: Path,
+        g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
+    ) -> None:
+        """Read two haploid bed files, combine and sort them as diploid, and write
+        it in bgzip format.
+        """
+
+        def go(
+            b: BedFile[DipChrSource2[BedSrc]], i: Path, imap: bed.InitMapper
+        ) -> pd.DataFrame:
+            df = b.read(i)
+            return bed.filter_sort_bed(imap, fmap, df)
+
+        bf = f(self.strat_inputs)
         conv = self.hap_chr_conversion(bf.data.chr_pattern)
         imap1, imap2 = conv.init_mapper
         fmap = conv.final_mapper
@@ -1342,19 +1377,19 @@ class StratDict_(
     def refkey_to_gap_src(self, rk: RefKeyT) -> list[BedSrc]:
         return self[rk].strat_inputs.gap_src
 
-    def refkey_to_x_features_src(self, rk: RefKeyT) -> list[BedSrc]:
-        return fmap_maybe_def(
-            [],
-            lambda x: x.x_bed.src_list,
-            self[rk].strat_inputs.xy.features,
-        )
+    # def refkey_to_x_features_src(self, rk: RefKeyT) -> list[BedSrc]:
+    #     return fmap_maybe_def(
+    #         [],
+    #         lambda x: x.x_bed.src_list,
+    #         self[rk].strat_inputs.xy.features,
+    #     )
 
-    def refkey_to_y_features_src(self, rk: RefKeyT) -> list[BedSrc]:
-        return fmap_maybe_def(
-            [],
-            lambda x: x.y_bed.src_list,
-            self[rk].strat_inputs.xy.features,
-        )
+    # def refkey_to_y_features_src(self, rk: RefKeyT) -> list[BedSrc]:
+    #     return fmap_maybe_def(
+    #         [],
+    #         lambda x: x.y_bed.src_list,
+    #         self[rk].strat_inputs.xy.features,
+    #     )
 
     def refkey_to_x_PAR(self, rk: RefKeyT) -> XYPar | None:
         return self[rk].strat_inputs.xy.x_par
@@ -1925,19 +1960,19 @@ class GiabStrats(BaseModel):
     def refkey_to_gap_src(self, k: RefKey) -> list[BedSrc]:
         return self.refkey_to_strat(k).strat_inputs.gap_src
 
-    def refkey_to_x_features_src(self, k: RefKey) -> list[BedSrc]:
-        return fmap_maybe_def(
-            [],
-            lambda x: x.x_bed.src_list,
-            self.refkey_to_strat(k).strat_inputs.xy.features,
-        )
+    # def refkey_to_x_features_src(self, k: RefKey) -> list[BedSrc]:
+    #     return fmap_maybe_def(
+    #         [],
+    #         lambda x: x.x_bed.src_list,
+    #         self.refkey_to_strat(k).strat_inputs.xy.features,
+    #     )
 
-    def refkey_to_y_features_src(self, k: RefKey) -> list[BedSrc]:
-        return fmap_maybe_def(
-            [],
-            lambda x: x.y_bed.src_list,
-            self.refkey_to_strat(k).strat_inputs.xy.features,
-        )
+    # def refkey_to_y_features_src(self, k: RefKey) -> list[BedSrc]:
+    #     return fmap_maybe_def(
+    #         [],
+    #         lambda x: x.y_bed.src_list,
+    #         self.refkey_to_strat(k).strat_inputs.xy.features,
+    #     )
 
     def refkey_to_x_PAR(self, k: RefKey) -> XYPar | None:
         return self.refkey_to_strat(k).strat_inputs.xy.x_par
@@ -2281,16 +2316,80 @@ class GiabStrats(BaseModel):
             # TODO this seems sloppy, not sure if I want it here
             assert False, "this should not happen"
 
-    def to_build_pair(self, rk: str, bk: str) -> BuildPair:
-        if rk in self.haploid_stratifications:
-            return BuildPair_(HaploidRefKey(rk), HaploidBuildKey(bk))
-        elif rk in self.diploid1_stratifications:
-            return BuildPair_(Diploid1RefKey(rk), Diploid1BuildKey(bk))
-        elif rk in self.diploid2_stratifications:
-            return BuildPair_(Diploid2RefKey(rk), Diploid2BuildKey(bk))
-        else:
-            # TODO this seems sloppy, not sure if I want it here
-            assert False, "this should not happen"
+    def with_build_data_unsafe(
+        self,
+        rk: str,
+        bk: str,
+        inputs: list[X],
+        outputs: list[Y],
+        hap: Haplotype | None,
+        get_f: Callable[[HaploidStratInputs | DiploidStratInputs], BedFile[AnyBedT]],
+        hap_f: Callable[[X, Y, BedFile[HapChrSource[BedSrc]]], None],
+        dip_to_dip_f: Callable[[X, Y, BedFile[DipChrSource1[BedSrc]]], None],
+        hap_to_hap_f: Callable[[X, Y, Haplotype, BedFile[DipChrSource2[BedSrc]]], None],
+        dip_to_hap_f: Callable[[X, tuple[Y, Y], BedFile[DipChrSource2[BedSrc]]], None],
+        hap_to_dip_f: Callable[[tuple[X, X], Y, BedFile[DipChrSource1[BedSrc]]], None],
+    ) -> None:
+        # TODO make these errors more meaningful
+        bd = self.to_build_data(rk, bk)
+        bedlike = get_f(bd.strat_inputs)
+        dat = bedlike.data
+        match (inputs, outputs):
+            case ([i], [o]):
+                # one haplotype for both bed and ref (no combine)
+                if (
+                    isinstance(bd, HaploidBuildData)
+                    and isinstance(dat, HapChrSource)
+                    and hap is None
+                ):
+                    hap_f(i, o, bedlike)
+                # one bed with both haps in it; one reference with both haps (no combine)
+                elif (
+                    isinstance(bd, Diploid1BuildData)
+                    and isinstance(dat, DipChrSource1)
+                    and hap is None
+                ):
+                    dip_to_dip_f(i, o, bedlike)
+                # one bed and one ref for a single haplotype in a diploid reference
+                elif (
+                    isinstance(bd, Diploid2BuildData)
+                    and isinstance(dat, DipChrSource2)
+                    and hap is not None
+                ):
+                    hap_to_hap_f(i, o, hap, bedlike)
+            case ([i], [o0, o1]):
+                # one bed with both haps in it; two references for both haps (split)
+                if (
+                    isinstance(bd, Diploid2BuildData)
+                    and isinstance(dat, DipChrSource2)
+                    and hap is None
+                ):
+                    dip_to_hap_f(i, (o0, o1), bedlike)
+                else:
+                    assert False, "this should not happen"
+            case ([i0, i1], [o]):
+                # two beds for both haps; one reference with both haps (combine)
+                if (
+                    isinstance(bd, Diploid1BuildData)
+                    and isinstance(dat, DipChrSource1)
+                    and hap is None
+                ):
+                    hap_to_dip_f((i0, i1), o, bedlike)
+                else:
+                    assert False, "this should not happen"
+            case _:
+                assert False, "this should not happen"
+
+    # def to_build_pair(self, rk: str, bk: str) -> BuildPair:
+    #     if rk in self.haploid_stratifications:
+    #         return BuildPair_(HaploidRefKey(rk), HaploidBuildKey(bk))
+    #     elif rk in self.diploid1_stratifications:
+    #         return BuildPair_(Diploid1RefKey(rk), Diploid1BuildKey(bk))
+    #     elif rk in self.diploid2_stratifications:
+    #         return BuildPair_(Diploid2RefKey(rk), Diploid2BuildKey(bk))
+    #     else:
+    #         # TODO this seems sloppy, not sure if I want it here
+    #         assert False, "this should not happen"
 
     def _all_refkey_from_want(
         self,
