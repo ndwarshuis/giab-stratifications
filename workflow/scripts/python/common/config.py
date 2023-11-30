@@ -15,6 +15,7 @@ from typing import (
     Annotated,
     Generic,
     Union,
+    TypeGuard,
 )
 from typing_extensions import Self, assert_never
 from more_itertools import unzip, unique_everseen
@@ -434,9 +435,9 @@ BedSrc = BedFileSrc | BedHttpSrc
 AnyBedT = TypeVar(
     "AnyBedT",
     HapChrSource[BedSrc],
-    # DipChrSource[BedSrc],
-    DipChrSource1[BedSrc],
-    DipChrSource2[BedSrc],
+    DipChrSource[BedSrc],
+    # DipChrSource1[BedSrc],
+    # DipChrSource2[BedSrc],
 )
 AnyBedT_ = TypeVar(
     "AnyBedT_",
@@ -622,15 +623,15 @@ class BedFileParams(BaseModel):
     sep: str = "\t"
 
 
-class BedFile(BaseModel, Generic[AnyBedT]):
+class BedFile(BaseModel, Generic[X]):
     """Inport specs for a bed-like file."""
 
-    data: AnyBedT
+    data: X
     params: BedFileParams = BedFileParams()
 
-    @property
-    def src_list(self) -> list[BedSrc]:
-        return diploid_to_list(self.data)
+    # @property
+    # def src_list(self) -> list[BedSrc]:
+    #     return diploid_to_list(self.data)
 
     def read(self, path: Path) -> pd.DataFrame:
         return self._read(path, [])
@@ -640,12 +641,14 @@ class BedFile(BaseModel, Generic[AnyBedT]):
         return bed.read_bed(path, p.bed_cols.columns, p.skip_lines, p.sep, more)
 
 
-# class BedFile(BedFile_[AnyBedT]):
-#     data: AnyBedT
+# TODO mypy for some reason doesn't understand how to narrow a
+# Something[Union[X, Y]] to a Something[X] using 'isinstance'
+def is_dip1_bed(x: BedFile[DipChrSource[X]]) -> TypeGuard[BedFile[DipChrSource1[X]]]:
+    return isinstance(x.data, DipChrSource1)
 
 
-# class SubBedFile(BedFile_[AnyBedT_]):
-#     data: AnyBedT_
+def is_dip2_bed(x: BedFile[DipChrSource[X]]) -> TypeGuard[BedFile[DipChrSource2[X]]]:
+    return isinstance(x.data, DipChrSource2)
 
 
 class VCFFile(BaseModel):
@@ -655,11 +658,11 @@ class VCFFile(BaseModel):
     chr_pattern: HapChrPattern = HapChrPattern()
 
 
-class RMSKFile(BedFile[AnyBedT]):
+class RMSKFile(BedFile[X]):
     """Input file for repeat masker stratification."""
 
     # TODO type narrowing won't work without this redfinition
-    data: AnyBedT
+    data: X
     class_col: NonNegativeInt
 
     @validator("class_col")
@@ -678,7 +681,7 @@ class RMSKFile(BedFile[AnyBedT]):
         return super()._read(path, [self.class_col])
 
 
-class SatFile(BedFile[AnyBedT]):
+class SatFile(BedFile[X]):
     """Configuration for a satellites file."""
 
     sat_col: NonNegativeInt
@@ -707,12 +710,12 @@ def map_diploid(f: Callable[[X], Y], x: AnyChrSource[X]) -> list[Y]:
     return [f(y) for y in diploid_to_list(x)]
 
 
-class LowComplexity(BaseModel, Generic[AnyBedT]):
+class LowComplexity(BaseModel, Generic[X]):
     """Configuration for low complexity stratification."""
 
-    rmsk: RMSKFile[AnyBedT] | None
-    simreps: BedFile[AnyBedT] | None
-    satellites: SatFile[AnyBedT] | None
+    rmsk: RMSKFile[X] | None
+    simreps: BedFile[X] | None
+    satellites: SatFile[X] | None
 
 
 class XYFile(BedFile[HapChrSource[BedSrc]]):
@@ -790,10 +793,10 @@ class Mappability(BaseModel):
     unplaced_chr_patterns: list[str]
 
 
-class SegDups(BaseModel, Generic[AnyBedT]):
+class SegDups(BaseModel, Generic[X]):
     """Configuration for Segdup stratifications."""
 
-    superdups: BedFile[AnyBedT] | None
+    superdups: BedFile[X] | None
 
 
 class LowMapParams(BaseModel):
@@ -921,18 +924,18 @@ class Build_(BaseModel):
     comparison: BuildCompare | None = None
 
 
-class HaploidBuild(Build_, Generic[AnyBedT]):
+class HaploidBuild(Build_):
     """Spec for a stratification build."""
 
     include: IncludeHaploid = IncludeHaploid()
     other_strats: OtherStrats[HapChrSource[BedSrc]] = {}
 
 
-class DiploidBuild(Build_, Generic[AnyBedT]):
+class DiploidBuild(Build_):
     """Spec for a stratification build."""
 
     include: IncludeDiploid = IncludeDiploid()
-    other_strats: OtherStrats[AnyBedT] = {}
+    other_strats: OtherStrats[DipChrSource[BedSrc]] = {}
 
 
 # RefFile = AnyChrSource[RefSrc]
@@ -955,24 +958,24 @@ class DiploidBuild(Build_, Generic[AnyBedT]):
 # RefFileDiploid = Diploid_[RefFileHaploid]
 
 
-class Functional(BaseModel, Generic[AnyBedT]):
+class Functional(BaseModel, Generic[X]):
     """Configuration for Functional stratifications."""
 
-    ftbl_src: AnyBedT
-    gff_src: AnyBedT
+    ftbl_src: X
+    gff_src: X
 
 
-class StratInputs_(BaseModel, Generic[AnyBedT]):
-    gap: BedFile[AnyBedT] | None
-    low_complexity: LowComplexity[AnyBedT]
+class StratInputs_(BaseModel, Generic[Z]):
+    gap: BedFile[Z] | None
+    low_complexity: LowComplexity[Z]
     xy: XY
     mappability: Mappability | None
-    segdups: SegDups[AnyBedT]
-    functional: Functional[AnyBedT] | None
+    segdups: SegDups[Z]
+    functional: Functional[Z] | None
 
     def _to_bed_src(
         self,
-        f: Callable[[Self], BedFile[AnyBedT] | None],
+        f: Callable[[Self], BedFile[Z] | None],
     ) -> list[BedSrc]:
         x = f(self)
         if x is None:
@@ -1097,6 +1100,10 @@ class BuildData_(Generic[W, StratInputT, BuildT]):
 class HaploidBuildData(
     BuildData_[HapChrSource[RefSrc], HaploidStratInputs, HaploidBuild]
 ):
+    ref: HapChrSource[RefSrc]
+    strat_inputs: HaploidStratInputs
+    build: HaploidBuild
+
     @property
     def final_mapper(self) -> bed.FinalMapper:
         return self.ref.chr_pattern.final_mapper(self.chr_indices)
@@ -1113,16 +1120,13 @@ class HaploidBuildData(
 
     def read_filter_sort_hap_bed(
         self,
-        f: Callable[[HaploidStratInputs], BedFile[HapChrSource[BedSrc]] | None],
+        bf: BedFile[HapChrSource[BedSrc]],
         ipath: Path,
         opath: Path,
         g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
         # more: list[int] = [],
     ) -> None:
         """Read a haploid bed file, sort it, and write it in bgzip format."""
-        bf = f(self.strat_inputs)
-        # TODO do better here?
-        assert bf is not None
         conv = self.chr_conversion(bf.data.chr_pattern)
         df = bf.read(ipath)
         df_ = bed.filter_sort_bed(conv.init_mapper, conv.final_mapper, df)
@@ -1133,6 +1137,10 @@ class HaploidBuildData(
 class Diploid1BuildData(
     BuildData_[DipChrSource1[RefSrc], DiploidStratInputs, DiploidBuild]
 ):
+    ref: DipChrSource1[RefSrc]
+    strat_inputs: DiploidStratInputs
+    build: DiploidBuild
+
     @property
     def final_mapper(self) -> bed.FinalMapper:
         return self.ref.chr_pattern.final_mapper(self.chr_indices)
@@ -1159,7 +1167,7 @@ class Diploid1BuildData(
 
     def read_filter_sort_hap_bed_unsafe(
         self,
-        f: Callable[[DiploidStratInputs], BedFile[DipChrSource[BedSrc]] | None],
+        bf: BedFile[DipChrSource2[BedSrc]],
         ipath: tuple[Path, Path],
         opath: Path,
         g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
@@ -1169,14 +1177,11 @@ class Diploid1BuildData(
         """
 
         def go(
-            b: BedFile[DipChrSource[BedSrc]], i: Path, imap: bed.InitMapper
+            b: BedFile[DipChrSource2[BedSrc]], i: Path, imap: bed.InitMapper
         ) -> pd.DataFrame:
             df = b.read(i)
             return bed.filter_sort_bed(imap, fmap, df)
 
-        bf = f(self.strat_inputs)
-        # TODO make this better
-        assert bf is not None and isinstance(bf.data, DipChrSource2)
         conv = self.hap_chr_conversion(bf.data.chr_pattern)
         imap1, imap2 = conv.init_mapper
         fmap = conv.final_mapper
@@ -1194,7 +1199,7 @@ class Diploid1BuildData(
 
     def read_filter_sort_hap_bed(
         self,
-        f: Callable[[DiploidStratInputs], BedFile[DipChrSource2[BedSrc]]],
+        bf: BedFile[DipChrSource2[BedSrc]],
         ipath: tuple[Path, Path],
         opath: Path,
         g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
@@ -1209,7 +1214,6 @@ class Diploid1BuildData(
             df = b.read(i)
             return bed.filter_sort_bed(imap, fmap, df)
 
-        bf = f(self.strat_inputs)
         conv = self.hap_chr_conversion(bf.data.chr_pattern)
         imap1, imap2 = conv.init_mapper
         fmap = conv.final_mapper
@@ -1227,15 +1231,13 @@ class Diploid1BuildData(
 
     def read_filter_sort_dip_bed(
         self,
-        f: Callable[[DiploidStratInputs], BedFile[DipChrSource[BedSrc]] | None],
+        bf: BedFile[DipChrSource1[BedSrc]],
         ipath: Path,
         opath: Path,
         g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
         # more: list[int] = [],
     ) -> None:
         """Read a diploid bed file, sort it, and write it in bgzip format."""
-        bf = f(self.strat_inputs)
-        assert bf is not None and isinstance(bf.data, DipChrSource1)
         conv = self.dip_chr_conversion(bf.data.chr_pattern)
         df = bf.read(ipath)
         df_ = bed.filter_sort_bed(conv.init_mapper, conv.final_mapper, df)
@@ -1275,15 +1277,13 @@ class Diploid2BuildData(
 
     def read_filter_sort_hap_bed(
         self,
-        f: Callable[[DiploidStratInputs], BedFile[DipChrSource[BedSrc]] | None],
+        bf: BedFile[DipChrSource2[BedSrc]],
         ipath: Path,
         opath: Path,
         hap: Haplotype,
         g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
         # more: list[int] = [],
     ) -> None:
-        bf = f(self.strat_inputs)
-        assert bf is not None and isinstance(bf.data, DipChrSource2)
         conv = self.hap_chr_conversion(bf.data.chr_pattern)
         df = bf.read(ipath)
         conv_ = hap.from_either(conv[0], conv[1])
@@ -1292,14 +1292,12 @@ class Diploid2BuildData(
 
     def read_filter_sort_dip_bed(
         self,
-        f: Callable[[DiploidStratInputs], BedFile[DipChrSource[BedSrc]] | None],
+        bf: BedFile[DipChrSource1[BedSrc]],
         ipath: Path,
         opath: tuple[Path, Path],
         g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
         # more: list[int] = [],
     ) -> None:
-        bf = f(self.strat_inputs)
-        assert bf is not None and isinstance(bf.data, DipChrSource1)
         conv = self.dip_chr_conversion(bf.data.chr_pattern)
         imap, splitter = conv.init_mapper
         fmap0, fmap1 = conv.final_mapper
@@ -1998,13 +1996,13 @@ class GiabStrats(BaseModel):
     def refkey_to_functional_gff_src(self, k: RefKey) -> list[BedSrc]:
         return self.refkey_to_strat(k).strat_inputs.gff_src
 
-    def otherkey_to_src(
-        self,
-        p: BuildPair,
-        lk: OtherLevelKey,
-        sk: OtherStratKey,
-    ) -> list[BedSrc]:
-        return self.otherkey_to_bed(p, lk, sk).src_list
+    # def otherkey_to_src(
+    #     self,
+    #     p: BuildPair,
+    #     lk: OtherLevelKey,
+    #     sk: OtherStratKey,
+    # ) -> list[BedSrc]:
+    #     return self.otherkey_to_bed(p, lk, sk).src_list
 
     # chromosome standardization
 
@@ -2316,6 +2314,7 @@ class GiabStrats(BaseModel):
             # TODO this seems sloppy, not sure if I want it here
             assert False, "this should not happen"
 
+    # TODO gross...
     def with_build_data_unsafe(
         self,
         rk: str,
@@ -2323,58 +2322,132 @@ class GiabStrats(BaseModel):
         inputs: list[X],
         outputs: list[Y],
         hap: Haplotype | None,
-        get_f: Callable[[HaploidStratInputs | DiploidStratInputs], BedFile[AnyBedT]],
-        hap_f: Callable[[X, Y, BedFile[HapChrSource[BedSrc]]], None],
-        dip_to_dip_f: Callable[[X, Y, BedFile[DipChrSource1[BedSrc]]], None],
-        hap_to_hap_f: Callable[[X, Y, Haplotype, BedFile[DipChrSource2[BedSrc]]], None],
-        dip_to_hap_f: Callable[[X, tuple[Y, Y], BedFile[DipChrSource2[BedSrc]]], None],
-        hap_to_dip_f: Callable[[tuple[X, X], Y, BedFile[DipChrSource1[BedSrc]]], None],
+        get_f: Callable[[StratInputs_[Z]], BedFile[Z] | None],
+        hap_f: Callable[[X, Y, HaploidBuildData, BedFile[HapChrSource[BedSrc]]], None],
+        dip_to_dip_f: Callable[
+            [X, Y, Diploid1BuildData, BedFile[DipChrSource1[BedSrc]]], None
+        ],
+        hap_to_hap_f: Callable[
+            [X, Y, Haplotype, Diploid2BuildData, BedFile[DipChrSource2[BedSrc]]], None
+        ],
+        dip_to_hap_f: Callable[
+            [X, tuple[Y, Y], Diploid2BuildData, BedFile[DipChrSource1[BedSrc]]], None
+        ],
+        hap_to_dip_f: Callable[
+            [tuple[X, X], Y, Diploid1BuildData, BedFile[DipChrSource2[BedSrc]]], None
+        ],
     ) -> None:
         # TODO make these errors more meaningful
         bd = self.to_build_data(rk, bk)
-        bedlike = get_f(bd.strat_inputs)
-        dat = bedlike.data
+        # bedlike = get_f(bd.strat_inputs)
+        # if bedlike is not None:
+        #     dat = bedlike.data
+        #     ps = bedlike.params
+        match (inputs, outputs):
+            # case ([i], [o]):
+            #     # one haplotype for both bed and ref (no combine)
+            #     if (
+            #         isinstance(bd, HaploidBuildData)
+            #         and isinstance(dat, HapChrSource)
+            #         and hap is None
+            #     ):
+            #         hap_f(i, o, bd, bedlike)
+            #     # one bed with both haps in it; one reference with both haps (no combine)
+            #     elif (
+            #         isinstance(bd, Diploid1BuildData)
+            #         and isinstance(dat, DipChrSource1)
+            #         and hap is None
+            #     ):
+            #         dip_to_dip_f(i, o, bd, BedFile(data=dat, params=ps))
+            #     # one bed and one ref for a single haplotype in a diploid reference
+            #     elif (
+            #         isinstance(bd, Diploid2BuildData)
+            #         and isinstance(dat, DipChrSource2)
+            #         and hap is not None
+            #     ):
+            #         hap_to_hap_f(i, o, hap, bd, BedFile(data=dat, params=ps))
+            # case ([i], [o0, o1]):
+            #     # one bed with both haps in it; two references for both haps (split)
+            #     if (
+            #         isinstance(bd, Diploid2BuildData)
+            #         and isinstance(dat, DipChrSource2)
+            #         and hap is None
+            #     ):
+            #         dip_to_hap_f(i, (o0, o1), bd, BedFile(data=dat, params=ps))
+            #     else:
+            #         assert False, "this should not happen"
+            case ([i0, i1], [o]):
+                # two beds for both haps; one reference with both haps (combine)
+                if (
+                    isinstance(bd, Diploid1BuildData)
+                    # and isinstance(dat, DipChrSource1)
+                    and hap is None
+                ):
+                    bed = get_f(bd.strat_inputs)
+                    hap_to_dip_f((i0, i1), o, bd, bed)
+                else:
+                    assert False, "this should not happen"
+            case _:
+                assert False, "this should not happen"
+
+    def with_build_src_data_unsafe(
+        self,
+        rk: str,
+        bk: str,
+        inputs: list[X],
+        outputs: list[Y],
+        hap: Haplotype | None,
+        get_f: Callable[[HaploidStratInputs | DiploidStratInputs], AnyBedT],
+        hap_f: Callable[[X, Y, HapChrSource[BedSrc]], None],
+        dip_to_dip_f: Callable[[X, Y, DipChrSource1[BedSrc]], None],
+        hap_to_hap_f: Callable[[X, Y, Haplotype, DipChrSource2[BedSrc]], None],
+        dip_to_hap_f: Callable[[X, tuple[Y, Y], DipChrSource2[BedSrc]], None],
+        hap_to_dip_f: Callable[[tuple[X, X], Y, DipChrSource1[BedSrc]], None],
+    ) -> None:
+        # TODO make these errors more meaningful
+        bd = self.to_build_data(rk, bk)
+        src = get_f(bd.strat_inputs)
         match (inputs, outputs):
             case ([i], [o]):
                 # one haplotype for both bed and ref (no combine)
                 if (
                     isinstance(bd, HaploidBuildData)
-                    and isinstance(dat, HapChrSource)
+                    and isinstance(src, HapChrSource)
                     and hap is None
                 ):
-                    hap_f(i, o, bedlike)
+                    hap_f(i, o, src)
                 # one bed with both haps in it; one reference with both haps (no combine)
                 elif (
                     isinstance(bd, Diploid1BuildData)
-                    and isinstance(dat, DipChrSource1)
+                    and isinstance(src, DipChrSource1)
                     and hap is None
                 ):
-                    dip_to_dip_f(i, o, bedlike)
+                    dip_to_dip_f(i, o, src)
                 # one bed and one ref for a single haplotype in a diploid reference
                 elif (
                     isinstance(bd, Diploid2BuildData)
-                    and isinstance(dat, DipChrSource2)
+                    and isinstance(src, DipChrSource2)
                     and hap is not None
                 ):
-                    hap_to_hap_f(i, o, hap, bedlike)
+                    hap_to_hap_f(i, o, hap, src)
             case ([i], [o0, o1]):
                 # one bed with both haps in it; two references for both haps (split)
                 if (
                     isinstance(bd, Diploid2BuildData)
-                    and isinstance(dat, DipChrSource2)
+                    and isinstance(src, DipChrSource2)
                     and hap is None
                 ):
-                    dip_to_hap_f(i, (o0, o1), bedlike)
+                    dip_to_hap_f(i, (o0, o1), src)
                 else:
                     assert False, "this should not happen"
             case ([i0, i1], [o]):
                 # two beds for both haps; one reference with both haps (combine)
                 if (
                     isinstance(bd, Diploid1BuildData)
-                    and isinstance(dat, DipChrSource1)
+                    and isinstance(src, DipChrSource1)
                     and hap is None
                 ):
-                    hap_to_dip_f((i0, i1), o, bedlike)
+                    hap_to_dip_f((i0, i1), o, src)
                 else:
                     assert False, "this should not happen"
             case _:
@@ -2429,3 +2502,25 @@ class GiabStrats(BaseModel):
     @property
     def all_refkey_segdups(self) -> list[RefKey]:
         return self._all_refkey_from_want(self.want_segdups)
+
+
+def narrow_bed_union(
+    x: BedFile[AnyBedT],
+) -> (
+    BedFile[HapChrSource[BedSrc]]
+    | BedFile[DipChrSource1[BedSrc]]
+    | BedFile[DipChrSource2[BedSrc]]
+    | None
+):
+    if x is None:
+        return None
+    elif isinstance(x.data, HapChrSource):
+        return x
+    elif is_dip1_bed(x):
+        return x
+    elif is_dip2_bed(x):
+        return x
+    else:
+        # ASSUME this is unreachable
+        return None
+        # assert_never(y)
