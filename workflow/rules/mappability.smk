@@ -186,7 +186,7 @@ rule wig_to_bed:
 def nonunique_inputs(wildcards):
     rk = wildcards.ref_key
     bk = wildcards.build_key
-    l, m, e = config.buildkey_to_mappability(rk, bk)
+    l, m, e = config.to_build_data(rk, bk).mappability_params
     return expand(rules.wig_to_bed.output, zip, allow_missing=True, l=l, m=m, e=e)
 
 

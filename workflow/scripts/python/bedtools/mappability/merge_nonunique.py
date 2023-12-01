@@ -2,16 +2,36 @@ import re
 from typing import Any
 from pathlib import Path
 import common.config as cfg
-from common.bed import read_bed, filter_sort_bed, write_bed
+from common.bed import read_bed, filter_sort_bed, write_bed, FinalMapper, InitMapper
 from pybedtools import BedTool as bt  # type: ignore
 import json
 
 
-def main(smk: Any, sconf: cfg.GiabStrats) -> None:
-    rk = cfg.RefKey(smk.wildcards["ref_key"])
+# TODO not DRY
+def get_bed_mappers(
+    bd: cfg.AnyBuildData, hap: cfg.Haplotype | None
+) -> tuple[InitMapper, FinalMapper]:
+    if isinstance(bd, cfg.HaploidBuildData) and hap is None:
+        c = bd.ref_chr_conversion
+        return (c.init_mapper, c.final_mapper)
 
-    pattern = sconf.refkey_to_final_chr_pattern(rk)
-    conv = cfg.fullset_conv(pattern)
+    elif isinstance(bd, cfg.Diploid1BuildData) and hap is None:
+        c0 = bd.ref_chr_conversion
+        return (c0.init_mapper, c0.final_mapper)
+
+    elif isinstance(bd, cfg.Diploid2BuildData) and hap is not None:
+        c = hap.from_either(*bd.ref_chr_conversion)
+        return (c.init_mapper, c.final_mapper)
+
+    else:
+        assert False
+
+
+def main(smk: Any, sconf: cfg.GiabStrats) -> None:
+    ws: dict[str, str] = smk.wildcards
+    hap = cfg.to_haplotype(ws["hap"])
+    bd = sconf.to_build_data(ws["ref_key"], ws["build_key"])
+    im, fm = get_bed_mappers(bd, hap)
 
     inputs = smk.input["bed"]
     genome = Path(smk.input["genome"][0])
@@ -28,11 +48,11 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         return final_path(f"nonunique_{m[1]}")
 
     def read_sort_bed(p: Path) -> bt:
-        df = read_bed(p)
+        df = read_bed(p, {0: str, 1: int, 2: int}, 0, "\t", [])
         # Sort here because we can't assume wig2bed sorts its output. Also,
         # filtering is necessary because the output should have unplaced contigs
         # in it that we don't want.
-        return bt().from_dataframe(filter_sort_bed(conv, df))
+        return bt().from_dataframe(filter_sort_bed(im, fm, df))
 
     def merge_bed(bed: bt, out: Path) -> None:
         df = bed.merge(d=100).intersect(b=gapless, sorted=True, g=genome).to_dataframe()

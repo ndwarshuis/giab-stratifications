@@ -18,6 +18,7 @@ def read_ftbl(path: str) -> "pd.Series[str]":
     )
 
 
+# TODO make this work for dip/hap
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     bd = sconf.to_build_data(smk.wildcards["ref_key"], smk.wildcards["build_key"])
     cis = bd.chr_indices

@@ -109,9 +109,8 @@ def write_intersected_range_beds(
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
-    rk = cfg.RefKey(smk.wildcards.ref_key)
-    bk = cfg.BuildKey(smk.wildcards.build_key)
-    gps = sconf.buildkey_to_include(rk, bk).gc
+    bd = sconf.to_build_data(smk.wildcards.ref_key, smk.wildcards.build_key)
+    gps = bd.build.include.gc
     assert gps is not None, "this should not happen"
     # ASSUME both of these input lists are sorted by GC fraction
     low = [GCInput(p, f, r) for p, (f, r) in zip(smk.input.low, gps.low)]

@@ -14,13 +14,11 @@ from pathlib import Path
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
-    rk = cfg.RefKey(smk.wildcards["ref_key"])
-    bk = cfg.BuildKey(smk.wildcards["build_key"])
+    ws: dict[str, str] = smk.wildcards
+    hap = cfg.to_haplotype(ws["hap"])
+    bd = sconf.to_build_data(ws["ref_key"], ws["build_key"])
 
-    pattern = sconf.refkey_to_final_chr_pattern(rk)
-    pats = sconf.refkey_to_mappability_patterns(rk)
-    cis = sconf.buildkey_to_chr_indices(rk, bk)
-
+    # TODO this may be two files in the diploid2 case
     idx = pd.read_table(
         Path(smk.input["idx"]),
         header=None,
@@ -28,19 +26,32 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         usecols=[0],
     )
 
-    chrs = [
-        *filter(
-            lambda c: any(i.chr_name_full(pattern) == c for i in cis)
-            or any(re.match(p, c) for p in pats),
-            idx[0].tolist(),
-        )
-    ]
+    def run_samtools(main_chrs: list[str]) -> None:
+        chrs = [
+            *filter(
+                lambda c: c in main_chrs
+                or any(re.match(p, c) for p in bd.mappability_patterns),
+                idx[0].tolist(),
+            )
+        ]
+        with open(Path(smk.output[0]), "w") as f:
+            # ASSUME sort order doesn't matter and ref is bgzip'd or unzip'd
+            # NOTE the output is not bgzip'd because GEM doesn't like it
+            p = sp.Popen(["samtools", "faidx", smk.input["fa"], *chrs], stdout=f)
+            p.wait()
 
-    with open(Path(smk.output[0]), "w") as f:
-        # ASSUME sort order doesn't matter and ref is bgzip'd or unzip'd
-        # NOTE the output is not bgzip'd because GEM doesn't like it
-        p = sp.Popen(["samtools", "faidx", Path(smk.input["fa"]), *chrs], stdout=f)
-        p.wait()
+    if isinstance(bd, cfg.HaploidBuildData) and hap is None:
+        main_chrs = bd.ref.chr_pattern.to_names(bd.chr_indices)
+        run_samtools(main_chrs)
+    elif isinstance(bd, cfg.Diploid1BuildData) and hap is None:
+        main_chrs = bd.ref.chr_pattern.to_names(bd.chr_indices)
+        run_samtools(main_chrs)
+    elif isinstance(bd, cfg.Diploid2BuildData) and hap is not None:
+        pat = bd.ref.chr_pattern
+        main_chrs = hap.from_either(pat.hap1, pat.hap2).to_names(bd.chr_indices)
+        run_samtools(main_chrs)
+    else:
+        assert False
 
 
 main(snakemake, snakemake.config)  # type: ignore
