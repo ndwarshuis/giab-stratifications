@@ -4,32 +4,13 @@ import common.config as cfg
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
-    # def hap_to_bed(
-    #     si: cfg.HaploidStratInputs | cfg.DiploidStratInputs,
-    # ) -> (
-    #     cfg.BedFile_[cfg.HapChrSource[cfg.BedSrc]]
-    #     | cfg.BedFile_[cfg.DipChrSource1[cfg.BedSrc]]
-    #     | cfg.BedFile_[cfg.DipChrSource2[cfg.BedSrc]]
-    #     | None
-    # ):
-    #     return si.low_complexity.simreps
-
-    # def hap_to_bed(
-    #     si: cfg.HaploidStratInputs,
-    # ) -> cfg.BedFile[cfg.HapChrSource[cfg.BedSrc]] | None:
-    #     return si.low_complexity.simreps
-
-    # def dip_to_bed(
-    #     si: cfg.DiploidStratInputs,
-    # ) -> cfg.BedFile[cfg.DipChrSource[cfg.BedSrc]] | None:
-    #     return si.low_complexity.simreps
+    ws: dict[str, str] = smk.wildcards
     ins: list[Path] = smk.input
     ons: list[Path] = smk.output
 
-    def go(si: cfg.StratInputs_[cfg.AnyBedT]) -> cfg.BedFile[cfg.AnyBedT] | None:
-        return si.low_complexity.simreps
+    def go(x: cfg.StratInputs_[cfg.AnyBedT]) -> cfg.BedFile[cfg.AnyBedT] | None:
+        return x.low_complexity.simreps
 
-    ws: dict[str, str] = smk.wildcards
     sconf.with_build_data_unsafe(
         ws["ref_key"],
         ws["build_key"],

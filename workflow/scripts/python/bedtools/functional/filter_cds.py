@@ -42,6 +42,8 @@ def write_df(path: Path, df: pd.DataFrame) -> None:
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, str] = smk.wildcards
+    ins = [CDSInput(b, m) for b, m in zip(smk.input["bed"], smk.input["mapper"])]
+    ons: list[Path] = smk.output
 
     def hap(i: CDSInput, o: Path, bd: cfg.HaploidBuildData) -> None:
         write_df(o, read_df(i.bed, i.mapper, bd.final_mapper))
@@ -79,11 +81,11 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         df = pd.concat([read_df(bed, mapper, bd.final_mapper) for bed, mapper in i])
         write_df(o, df)
 
-    sconf.with_build_data_unsafe(
+    sconf.with_build_src_data_unsafe(
         ws["ref_key"],
         ws["build_key"],
-        [CDSInput(b, m) for b, m in zip(smk.input["bed"], smk.input["mapper"])],
-        smk.output,
+        ins,
+        ons,
         cfg.to_haplotype(ws["hap"]),
         hap,
         dip_to_dip,
