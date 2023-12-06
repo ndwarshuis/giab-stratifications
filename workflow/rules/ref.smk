@@ -26,7 +26,7 @@ rule download_ref:
     output:
         config.ref_src_dir / "ref.fna.gz",
     params:
-        src=lambda w: config.refkey_to_ref_src(w.ref_key),
+        src=lambda w: config.refkey_to_ref_src(w.ref_src_key),
     log:
         ref_log_src_dir / "download_ref.log",
     conda:
@@ -38,7 +38,7 @@ rule download_ref:
 
 rule index_ref:
     input:
-        rules.download_ref.output,
+        lambda w: expand(rules.download_ref.output, ref_src_key=w.ref_key),
     output:
         ref_master_dir / "ref.fna.fai",
     conda:
@@ -68,7 +68,7 @@ rule get_genome:
 
 rule filter_sort_ref:
     input:
-        fa=rules.download_ref.output,
+        fa=lambda w: expand(rules.download_ref.output, ref_src_key=w.ref_key),
         genome=rules.get_genome.output,
     output:
         ref_inter_dir / "ref_filtered.fa",
@@ -87,14 +87,16 @@ use rule download_ref as download_gaps with:
     output:
         config.ref_src_dir / "gap.bed.gz",
     params:
-        src=lambda w: config.refkey_to_gap_src(w.ref_key),
+        src=lambda w: config.refkey_to_gap(w.ref_src_key).src,
     localrule: True
     log:
         ref_log_src_dir / "download_gaps.log",
 
 
 def gapless_input(wildcards):
-    if config.refkey_to_gap_src(wildcards.ref_key):
+    # TODO this function won't work (or it will but I'll need to catch an
+    # exception, less obvious :/)
+    if config.refkey_to_gap(wildcards.ref_key):
         gaps = {"gaps": rules.download_gaps.output[0]}
         if config.refkey_to_y_PAR(wildcards.ref_key) is None:
             return gaps

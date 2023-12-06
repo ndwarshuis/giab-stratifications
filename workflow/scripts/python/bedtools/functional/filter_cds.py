@@ -12,6 +12,10 @@ from common.bed import (
     split_bed,
 )
 
+# TODO move all the logic for the mapper and VDJ filter in here to keep more
+# type-safe given that multiple haplotypes will turn this into a fiery hellscape
+# of burnt ramen code
+
 
 class CDSInput(NamedTuple):
     bed: Path

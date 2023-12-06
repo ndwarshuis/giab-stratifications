@@ -11,12 +11,22 @@ from common.config import GiabStrats
 config = GiabStrats.parse_obj(config)
 
 
+def read_checkpoint(rulename, wildcards):
+    r = getattr(checkpoints, rulename)
+    c = r.get(ref_key=wildcards.ref_key, build_key=wildcards.build_key)
+    with c.output[0].open() as f:
+        return json.load(f)
+
+
 wildcard_constraints:
     # permit alphanumerics and dashes only, underscores will be used for
     # separation in filepaths; this convention makes it impossible for
     # wildcards to be ambiguous
     ref_key="[A-Za-z0-9-]+",
     build_key="[A-Za-z0-9-]+",
+    # separate ref key for downloading (which may or may not follow the
+    # cardinality of the target reference)
+    ref_src_key="[A-Za-z0-9-]+",
     # this appears way too often, so define constraint here
     sex_chr="[XY]",
 

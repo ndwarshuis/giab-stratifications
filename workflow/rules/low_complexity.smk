@@ -1,6 +1,6 @@
 from more_itertools import unzip, flatten
 from collections import namedtuple
-from common.config import CoreLevel
+from common.config import CoreLevel, parse_refkey
 from functools import partial
 
 lc_dir = CoreLevel.LOWCOMPLEXITY
@@ -387,15 +387,20 @@ use rule download_ref as download_trf with:
     log:
         lc_log_src_dir / "trf_simreps.log",
     params:
-        src=lambda w: config.refkey_to_simreps_src(w.ref_key),
+        src=lambda w: config.refkey_to_trf(w.ref_src_key).src,
     localrule: True
 
 
-rule filter_sort_trf:
+# TODO update this script
+checkpoint filter_sort_trf:
     input:
-        rules.download_trf.output,
+        lambda w: expand(
+            rules.download_trf.output,
+            ref_src_key=config.refkey_to_trf(w.ref_key).key,
+        ),
     output:
-        lc_inter_dir / "trf.txt.gz",
+        # lc_inter_dir / "trf.txt.gz",
+        lc_inter_dir / "trf.json",
     conda:
         "../envs/bedtools.yml"
     script:
@@ -404,7 +409,8 @@ rule filter_sort_trf:
 
 rule merge_trf:
     input:
-        rules.filter_sort_trf.output,
+        partial(read_checkpoint, "filter_sort_trf"),
+        # rules.filter_sort_trf.output,
     output:
         lc_inter_dir / "trf_simpleRepeats.bed.gz",
     conda:
@@ -427,13 +433,17 @@ use rule download_ref as download_rmsk with:
     log:
         lc_log_src_dir / "rmsk.log",
     params:
-        src=lambda w: config.refkey_to_rmsk_src(w.ref_key),
+        src=lambda w: config.refkey_to_rmsk(w.ref_src_key).src,
     localrule: True
 
 
-rule filter_sort_rmsk:
+# TODO update script
+checkpoint filter_sort_rmsk:
     input:
-        rules.download_rmsk.output,
+        lambda w: expand(
+            rules.download_rmsk.output,
+            ref_src_key=config.refkey_to_rmsk(w.ref_key).key,
+        ),
     output:
         lc_inter_dir / "rmsk.txt.gz",
     conda:
@@ -446,7 +456,7 @@ rule filter_sort_rmsk:
 
 rule merge_rmsk_class:
     input:
-        rmsk=rules.filter_sort_rmsk.output,
+        partial(read_checkpoint, "filter_sort_rmsk"),
     output:
         lc_inter_dir / "rmsk_class_{rmsk_class}.bed.gz",
     conda:
@@ -455,7 +465,7 @@ rule merge_rmsk_class:
         rmsk_class="\w+",
     shell:
         """
-        gunzip -c {input.rmsk} | \
+        gunzip -c {input} | \
         grep {wildcards.rmsk_class} | \
         mergeBed -i stdin | \
         bgzip -c > {output}
@@ -482,13 +492,16 @@ use rule download_ref as download_censat with:
     log:
         lc_log_src_dir / "censat.log",
     params:
-        src=lambda w: config.refkey_to_satellite_src(w.ref_key),
+        src=lambda w: config.refkey_to_satellite(w.ref_src_key).src,
     localrule: True
 
 
 rule filter_sort_censat:
     input:
-        rules.download_censat.output,
+        lambda w: expand(
+            rules.download_censat.output,
+            ref_src_key=config.refkey_to_satellite(w.ref_key).key,
+        ),
     output:
         lc_inter_dir / "censat.txt.gz",
     conda:
@@ -501,7 +514,7 @@ rule filter_sort_censat:
 # bed file but add slop of their own, so this avoids adding slop twice
 rule merge_satellites_intermediate:
     input:
-        lambda w: rules.filter_sort_censat.output
+        lambda w: read_checkpoint("filter_sort_censat", w)
         if config.has_low_complexity_censat(w.ref_key)
         else all_rmsk_classes["Satellite"],
     output:
