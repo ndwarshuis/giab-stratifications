@@ -2033,24 +2033,28 @@ class GiabStrats(BaseModel):
         return self.with_ref_data_and_bed(
             rk,
             f,
+            # hap to hap (no change to key)
             lambda _, __: [rk],
+            # dip1 to dip1 (no change to key)
             lambda _, __: [rk],
-            lambda hap, _, __: [f"{rk}_{hap.name}"],
+            # dip1 to dip2 (append both haps to key)
             lambda _, __: [f"{rk}_{h.name}" for h in Haplotype],
-            lambda _, __: [f"{rk}_{h.name}" for h in Haplotype],
+            # dip2 to dip1 (key has hap on it, so strip it off)
+            lambda _, __: [parse_refkey(rk)[0]],
+            # dip2 to dip1 (no change, key already has hap appended)
+            lambda _, __, ___: [rk],
         )
 
-    # def _refkey_to_bed_src(self, f: StratInputToBed, rk: str) -> BedSrc:
-    #     # TODO this won't work
-    #     return self.with_ref_data_and_bed(
-    #         rk,
-    #         f,
-    #         lambda _, bf: bf.data.src,
-    #         lambda _, bf: bf.data.src,
-    #         lambda hap, _, bf: hap.from_either(bf.data.src.hap1, bf.data.src.hap2),
-    #         lambda _, bf: bf.data.src,
-    #         lambda _, bf: bf.data.src,
-    #     )
+    def _refsrckey_to_bed_src(self, f: StratInputToBed, rsk: str) -> BedSrc:
+        return self.with_ref_data_bed_unsafe(
+            rsk,
+            f,
+            lambda _, bf: bf.data.src,
+            lambda _, bf: bf.data.src,
+            lambda hap, _, bf: hap.from_either(bf.data.src.hap1, bf.data.src.hap2),
+            lambda _, bf: bf.data.src,
+            lambda hap, _, bf: hap.from_either(bf.data.src.hap1, bf.data.src.hap2),
+        )
 
     # def _refkey_to_bed(self, f: StratInputToBed, rk: str) -> BedSrcAndKey:
     #     return BedSrcAndKey(
@@ -2615,8 +2619,8 @@ class GiabStrats(BaseModel):
         rk: str,
         hap_f: Callable[[HaploidStratification], X],
         dip1_f: Callable[[Diploid1Stratification], X],
-        dip2_f: Callable[[Diploid2Stratification], X],
         hap1_f: Callable[[Haplotype, Diploid1Stratification], X],
+        dip2_f: Callable[[Diploid2Stratification], X],
         hap2_f: Callable[[Haplotype, Diploid2Stratification], X],
     ) -> X:
         rk_, hap = parse_refkey(rk)
@@ -2640,8 +2644,8 @@ class GiabStrats(BaseModel):
         get_bed_f: StratInputToBed,
         hap_f: Callable[[HaploidStratification, HapBedFile], X],
         dip1_f: Callable[[Diploid1Stratification, Dip1BedFile], X],
-        dip2_f: Callable[[Diploid2Stratification, Dip1BedFile], X],
         hap1_f: Callable[[Haplotype, Diploid1Stratification, Dip2BedFile], X],
+        dip2_f: Callable[[Diploid2Stratification, Dip1BedFile], X],
         hap2_f: Callable[[Haplotype, Diploid2Stratification, Dip2BedFile], X],
     ) -> X:
         def _hap_f(s: HaploidStratification) -> X:
@@ -2651,31 +2655,30 @@ class GiabStrats(BaseModel):
 
         def _dip1_f(s: Diploid1Stratification) -> X:
             b = get_bed_f(s.strat_inputs)
-            assert b is not None
-            assert isinstance(b.data, DipChrSource1)
-            return dip1_f(s, b)
-
-        def _dip2_f(s: Diploid2Stratification) -> X:
-            b = get_bed_f(s.strat_inputs)
-            assert isinstance(b, DipChrSource1)
+            assert b is not None and is_dip1_bed(b)
             return dip1_f(s, b)
 
         def _hap1_f(h: Haplotype, s: Diploid1Stratification) -> X:
             b = get_bed_f(s.strat_inputs)
-            assert isinstance(b, DipChrSource2)
+            assert b is not None and is_dip2_bed(b)
             return hap1_f(h, s, b)
+
+        def _dip2_f(s: Diploid2Stratification) -> X:
+            b = get_bed_f(s.strat_inputs)
+            assert b is not None and is_dip1_bed(b)
+            return dip2_f(s, b)
 
         def _hap2_f(h: Haplotype, s: Diploid2Stratification) -> X:
             b = get_bed_f(s.strat_inputs)
-            assert isinstance(b, DipChrSource2)
+            assert b is not None and is_dip2_bed(b)
             return hap2_f(h, s, b)
 
         return self.with_ref_data_0_unsafe(
             rk,
             _hap_f,
             _dip1_f,
-            _dip2_f,
             _hap1_f,
+            _dip2_f,
             _hap2_f,
         )
 
@@ -2730,51 +2733,53 @@ class GiabStrats(BaseModel):
         get_bed_f: StratInputToBed,
         hap_f: Callable[[HaploidStratification, HapBedFile], Z],
         dip_to_dip_f: Callable[[Diploid1Stratification, Dip1BedFile], Z],
-        hap_to_hap_f: Callable[[Haplotype, Diploid2Stratification, Dip2BedFile], Z],
-        dip_to_hap_f: Callable[[Diploid2Stratification, Dip1BedFile], Z],
         hap_to_dip_f: Callable[[Diploid1Stratification, Dip2BedFile], Z],
+        dip_to_hap_f: Callable[[Diploid2Stratification, Dip1BedFile], Z],
+        hap_to_hap_f: Callable[[Haplotype, Diploid2Stratification, Dip2BedFile], Z],
     ) -> Z:
+        # TODO mypy doesn't know how to narrow down these bed files properly
+        # (hence the casts)
         rk_, hap = parse_refkey(rk)
         rd = self.to_ref_data(rk_)
         # ref and bed are both haploid
         if (
             isinstance(rd.ref, HapChrSource)
-            and (bf_h := get_bed_f(rd.strat_inputs)) is not None
+            and (bf0 := get_bed_f(rd.strat_inputs)) is not None
             and hap is None
         ):
-            return hap_f(rd, bf_h)
+            return hap_f(rd, bf0)
         # ref and bed are both diploid1
         elif (
             isinstance(rd.ref, DipChrSource1)
             and (bf1 := get_bed_f(rd.strat_inputs)) is not None
-            and isinstance(bf1.data, DipChrSource1)
+            and is_dip2_bed(bf1)
             and hap is None
         ):
-            return dip_to_dip_f(rd, bf1)
+            return dip_to_dip_f(rd, cast(Dip1BedFile, bf1))
         # ref is diploid1, bed is diploid2 (split)
         elif (
             isinstance(rd.ref, DipChrSource2)
             and (bf2 := get_bed_f(rd.strat_inputs)) is not None
-            and isinstance(bf2.data, DipChrSource2)
+            and is_dip2_bed(bf2)
             and hap is not None
         ):
-            return hap_to_hap_f(hap, rd, bf2)
+            return hap_to_hap_f(hap, rd, cast(Dip2BedFile, bf2))
         # ref is diploid2, bed is diploid1 (combine)
         elif (
             isinstance(rd.ref, DipChrSource2)
             and (bf3 := get_bed_f(rd.strat_inputs)) is not None
-            and isinstance(bf3.data, DipChrSource2)
+            and is_dip1_bed(bf3)
             and hap is None
         ):
-            return dip_to_hap_f(rd, bf3)
+            return dip_to_hap_f(rd, cast(Dip1BedFile, bf3))
         # ref and bed are both diploid2
         elif (
             isinstance(rd.ref, DipChrSource1)
             and (bf4 := get_bed_f(rd.strat_inputs)) is not None
-            and isinstance((d := bf4.data), DipChrSource2)
+            and is_dip2_bed(bf4)
             and hap is not None
         ):
-            return hap_to_dip_f(rd, BedFile(data=d, params=bf4.params))
+            return hap_to_dip_f(rd, bf4)
         else:
             # TODO make this error more meaningful
             assert False, "this should not happen"
@@ -2786,9 +2791,9 @@ class GiabStrats(BaseModel):
         get_bed_f: StratInputToBed,
         hap_f: Callable[[HaploidBuildData, HapBedFile], Z],
         dip_to_dip_f: Callable[[Diploid1BuildData, Dip1BedFile], Z],
-        hap_to_hap_f: Callable[[Haplotype, Diploid2BuildData, Dip2BedFile], Z],
-        dip_to_hap_f: Callable[[Diploid2BuildData, Dip1BedFile], Z],
         hap_to_dip_f: Callable[[Diploid1BuildData, Dip2BedFile], Z],
+        dip_to_hap_f: Callable[[Diploid2BuildData, Dip1BedFile], Z],
+        hap_to_hap_f: Callable[[Haplotype, Diploid2BuildData, Dip2BedFile], Z],
     ) -> Z:
         # TODO unsafe, catch error or something
         return self.with_ref_data_and_bed(
@@ -2806,10 +2811,9 @@ class GiabStrats(BaseModel):
                 ),
                 bf,
             ),
-            lambda hap, rd, bf: hap_to_hap_f(
-                hap,
-                Diploid2BuildData(
-                    *astuple(rd.to_build_data_unsafe(Diploid2BuildKey(bk)))
+            lambda rd, bf: hap_to_dip_f(
+                Diploid1BuildData(
+                    *astuple(rd.to_build_data_unsafe(Diploid1BuildKey(bk)))
                 ),
                 bf,
             ),
@@ -2819,9 +2823,10 @@ class GiabStrats(BaseModel):
                 ),
                 bf,
             ),
-            lambda rd, bf: hap_to_dip_f(
-                Diploid1BuildData(
-                    *astuple(rd.to_build_data_unsafe(Diploid1BuildKey(bk)))
+            lambda hap, rd, bf: hap_to_hap_f(
+                hap,
+                Diploid2BuildData(
+                    *astuple(rd.to_build_data_unsafe(Diploid2BuildKey(bk)))
                 ),
                 bf,
             ),
@@ -2891,9 +2896,9 @@ class GiabStrats(BaseModel):
             get_bed_f,
             _hap_f,
             _dip_to_dip_f,
-            _hap_to_hap_f,
-            _dip_to_hap_f,
             _hap_to_dip_f,
+            _dip_to_hap_f,
+            _hap_to_hap_f,
         )
 
     # def with_build_src_data_unsafe(
