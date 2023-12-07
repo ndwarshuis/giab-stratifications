@@ -97,7 +97,15 @@ def gapless_input(wildcards):
     # TODO this function won't work (or it will but I'll need to catch an
     # exception, less obvious :/)
     if config.refkey_to_gap(wildcards.ref_key):
-        gaps = {"gaps": rules.download_gaps.output[0]}
+        gaps = {
+            "gaps": expand(
+                rules.download_gaps.output,
+                ref_src_key=sconf.refkey_to_refsrckey(
+                    lambda si: si.gaps,
+                    wildcards.ref_final_key,
+                ),
+            )
+        }
         if config.refkey_to_y_PAR(wildcards.ref_key) is None:
             return gaps
         else:

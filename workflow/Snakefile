@@ -18,6 +18,9 @@ def read_checkpoint(rulename, wildcards):
         return json.load(f)
 
 
+# TODO change the "ref_key" name to something else that actually reflects the
+# fact it may/may not have a haplotype tagged on the end of it and doesn't
+# correspond to the key in the config corresponding to each reference)
 wildcard_constraints:
     # permit alphanumerics and dashes only, underscores will be used for
     # separation in filepaths; this convention makes it impossible for

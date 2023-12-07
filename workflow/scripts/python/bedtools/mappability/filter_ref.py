@@ -15,10 +15,7 @@ from pathlib import Path
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, str] = smk.wildcards
-    hap = cfg.to_haplotype(ws["hap"])
-    bd = sconf.to_build_data(ws["ref_key"], ws["build_key"])
 
-    # TODO this may be two files in the diploid2 case
     idx = pd.read_table(
         Path(smk.input["idx"]),
         header=None,
@@ -26,13 +23,16 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         usecols=[0],
     )
 
-    def run_samtools(main_chrs: list[str]) -> None:
-        chrs = [
-            *filter(
-                lambda c: c in main_chrs
-                or any(re.match(p, c) for p in bd.mappability_patterns),
-                idx[0].tolist(),
-            )
+    def run_samtools(
+        bd: cfg.BuildData_[cfg.RefSourceT, cfg.StratInputT, cfg.BuildT],
+        pat: cfg.ChrPattern,
+    ) -> None:
+        main_chrs = pat.to_names(bd.chr_indices)
+        chrs: list[str] = [
+            c
+            for c in idx[0].tolist()
+            if c in main_chrs
+            or any(re.match(p, c) is not None for p in bd.mappability_patterns)
         ]
         with open(Path(smk.output[0]), "w") as f:
             # ASSUME sort order doesn't matter and ref is bgzip'd or unzip'd
@@ -40,18 +40,15 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             p = sp.Popen(["samtools", "faidx", smk.input["fa"], *chrs], stdout=f)
             p.wait()
 
-    if isinstance(bd, cfg.HaploidBuildData) and hap is None:
-        main_chrs = bd.ref.chr_pattern.to_names(bd.chr_indices)
-        run_samtools(main_chrs)
-    elif isinstance(bd, cfg.Diploid1BuildData) and hap is None:
-        main_chrs = bd.ref.chr_pattern.to_names(bd.chr_indices)
-        run_samtools(main_chrs)
-    elif isinstance(bd, cfg.Diploid2BuildData) and hap is not None:
-        pat = bd.ref.chr_pattern
-        main_chrs = hap.from_either(pat.hap1, pat.hap2).to_names(bd.chr_indices)
-        run_samtools(main_chrs)
-    else:
-        assert False
+    sconf.with_build_data_ref_unsafe(
+        ws["ref_final_key"],
+        ws["build_key"],
+        lambda bd: run_samtools(bd, bd.ref.chr_pattern),
+        lambda bd: run_samtools(bd, bd.ref.chr_pattern),
+        lambda hap, bd: run_samtools(
+            bd, hap.from_either((pat := bd.ref.chr_pattern).hap1, pat.hap2)
+        ),
+    )
 
 
 main(snakemake, snakemake.config)  # type: ignore

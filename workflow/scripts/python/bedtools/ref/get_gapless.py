@@ -2,7 +2,7 @@ from typing import Any
 from pathlib import Path
 import common.config as cfg
 from pybedtools import BedTool as bt  # type: ignore
-from common.bed import filter_sort_bed, read_bed, write_bed
+from common.bed import write_bed
 import pandas as pd
 
 
@@ -21,6 +21,10 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     inputs = smk.input
     auto_out = Path(smk.output["auto"])
     parY_out = Path(smk.output["parY"])
+    ws: dict[str, str] = smk.wildcards
+
+    def go(x: cfg.StratInputs_[cfg.AnyBedT]) -> cfg.BedFile[cfg.AnyBedT] | None:
+        return x.gap
 
     # convert genome to bed file (where each region is just the length of
     # one chromosome)
@@ -29,20 +33,26 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     # If we have gap input, make the gapless file, otherwise just symlink to the
     # genome bed file (which just means the entire genome is gapless)
     if hasattr(inputs, "gaps"):
-        rk = cfg.RefKey(smk.wildcards["ref_key"])
-        bk = cfg.BuildKey(smk.wildcards["build_key"])
+        gap_inputs: list[Path] = inputs["gaps"]
 
-        bedfile = sconf.stratifications[rk].gap
-        assert bedfile is not None, "this should not happen"
-        ps = bedfile.params
+        gaps_df = sconf.with_build_data_and_bed_i(
+            ws["ref_final_key"],
+            ws["build_key"],
+            gap_inputs,
+            go,
+            lambda i, bd, bf: bd.read_filter_sort_hap_bed(bf, i),
+            lambda i, bd, bf: bd.read_filter_sort_dip_bed(bf, i),
+            lambda i, bd, bf: bd.read_filter_sort_dip_bed(bf, i),
+            lambda i, bd, bf: pd.concat([*bd.read_filter_sort_hap_bed(bf, i)]),
+            lambda i, hap, bd, bf: bd.read_filter_sort_hap_bed(
+                bf,
+                *hap.from_either(
+                    (i[0], cfg.Haplotype.HAP1), (i[1], cfg.Haplotype.HAP2)
+                ),
+            ),
+        )
 
-        conv = sconf.buildkey_to_chr_conversion(rk, bk, ps.chr_pattern)
-
-        gaps_src = Path(inputs["gaps"])
-
-        gaps = read_bed(gaps_src, ps)
-        gaps = filter_sort_bed(conv, gaps)
-        gaps = bt.from_dataframe(gaps).merge(d=100).to_dataframe()
+        gaps: pd.DataFrame = bt.from_dataframe(gaps_df).merge(d=100).to_dataframe()
         gaps_bed = bt().from_dataframe(gaps)
         gaps_with_parY = bt().from_dataframe(genome_bed).subtract(gaps_bed)
 

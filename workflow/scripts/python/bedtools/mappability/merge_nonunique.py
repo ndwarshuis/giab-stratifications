@@ -2,36 +2,24 @@ import re
 from typing import Any
 from pathlib import Path
 import common.config as cfg
-from common.bed import read_bed, filter_sort_bed, write_bed, FinalMapper, InitMapper
+from common.bed import read_bed, filter_sort_bed, write_bed
 from pybedtools import BedTool as bt  # type: ignore
 import json
 
 
-# TODO not DRY
-def get_bed_mappers(
-    bd: cfg.AnyBuildData, hap: cfg.Haplotype | None
-) -> tuple[InitMapper, FinalMapper]:
-    if isinstance(bd, cfg.HaploidBuildData) and hap is None:
-        c = bd.ref_chr_conversion
-        return (c.init_mapper, c.final_mapper)
-
-    elif isinstance(bd, cfg.Diploid1BuildData) and hap is None:
-        c0 = bd.ref_chr_conversion
-        return (c0.init_mapper, c0.final_mapper)
-
-    elif isinstance(bd, cfg.Diploid2BuildData) and hap is not None:
-        c = hap.from_either(*bd.ref_chr_conversion)
-        return (c.init_mapper, c.final_mapper)
-
-    else:
-        assert False
-
-
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, str] = smk.wildcards
-    hap = cfg.to_haplotype(ws["hap"])
-    bd = sconf.to_build_data(ws["ref_key"], ws["build_key"])
-    im, fm = get_bed_mappers(bd, hap)
+
+    im, fm = sconf.with_build_data_ref_unsafe(
+        ws["ref_final_key"],
+        ws["build_key"],
+        lambda bd: ((c := bd.ref_chr_conversion).init_mapper, c.final_mapper),
+        lambda bd: ((c := bd.ref_chr_conversion).init_mapper, c.final_mapper),
+        lambda hap, bd: (
+            (c := hap.from_either(*bd.ref_chr_conversion)).init_mapper,
+            c.final_mapper,
+        ),
+    )
 
     inputs = smk.input["bed"]
     genome = Path(smk.input["genome"][0])

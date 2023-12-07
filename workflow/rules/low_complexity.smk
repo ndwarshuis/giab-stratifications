@@ -387,20 +387,32 @@ use rule download_ref as download_trf with:
     log:
         lc_log_src_dir / "trf_simreps.log",
     params:
-        src=lambda w: config.refkey_to_trf(w.ref_src_key).src,
+        src=lambda w: config.refsrckey_to_bed_src(
+            lambda si: si.low_complexity.simreps,
+            w.ref_src_key,
+        ),
     localrule: True
 
 
-# TODO update this script
+# TODO these directories should reflect the different types of ref_keys
 checkpoint filter_sort_trf:
     input:
         lambda w: expand(
             rules.download_trf.output,
-            ref_src_key=config.refkey_to_trf(w.ref_key).key,
+            ref_src_key=config.refkey_to_bed_refsrckey(
+                lambda si: si.low_complexity.simreps,
+                w.ref_final_key,
+            ),
         ),
     output:
         # lc_inter_dir / "trf.txt.gz",
-        lc_inter_dir / "trf.json",
+        lambda w: expand(
+            lc_inter_dir / "trf.json", ref_key=strip_refkey(w.ref_final_key)
+        ),
+    params:
+        bed_outputs=lambda w: expand(
+            lc_inter_dir / "trf.bed.gz", ref_key=w.ref_final_key
+        ),
     conda:
         "../envs/bedtools.yml"
     script:
