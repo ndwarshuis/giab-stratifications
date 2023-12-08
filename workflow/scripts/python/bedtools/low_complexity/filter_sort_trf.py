@@ -11,8 +11,10 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     output_list = smk.output[0]
     bed_outputs = list(map(Path, ps["bed_outputs"]))
 
-    def go(x: cfg.StratInputs_[cfg.AnyBedT]) -> cfg.BedFile[cfg.AnyBedT] | None:
-        return x.low_complexity.simreps
+    def go(
+        x: cfg.BuildData_[cfg.RefSourceT, cfg.AnyBedT, cfg.AnyBedT_, cfg.IncludeT]
+    ) -> cfg.BedFile[cfg.AnyBedT] | None:
+        return x.strat_inputs.low_complexity.simreps
 
     sconf.with_build_data_and_bed_io_(
         ws["ref_final_key"],

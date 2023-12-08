@@ -16,20 +16,25 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     output_list: Path = smk.output
     bed_outputs = list(map(Path, ps["bed_outputs"]))
 
-    def go(x: cfg.StratInputs_[cfg.AnyBedT]) -> cfg.BedFile[cfg.AnyBedT] | None:
-        return x.low_complexity.simreps
+    def go(
+        x: cfg.BuildData_[cfg.RefSourceT, cfg.AnyBedT, cfg.AnyBedT_, cfg.IncludeT]
+    ) -> cfg.BedFile[cfg.AnyBedT] | None:
+        return x.strat_inputs.low_complexity.rmsk
+        return x.strat_inputs.low_complexity.simreps
 
-    sconf.with_build_data_and_bed_io(
+    sconf.with_build_data_and_bed_io_(
         ws["ref_final_key"],
         ws["build_key"],
         ins,
         bed_outputs,
         go,
-        lambda i, o, bd, b: bd.read_filter_sort_hap_bed(b, i, o, filter_ct),
-        lambda i, o, bd, b: bd.read_filter_sort_dip_bed(b, i, o, filter_ct),
-        lambda i, o, bd, b: bd.read_filter_sort_dip_bed(b, i, o, filter_ct),
-        lambda i, o, bd, b: bd.read_filter_sort_hap_bed(b, i, o, filter_ct),
-        lambda i, o, hap, bd, b: bd.read_filter_sort_hap_bed(b, i, o, hap, filter_ct),
+        lambda i, o, bd, b: bd.read_write_filter_sort_hap_bed(b, i, o, filter_ct),
+        lambda i, o, bd, b: bd.read_write_filter_sort_dip_bed(b, i, o, filter_ct),
+        lambda i, o, bd, b: bd.read_write_filter_sort_dip_bed(b, i, o, filter_ct),
+        lambda i, o, bd, b: bd.read_write_filter_sort_hap_bed(b, i, o, filter_ct),
+        lambda i, o, hap, bd, b: bd.read_write_filter_sort_hap_bed(
+            b, i, o, hap, filter_ct
+        ),
     )
 
     with open(output_list, "w") as f:

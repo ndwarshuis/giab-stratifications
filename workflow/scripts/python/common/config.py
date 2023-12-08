@@ -1479,12 +1479,13 @@ class Diploid2BuildData(
         bf: Dip1BedFile,
         ipath: Path,
         opath: tuple[Path, Path],
-        g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
+        g0: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
+        g1: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
     ) -> None:
         """Read a haploid bed file, sort it, and write it in bgzip format."""
         df0, df1 = self.read_filter_sort_dip_bed(bf, ipath)
-        bed.write_bed(opath[0], g(df0))
-        bed.write_bed(opath[1], g(df1))
+        bed.write_bed(opath[0], g0(df0))
+        bed.write_bed(opath[1], g1(df1))
 
 
 AnyBuildData = HaploidBuildData | Diploid1BuildData | Diploid2BuildData

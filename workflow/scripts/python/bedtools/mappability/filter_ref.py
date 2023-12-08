@@ -24,7 +24,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     )
 
     def run_samtools(
-        bd: cfg.BuildData_[cfg.RefSourceT, cfg.StratInputT, cfg.BuildT],
+        bd: cfg.BuildData_[cfg.RefSourceT, cfg.AnyBedT, cfg.AnyBedT_, cfg.IncludeT],
         pat: cfg.ChrPattern,
     ) -> None:
         main_chrs = pat.to_names(bd.chr_indices)
