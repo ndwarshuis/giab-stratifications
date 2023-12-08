@@ -1,11 +1,39 @@
 import hashlib
-from typing import TypeVar
+from typing import TypeVar, Callable
 from logging import Logger
 from pathlib import Path
 from Bio import bgzf  # type: ignore
 import gzip
 
 X = TypeVar("X")
+Y = TypeVar("Y")
+
+
+class DesignError(Exception):
+    """Exception raised when the code is designed incorrectly (ie the 'this
+    should not happen' error)"""
+
+    pass
+
+
+def match1_unsafe(xs: list[X], f: Callable[[X], Y], msg: None | str = None) -> Y:
+    match xs:
+        case [x]:
+            return f(x)
+        case _:
+            raise DesignError(
+                msg if msg is not None else f"One input expected, got {len(xs)}"
+            )
+
+
+def match2_unsafe(xs: list[X], f: Callable[[X, X], Y], msg: None | str = None) -> Y:
+    match xs:
+        case [x1, x2]:
+            return f(x1, x2)
+        case _:
+            raise DesignError(
+                msg if msg is not None else f"Two inputs expected, got {len(xs)}"
+            )
 
 
 def get_md5(path: str, unzip: bool = False) -> str:

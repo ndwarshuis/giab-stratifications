@@ -1,3 +1,9 @@
+"""
+Conventions:
+* Functions ending in "_unsafe" should never throw errors; if they do then the
+  code is incorrect. This is in contrast with other errors which may happen due
+  to network issues, invalid inputs, etc.
+"""
 import pandas as pd
 import re
 from pathlib import Path
@@ -21,7 +27,7 @@ from typing import (
 )
 from typing_extensions import Self, assert_never
 from more_itertools import unique_everseen
-from common.io import is_gzip, is_bgzip
+from common.io import is_gzip, is_bgzip, DesignError, match1_unsafe, match2_unsafe
 import common.bed as bed
 
 W = TypeVar("W")
@@ -142,11 +148,6 @@ class BaseModel(BaseModel_):
         extra = "forbid"
 
 
-class Diploid_(BaseModel, Generic[X]):
-    hap1: X
-    hap2: X
-
-
 class Haplotype(Enum):
     HAP1: int = 0
     HAP2: int = 1
@@ -175,6 +176,14 @@ class Haplotype(Enum):
             return right
         else:
             assert_never(self)
+
+
+class Diploid_(BaseModel, Generic[X]):
+    hap1: X
+    hap2: X
+
+    def from_either(self, hap: Haplotype) -> X:
+        return hap.from_either(self.hap1, self.hap2)
 
 
 @dataclass(frozen=True)
@@ -262,6 +271,13 @@ class ChrIndex(Enum):
         except StopIteration:
             raise ValueError(f"could make chr index from name '{n}'")
 
+    @classmethod
+    def from_name_unsafe(cls, n: str) -> Self:
+        try:
+            return cls.from_name(n)
+        except ValueError as e:
+            raise DesignError(e)
+
     def __init__(self, i: int) -> None:
         self.chr_name: str = "X" if i == 23 else ("Y" if i == 24 else str(i))
 
@@ -273,6 +289,18 @@ class ChrIndex(Enum):
 
     def to_internal_index(self, hap: Haplotype) -> bed.InternalChrIndex:
         return bed.InternalChrIndex(hap.value * 24 + self.value - 1)
+
+    def choose_xy_unsafe(self, x_res: X, y_res: X) -> X:
+        if self.value is self.CHRX:
+            return x_res
+        elif self.value is self.CHRY:
+            return y_res
+        else:
+            raise DesignError(f"I am not an X or Y, I am a {self}")
+
+    @property
+    def xy_to_hap_unsafe(self) -> Haplotype:
+        return self.choose_xy_unsafe(Haplotype.HAP2, Haplotype.HAP1)
 
 
 class ChrPattern:
@@ -314,18 +342,10 @@ class HapChrPattern(BaseModel, ChrPattern):
         # used to make the index which I remove before returning here
         return [x[1] for x in self.to_pairs(cs, Haplotype.HAP1)]
 
-    def init_mapper(
-        self,
-        cs: set[ChrIndex],
-        hap: Haplotype = Haplotype.HAP1,
-    ) -> bed.InitMapper:
+    def init_mapper(self, cs: set[ChrIndex], hap: Haplotype) -> bed.InitMapper:
         return {n: i for i, n in self.to_pairs(cs, hap)}
 
-    def final_mapper(
-        self,
-        cs: set[ChrIndex],
-        hap: Haplotype = Haplotype.HAP1,
-    ) -> bed.FinalMapper:
+    def final_mapper(self, cs: set[ChrIndex], hap: Haplotype) -> bed.FinalMapper:
         return {i: n for i, n in self.to_pairs(cs, hap)}
 
 
@@ -349,9 +369,8 @@ class DipChrPattern(BaseModel, ChrPattern):
         return v
 
     def to_chr_name(self, i: ChrIndex, h: Haplotype) -> str | None:
-        xs = self.exclusions
-        ns = self.hapnames
-        exc, name = h.from_either((xs.hap1, ns.hap1), (xs.hap2, ns.hap2))
+        exc = self.exclusions.from_either(h)
+        name = self.hapnames.from_either(h)
         if i in exc:
             return None
         elif i in self.special:
@@ -377,6 +396,15 @@ class DipChrPattern(BaseModel, ChrPattern):
 
     def final_mapper(self, cs: set[ChrIndex]) -> bed.FinalMapper:
         return {i: n for i, n in self.to_pairs(cs)}
+
+    def to_hap_pattern(self, hap: Haplotype) -> HapChrPattern:
+        hs = self.hapnames.from_either(hap)
+        xs = self.exclusions.from_either(hap)
+        return HapChrPattern(
+            template=self.template.replace(CHR_HAP_PLACEHOLDER, hs),
+            special=self.special,
+            exclusions=xs,
+        )
 
 
 AnyChrPatternT = TypeVar("AnyChrPatternT", HapChrPattern, DipChrPattern)
@@ -525,11 +553,11 @@ class HapToHapChrConversion:
 
     @property
     def init_mapper(self) -> bed.InitMapper:
-        return self.fromPattern.init_mapper(self.indices)
+        return self.fromPattern.init_mapper(self.indices, Haplotype.HAP1)
 
     @property
     def final_mapper(self) -> bed.FinalMapper:
-        return self.toPattern.final_mapper(self.indices)
+        return self.toPattern.final_mapper(self.indices, Haplotype.HAP1)
 
 
 @dataclass
@@ -557,7 +585,10 @@ class HapToDipChrConversion:
     def init_mapper(self) -> tuple[bed.InitMapper, bed.InitMapper]:
         p = self.fromPattern
         i = self.indices
-        return (p.hap1.init_mapper(i), p.hap2.init_mapper(i))
+        return (
+            p.hap1.init_mapper(i, Haplotype.HAP1),
+            p.hap2.init_mapper(i, Haplotype.HAP2),
+        )
 
     @property
     def final_mapper(self) -> bed.FinalMapper:
@@ -573,14 +604,17 @@ class DipToHapChrConversion:
     @property
     def init_mapper(self) -> tuple[bed.InitMapper, bed.SplitMapper]:
         im = self.fromPattern.init_mapper(self.indices)
-        fm0 = self.toPattern.hap1.final_mapper(self.indices)
+        fm0 = self.toPattern.hap1.final_mapper(self.indices, Haplotype.HAP1)
         return (im, bed.make_split_mapper(im, fm0))
 
     @property
     def final_mapper(self) -> tuple[bed.FinalMapper, bed.FinalMapper]:
         p = self.toPattern
         i = self.indices
-        return (p.hap1.final_mapper(i), p.hap2.final_mapper(i))
+        return (
+            p.hap1.final_mapper(i, Haplotype.HAP1),
+            p.hap2.final_mapper(i, Haplotype.HAP2),
+        )
 
 
 # For instances where we simply need to sort all the chromosomes and they are
@@ -821,7 +855,11 @@ class XYFile(HapBedFile):
             pass
         return v
 
+    def read(self, path: Path) -> pd.DataFrame:
+        return super()._read(path, [self.level_col])
 
+
+# TODO what if the reference is XX?
 class XYFeatures(BaseModel):
     """Configuration for XY features stratifications."""
 
@@ -863,8 +901,20 @@ class XY(BaseModel):
     def fmt_x_par(self, pattern: HapChrPattern) -> str | None:
         return fmap_maybe(lambda x: x.fmt(ChrIndex.CHRX, pattern), self.x_par)
 
+    def fmt_x_par_unsafe(self, pattern: HapChrPattern) -> str:
+        s = self.fmt_x_par(pattern)
+        if s is None:
+            raise DesignError("X PAR does not exist")
+        return s
+
     def fmt_y_par(self, pattern: HapChrPattern) -> str | None:
         return fmap_maybe(lambda x: x.fmt(ChrIndex.CHRY, pattern), self.y_par)
+
+    def fmt_y_par_unsafe(self, pattern: HapChrPattern) -> str:
+        s = self.fmt_y_par(pattern)
+        if s is None:
+            raise DesignError("Y PAR does not exist")
+        return s
 
 
 class Mappability(BaseModel):
@@ -1129,6 +1179,17 @@ class StratInputs_(BaseModel, Generic[AnyBedT]):
     def gff_src(self) -> list[BedSrc]:
         return fmap_maybe_def([], lambda x: diploid_to_list(x.gff_src), self.functional)
 
+    @property
+    def xy_features_unsafe(self) -> XYFeatures:
+        f = self.xy.features
+        if f is None:
+            raise DesignError("XY features does not exist")
+        return f
+
+    def xy_feature_bed_unsafe(self, i: ChrIndex) -> XYFile:
+        f = self.xy_features_unsafe
+        return i.choose_xy_unsafe(f.x_bed, f.y_bed)
+
 
 class StratInputToBed(Protocol):
     A = TypeVar("A", HapChrSource[BedSrc], DipChrSource[BedSrc])
@@ -1246,14 +1307,17 @@ class Stratification(
         self,
         bk: BuildKeyT,
     ) -> BuildData_[RefSourceT, AnyBedT, AnyBedT_, IncludeT]:
-        return BuildData_(self.ref, self.strat_inputs, self.builds[bk])
+        bd = self.to_build_data(bk)
+        if bd is None:
+            raise DesignError(f"Could not create build data from key '{bk}'")
+        return bd
 
     def to_build_data(
         self,
         bk: BuildKeyT,
     ) -> BuildData_[RefSourceT, AnyBedT, AnyBedT_, IncludeT] | None:
         try:
-            return self.to_build_data_unsafe(bk)
+            return BuildData_(self.ref, self.strat_inputs, self.builds[bk])
         except KeyError:
             return None
 
@@ -1272,7 +1336,7 @@ class HaploidBuildData(
 ):
     @property
     def final_mapper(self) -> bed.FinalMapper:
-        return self.ref.chr_pattern.final_mapper(self.chr_indices)
+        return self.ref.chr_pattern.final_mapper(self.chr_indices, Haplotype.HAP1)
 
     @property
     def ref_chr_conversion(self) -> HapToHapChrConversion:
@@ -1405,7 +1469,10 @@ class Diploid2BuildData(
     def final_mapper(self) -> tuple[bed.FinalMapper, bed.FinalMapper]:
         p = self.ref.chr_pattern
         i = self.chr_indices
-        return (p.hap1.final_mapper(i), p.hap2.final_mapper(i))
+        return (
+            p.hap1.final_mapper(i, Haplotype.HAP1),
+            p.hap2.final_mapper(i, Haplotype.HAP2),
+        )
 
     @property
     def ref_chr_conversion(self) -> tuple[HapToHapChrConversion, HapToHapChrConversion]:
@@ -1515,14 +1582,17 @@ class StratDict_(
         self,
         rk: RefKeyT,
     ) -> Stratification[RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]:
-        return self[rk]
+        rd = self.to_ref_data(rk)
+        if rd is None:
+            raise DesignError(f"Could not get ref data for key '{rk}'")
+        return rd
 
     def to_ref_data(
         self,
         rk: RefKeyT,
     ) -> Stratification[RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT] | None:
         try:
-            return self.to_ref_data_unsafe(rk)
+            return self[rk]
         except KeyError:
             return None
 
@@ -1540,7 +1610,7 @@ class StratDict_(
     ) -> BuildData_[RefSourceT, AnyBedT, AnyBedT_, IncludeT] | None:
         try:
             return self.to_build_data_unsafe(rk, bk)
-        except KeyError:
+        except DesignError:
             return None
 
     # def refkey_to_ref(self, rk: RefKeyT) -> RefSourceT:
@@ -2624,8 +2694,7 @@ class GiabStrats(BaseModel):
         except KeyError:
             pass
 
-        # TODO this seems sloppy, not sure if I want it here
-        assert False
+        raise DesignError(f"could not get stratification data for ref key '{rk}'")
 
     def to_build_data(self, rk: str, bk: str) -> AnyBuildData:
         try:
@@ -2661,8 +2730,9 @@ class GiabStrats(BaseModel):
         except KeyError:
             pass
 
-        # TODO this seems sloppy, not sure if I want it here
-        assert False
+        raise DesignError(
+            f"could not get build data for ref key '{rk}' and build key '{bk}'"
+        )
 
     def with_ref_data_unsafe(
         self,
@@ -2680,7 +2750,9 @@ class GiabStrats(BaseModel):
         elif isinstance(rd.ref, DipChrSource2) and hap is not None:
             return dip2_f(hap, rd)
         else:
-            assert False
+            raise DesignError(
+                f"Invalid ref data with type '{type(rd)}' for key '{rfk}'"
+            )
 
     def with_ref_data_0_unsafe(
         self,
@@ -2704,7 +2776,7 @@ class GiabStrats(BaseModel):
         elif isinstance(rd.ref, DipChrSource2) and hap is not None:
             return hap2_f(hap, rd)
         else:
-            assert False
+            raise DesignError(f"Invalid ref data with type '{type(rd)}' for key '{rk}'")
 
     def with_build_data_ref_unsafe(
         self,
@@ -2752,27 +2824,32 @@ class GiabStrats(BaseModel):
     ) -> X:
         def _hap_f(s: HaploidStratification) -> X:
             b = get_bed_f(s.strat_inputs)
-            assert b is not None
+            if b is None:
+                raise DesignError("Bed file should not be None")
             return hap_f(s, b)
 
         def _dip_1to1_f(s: Diploid1Stratification) -> X:
             b = get_bed_f(s.strat_inputs)
-            assert b is not None and is_dip1_bed(b)
+            if b is None or not is_dip1_bed(b):
+                raise DesignError(f"Expecting Diploid1 bed file, got {type(b)}")
             return dip_1to1_f(s, b)
 
         def _dip_1to2_f(h: Haplotype, s: Diploid1Stratification) -> X:
             b = get_bed_f(s.strat_inputs)
-            assert b is not None and is_dip2_bed(b)
+            if b is None or not is_dip2_bed(b):
+                raise DesignError(f"Expecting Diploid2 bed file, got {type(b)}")
             return dip_1to2_f(h, s, b)
 
         def _dip_2to1_f(s: Diploid2Stratification) -> X:
             b = get_bed_f(s.strat_inputs)
-            assert b is not None and is_dip1_bed(b)
+            if b is None or not is_dip1_bed(b):
+                raise DesignError(f"Expecting Diploid1 bed file, got {type(b)}")
             return dip_2to1_f(s, b)
 
         def _dip_2to2_f(h: Haplotype, s: Diploid2Stratification) -> X:
             b = get_bed_f(s.strat_inputs)
-            assert b is not None and is_dip2_bed(b)
+            if b is None or not is_dip2_bed(b):
+                raise DesignError(f"Expecting Diploid2 bed file, got {type(b)}")
             return dip_2to2_f(h, s, b)
 
         return self.with_ref_data_0_unsafe(
@@ -2801,7 +2878,9 @@ class GiabStrats(BaseModel):
         elif isinstance(bd, Diploid2BuildData) and hap is not None:
             return dip2_f(hap, bd)
         else:
-            assert False
+            raise DesignError(
+                f"Invalid build data with type '{type(bd)}' for keys '{rk}' and '{bk}'"
+            )
 
     # TODO feed refkey to the HO-functions so that there is no confusion as to
     # when the refkey has been parsed
@@ -2859,8 +2938,10 @@ class GiabStrats(BaseModel):
         ):
             return dip_2to2_f(hap, rd, cast(Dip2BedFile, bf2))
         else:
-            # TODO make this error more meaningful
-            assert False, "this should not happen"
+            # TODO this errror seems wonky
+            raise DesignError(
+                f"Invalid ref data with type '{type(rd)}' for key '{rfk}'"
+            )
 
     def with_build_data_and_bed(
         self,
@@ -2932,34 +3013,21 @@ class GiabStrats(BaseModel):
 
         # TODO not DRY
         def _hap_f(bd: HaploidBuildData, bf: HapBedFile) -> Z:
-            match inputs:
-                case [i]:
-                    hap_f(i, bd, bf)
-            assert False
+            return match1_unsafe(inputs, lambda i: hap_f(i, bd, bf))
 
         def _dip_1to1_f(bd: Diploid1BuildData, bf: Dip1BedFile) -> Z:
-            match inputs:
-                case [i]:
-                    dip_1to1_f(i, bd, bf)
-            assert False
+            return match1_unsafe(inputs, lambda i: dip_1to1_f(i, bd, bf))
 
         def _dip_1to2_f(bd: Diploid2BuildData, bf: Dip1BedFile) -> Z:
-            match inputs:
-                case [i]:
-                    dip_1to2_f(i, bd, bf)
-            assert False
+            return match1_unsafe(inputs, lambda i: dip_1to2_f(i, bd, bf))
 
         def _dip_2to1_f(bd: Diploid1BuildData, bf: Dip2BedFile) -> Z:
-            match inputs:
-                case [i1, i2]:
-                    dip_2to1_f((i1, i2), bd, bf)
-            assert False
+            return match2_unsafe(inputs, lambda i1, i2: dip_2to1_f((i1, i2), bd, bf))
 
         def _dip_2to2_f(hap: Haplotype, bd: Diploid2BuildData, bf: Dip2BedFile) -> Z:
-            match inputs:
-                case [i1, i2]:
-                    dip_2to2_f((i1, i2), hap, bd, bf)
-            assert False
+            return match2_unsafe(
+                inputs, lambda i1, i2: dip_2to2_f((i1, i2), hap, bd, bf)
+            )
 
         return self.with_build_data_and_bed(
             rfk,
@@ -3028,36 +3096,25 @@ class GiabStrats(BaseModel):
         #     return Path(outpath_base.replace(_REPLACE_KEY, rk))
 
         def _hap_f(i: X, bd: HaploidBuildData, bf: HapBedFile) -> Z:
-            match outputs:
-                case [o]:
-                    hap_f(i, o, bd, bf)
-            assert False
+            return match1_unsafe(outputs, lambda o: hap_f(i, o, bd, bf))
 
         def _dip_1to1_f(i: X, bd: Diploid1BuildData, bf: Dip1BedFile) -> Z:
-            match outputs:
-                case [o]:
-                    dip_1to1_f(i, o, bd, bf)
-            assert False
+            return match1_unsafe(outputs, lambda o: dip_1to1_f(i, o, bd, bf))
 
         def _dip_1to2_f(i: X, bd: Diploid2BuildData, bf: Dip1BedFile) -> Z:
-            match outputs:
-                case [o1, o2]:
-                    dip_1to2_f(i, (o1, o2), bd, bf)
-            assert False
+            return match2_unsafe(
+                outputs, lambda o1, o2: dip_1to2_f(i, (o1, o2), bd, bf)
+            )
 
         def _dip_2to1_f(i: tuple[X, X], bd: Diploid1BuildData, bf: Dip2BedFile) -> Z:
-            match outputs:
-                case [o]:
-                    dip_2to1_f(i, o, bd, bf)
-            assert False
+            return match1_unsafe(outputs, lambda o: dip_2to1_f(i, o, bd, bf))
 
         def _dip_2to2_f(
             i: tuple[X, X], _: Haplotype, bd: Diploid2BuildData, bf: Dip2BedFile
         ) -> Z:
-            match outputs:
-                case [o1, o2]:
-                    dip_2to2_f(i, (o1, o2), bd, bf)
-            assert False
+            return match2_unsafe(
+                outputs, lambda o1, o2: dip_2to2_f(i, (o1, o2), bd, bf)
+            )
 
         return self.with_build_data_and_bed_i(
             rfk,

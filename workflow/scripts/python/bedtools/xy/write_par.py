@@ -5,18 +5,27 @@ import common.config as cfg
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     i = cfg.ChrIndex.from_name(smk.wildcards["sex_chr"])
-    k = cfg.RefKey(smk.wildcards["ref_key"])
-    pattern = sconf.refkey_to_final_chr_pattern(k)
-    cxy = sconf.stratifications[k].xy
 
-    assert i in [cfg.ChrIndex.CHRX, cfg.ChrIndex.CHRY], "invalid sex chr"
+    cxy, pat = sconf.with_ref_data_unsafe(
+        smk.wildcards["ref_key"],
+        lambda rd: (
+            rd.strat_inputs.xy,
+            rd.ref.chr_pattern,
+        ),
+        lambda rd: (
+            rd.strat_inputs.xy,
+            rd.ref.chr_pattern.to_hap_pattern(i.xy_to_hap_unsafe),
+        ),
+        lambda hap, rd: (
+            rd.strat_inputs.xy,
+            rd.ref.chr_pattern.from_either(hap),
+        ),
+    )
 
-    par_fun = cxy.fmt_x_par if i == cfg.ChrIndex.CHRX else cxy.fmt_y_par
-    out = par_fun(pattern)
-    assert out is not None, "this should not happen"
+    par_fun = i.choose_xy_unsafe(cxy.fmt_x_par_unsafe, cxy.fmt_y_par_unsafe)
 
     with bgzf.BgzfWriter(smk.output[0], "w") as f:
-        f.write(out)
+        f.write(par_fun(pat))
 
 
 main(snakemake, snakemake.config)  # type: ignore
