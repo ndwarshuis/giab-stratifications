@@ -50,7 +50,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     # TODO flatten builddata to make this sort of thing easier (and type the
     # types with less typing)
     def go(
-        x: cfg.BuildData_[cfg.RefSourceT, cfg.StratInputs_[cfg.AnyBedT], cfg.BuildT]
+        x: cfg.BuildData_[cfg.RefSourceT, cfg.AnyBedT, cfg.AnyBedT_, cfg.IncludeT]
     ) -> cfg.BedFile[cfg.AnyBedT] | None:
         return cfg.fmap_maybe(lambda y: y.bench_bed, x.build.bench)
 
