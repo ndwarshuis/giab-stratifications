@@ -9,7 +9,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ps: dict[str, str] = smk.params
     ins: list[Path] = smk.input
     output_list = smk.output[0]
-    bed_outputs = list(map(Path, ps["bed_outputs"]))
+    output_pattern: str = ps["output_pattern"]
 
     def go(
         x: cfg.BuildData_[cfg.RefSourceT, cfg.AnyBedT, cfg.AnyBedT_, cfg.IncludeT]

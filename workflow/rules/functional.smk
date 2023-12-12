@@ -10,12 +10,34 @@ def func_final_path(name):
     return config.build_strat_path(func_dir, name)
 
 
+use rule download_ref as download_ftbl with:
+    output:
+        config.ref_src_dir / "ftbl.txt.gz",
+    params:
+        src=lambda w: config.refkey_to_functional_ftbl_src(w.ref_key),
+    localrule: True
+    log:
+        ref_master_log_dir / "ftbl.log",
+
+
+use rule download_ref as download_gff with:
+    output:
+        config.ref_src_dir / "gff.txt.gz",
+    params:
+        src=lambda w: config.refkey_to_functional_gff_src(w.ref_key),
+    localrule: True
+    log:
+        ref_master_log_dir / "gff.log",
+
+
 rule filter_cds:
     input:
-        mapper=rules.ftbl_to_mapper.output[0],
-        bed=rules.gff_to_bed.output[0],
+        gff=rules.download_gff.output,
+        ftbl=rules.download_ftbl.output,
     output:
-        func_inter_dir / "refseq_cds.bed.gz",
+        vdj=TODO,
+        cds=TODO,
+        # func_inter_dir / "refseq_cds.bed.gz",
     conda:
         "../envs/bedtools.yml"
     script:

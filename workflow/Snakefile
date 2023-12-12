@@ -13,7 +13,10 @@ config = GiabStrats.parse_obj(config)
 
 def read_checkpoint(rulename, wildcards):
     r = getattr(checkpoints, rulename)
-    c = r.get(ref_key=wildcards.ref_key, build_key=wildcards.build_key)
+    c = r.get(
+        ref_key=strip_refkey(wildcards.ref_final_key),
+        build_key=wildcards.build_key,
+    )
     with c.output[0].open() as f:
         return json.load(f)
 

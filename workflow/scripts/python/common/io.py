@@ -16,6 +16,18 @@ class DesignError(Exception):
     pass
 
 
+def none_unsafe(x: X | None, f: Y, msg: None | str = None) -> Y:
+    if x is not None:
+        raise DesignError(msg if msg is not None else "Should not be None")
+    return f
+
+
+def not_none_unsafe(x: X | None, f: Callable[[X], Y], msg: None | str = None) -> Y:
+    if x is None:
+        raise DesignError(msg if msg is not None else "Should not be None")
+    return f(x)
+
+
 def match1_unsafe(xs: list[X], f: Callable[[X], Y], msg: None | str = None) -> Y:
     match xs:
         case [x]:
@@ -30,6 +42,23 @@ def match2_unsafe(xs: list[X], f: Callable[[X, X], Y], msg: None | str = None) -
     match xs:
         case [x1, x2]:
             return f(x1, x2)
+        case _:
+            raise DesignError(
+                msg if msg is not None else f"Two inputs expected, got {len(xs)}"
+            )
+
+
+def match12_unsafe(
+    xs: list[X],
+    f1: Callable[[X], Y],
+    f2: Callable[[X, X], Y],
+    msg: None | str = None,
+) -> Y:
+    match xs:
+        case [x1]:
+            return f1(x1)
+        case [x1, x2]:
+            return f2(x1, x2)
         case _:
             raise DesignError(
                 msg if msg is not None else f"Two inputs expected, got {len(xs)}"

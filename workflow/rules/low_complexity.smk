@@ -394,7 +394,6 @@ use rule download_ref as download_trf with:
     localrule: True
 
 
-# TODO these directories should reflect the different types of ref_keys
 checkpoint filter_sort_trf:
     input:
         lambda w: expand(
@@ -405,13 +404,12 @@ checkpoint filter_sort_trf:
             ),
         ),
     output:
-        # lc_inter_dir / "trf.txt.gz",
-        lambda w: expand(
-            lc_inter_dir / "trf.json", ref_key=strip_refkey(w.ref_final_key)
-        ),
+        lc_inter_dir / "trf.json",
     params:
-        bed_outputs=lambda w: expand(
-            lc_inter_dir / "trf.bed.gz", ref_key=w.ref_final_key
+        bed_output=lambda w: expand(
+            lc_inter_dir / "trf.bed.gz",
+            ref_key="%s",
+            build_key=w.build_key,
         ),
     conda:
         "../envs/bedtools.yml"

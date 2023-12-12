@@ -26,18 +26,19 @@ rule get_gaps:
         """
 
 
-rule filter_vdj:
-    input:
-        mapper=rules.ftbl_to_mapper.output[0],
-        bed=rules.gff_to_bed.output[0],
-    output:
-        otherdiff_inter_dir / "vdj.bed.gz",
-    conda:
-        "../envs/bedtools.yml"
-    script:
-        "../scripts/python/bedtools/otherdifficult/filter_vdj.py"
+# rule filter_vdj:
+#     input:
+#         mapper=rules.ftbl_to_mapper.output[0],
+#         bed=rules.gff_to_bed.output[0],
+#     output:
+#         otherdiff_inter_dir / "vdj.bed.gz",
+#     conda:
+#         "../envs/bedtools.yml"
+#     script:
+#         "../scripts/python/bedtools/otherdifficult/filter_vdj.py"
 
 
+# TODO use checkpoint here
 rule remove_vdj_gaps:
     input:
         bed=rules.filter_vdj.output,
