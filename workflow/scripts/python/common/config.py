@@ -47,54 +47,84 @@ Z = TypeVar("Z")
 Percent = Annotated[int, Field(ge=0, le=100)]
 
 
-class HapRefKey_(str):
+class RefKey_(str):
+    pass
+    # def __init__(self, k: RefKeyT_) -> None:
+    #     self.key: RefKeyT_ = k
+
+    # @property
+    # def nohap_final(self) -> "RefFinalKey":
+    #     return RefFinalKey(self, None)
+
+    # @property
+    # def hap1_final(self) -> "RefFinalKey":
+    #     return RefFinalKey(self, Haplotype.HAP1)
+
+    # @property
+    # def hap2_final(self) -> "RefFinalKey":
+    #     return RefFinalKey(self, Haplotype.HAP2)
+
+    # @property
+    # def haps_final(self) -> "tuple[RefFinalKey, RefFinalKey]":
+    #     return (self.hap1_final, self.hap2_final)
+
+    # @property
+    # def nohap_src(self) -> "RefSrcKey":
+    #     return RefSrcKey(self, None)
+
+    # @property
+    # def hap1_src(self) -> "RefSrcKey":
+    #     return RefSrcKey(self, Haplotype.HAP1)
+
+    # @property
+    # def hap2_src(self) -> "RefSrcKey":
+    #     return RefSrcKey(self, Haplotype.HAP2)
+
+    # @property
+    # def haps_src(self) -> "tuple[RefSrcKey, RefSrcKey]":
+    #     return (self.hap1_src, self.hap2_src)
+
+
+class HapRefKey_(RefKey_):
     pass
 
 
-class Dip1RefKey_(str):
+class Dip1RefKey_(RefKey_):
     pass
 
 
-class Dip2RefKey_(str):
+class Dip2RefKey_(RefKey_):
     pass
 
 
-RefKeyT_ = TypeVar("RefKeyT_", HapRefKey_, Dip1RefKey_, Dip2RefKey_)
+RefKeyT = TypeVar("RefKeyT", HapRefKey_, Dip1RefKey_, Dip2RefKey_)
 
 
-class RefKey_(Generic[RefKeyT_]):
-    def __init__(self, k: RefKeyT_) -> None:
-        self.key: RefKeyT_ = k
-
-    @property
-    def hap1(self) -> "RefKeyFull[RefKeyT_]":
-        return RefKeyFull(self.key, Haplotype.HAP1)
-
-    @property
-    def hap2(self) -> "RefKeyFull[RefKeyT_]":
-        return RefKeyFull(self.key, Haplotype.HAP2)
-
-    @property
-    def haps(self) -> "list[RefKeyFull[RefKeyT_]]":
-        return [self.hap1, self.hap2]
-
-
-HapRefKey = RefKey_[HapRefKey_]
-Dip1RefKey = RefKey_[Dip1RefKey_]
-Dip2RefKey = RefKey_[Dip2RefKey_]
+# HapRefKey = RefKey_[HapRefKey_]
+# Dip1RefKey = RefKey_[Dip1RefKey_]
+# Dip2RefKey = RefKey_[Dip2RefKey_]
+HapRefKey = HapRefKey_
+Dip1RefKey = Dip1RefKey_
+Dip2RefKey = Dip2RefKey_
 AnyRefKey = HapRefKey | Dip1RefKey | Dip2RefKey
 
 
-RefKeyT = TypeVar("RefKeyT", HapRefKey, Dip1RefKey, Dip2RefKey)
+# RefKeyT = TypeVar("RefKeyT", HapRefKey, Dip1RefKey, Dip2RefKey)
 
 
 @dataclass(frozen=True)
-class RefKeyFull(Generic[RefKeyT_]):
-    key: RefKeyT_
+class RefKeyFull(Generic[RefKeyT]):
+    key: RefKeyT
     hap: "Haplotype" | None
 
+    # @classmethod
+    # def from_str(cls, s: str) -> Self:
+    #     m = re.match("(.+)_(hap[12])", s)
+    #     # ASSUME this will never fail due to the hap1/2 permitted match pattern
+    #     return cls(s, None) if m is None else cls(m[1], Haplotype.from_name(m[2]))
+
     @property
-    def strip(self) -> RefKey_[RefKeyT_]:
+    def strip(self) -> RefKey_:
         return RefKey_(self.key)
 
     @property
@@ -105,6 +135,19 @@ class RefKeyFull(Generic[RefKeyT_]):
     def name(self) -> str:
         k, h = self.as_tuple
         return f"{k}_{h}" if h is not None else k
+
+
+class RefFinalKey(RefKeyFull[RefKeyT]):
+    pass
+
+
+class RefSrcKey(RefKeyFull[RefKeyT]):
+    pass
+
+
+AnyRefFinalKey = (
+    RefFinalKey[HapRefKey] | RefFinalKey[Dip1RefKey] | RefFinalKey[Dip2RefKey]
+)
 
 
 # class wrapper so I can pattern match on them (which newtype won't allow)
@@ -139,33 +182,6 @@ BuildPairT = TypeVar(
 )
 
 
-# def either_ref_key(
-#     left: Callable[[HapRefKey], X], right: Callable[[Dip1RefKey], X], k: RefKey
-# ) -> X:
-#     if isinstance(k, HapRefKey):
-#         return left(k)
-#     elif isinstance(k, Dip1RefKey):
-#         return right(k)
-#     elif isinstance(k, Dip2RefKey):
-#         # TODO
-#         return right(k)
-#     else:
-#         assert_never(k)
-
-
-# def either_build_pair(
-#     left: Callable[[HaploidBuildPair], X],
-#     right: Callable[[Diploid1BuildPair], X],
-#     p: BuildPair,
-# ) -> X:
-#     if isinstance(p.ref, HapRefKey):
-#         return left(p)
-#     elif isinstance(p.ref, Dip1RefKey):
-#         return right(p)
-#     else:
-#         assert_never(p.ref)
-
-
 BuildKeyT = TypeVar("BuildKeyT", HapBuildKey, Dip1BuildKey, Dip2BuildKey)
 
 CompareKey = NewType("CompareKey", str)
@@ -191,6 +207,10 @@ def fmap_maybe_def(
     x: X | None,
 ) -> Y:
     return default if x is None else f(x)
+
+
+def both(f: Callable[[X], Y], x: tuple[X, X]) -> tuple[Y, Y]:
+    return (f(x[0]), f(x[1]))
 
 
 def from_maybe(default: X, x: X | None) -> X:
@@ -248,14 +268,14 @@ def to_haplotype(s: str) -> Haplotype | None:
         return None
 
 
-def parse_refkey(s: str) -> tuple[str, Haplotype | None]:
+def parse_final_refkey(s: str) -> tuple[str, Haplotype | None]:
     m = re.match("(.+)_(hap[12])", s)
     # ASSUME this will never fail due to the hap1/2 permitted match pattern
     return (s, None) if m is None else (m[1], Haplotype.from_name(m[2]))
 
 
-def strip_refkey(s: str) -> str:
-    return parse_refkey(s)[0]
+# def strip_refkey(s: str) -> str:
+#     return parse_refkey(s)[0]
 
 
 def insert_suffix(p: Path, i: str) -> Path:
@@ -657,18 +677,6 @@ class DipToHapChrConversion:
         )
 
 
-# For instances where we simply need to sort all the chromosomes and they are
-# already named appropriately
-# def fullset_hap_conv(p: HapChrPattern) -> HapToHapChrConversion:
-#     return HapToHapChrConversion(p, p, set([i for i in ChrIndex]))
-
-
-# def fullset_dip1_conv(p: DipChrPattern) -> DipToDipChrConversion:
-#     return DipToDipChrConversion(
-#         p, p, set([(h, i) for i in ChrIndex for h in Haplotype])
-#     )
-
-
 class Paths(BaseModel):
     """Local build paths for snakemake."""
 
@@ -802,6 +810,20 @@ def is_dip2_bed(x: BedFile[DipChrSource[X]]) -> TypeGuard[BedFile[DipChrSource2[
     return isinstance(x.data, DipChrSource2)
 
 
+def with_dip_bedfile(
+    bf: BedFile[DipChrSource[X]],
+    dip1: Callable[[BedFile[DipChrSource1[X]]], Y],
+    dip2: Callable[[BedFile[DipChrSource2[X]]], Y],
+) -> Y:
+    if is_dip1_bed(bf):
+        return dip1(bf)
+    elif is_dip2_bed(bf):
+        return dip2(bf)
+    else:
+        assert False, "TODO this is a mypy FP"
+        # assert_never(bf)
+
+
 # class VCFFile(BaseModel):
 #     """Inport specs for a vcf file."""
 
@@ -848,14 +870,6 @@ class SatFile(BedFile[X]):
 
     def read(self, path: Path) -> pd.DataFrame:
         return super()._read(path, [self.sat_col])
-
-
-# def either_diploid(left: Callable) -> list[X]:
-#     s = x.src
-#     if isinstance(s, Diploid_):
-#         return [s.hap1, s.hap2]
-#     else:
-#         return [s]
 
 
 def diploid_to_list(x: AnyChrSource[X]) -> list[X]:
@@ -1045,7 +1059,7 @@ class GCParams(BaseModel):
         return (bounds[-1], bounds[:-1])
 
 
-class HaploidInclude(BaseModel):
+class HapInclude(BaseModel):
     """Flags to control which stratification levels are included."""
 
     low_complexity: bool = True
@@ -1063,13 +1077,13 @@ class HaploidInclude(BaseModel):
     gc: GCParams | None = GCParams()
 
 
-class DiploidInclude(HaploidInclude):
+class DipInclude(HapInclude):
     """Flags to control which stratification levels are included."""
 
     hets: bool = True
 
 
-IncludeT = TypeVar("IncludeT", HaploidInclude, DiploidInclude)
+IncludeT = TypeVar("IncludeT", HapInclude, DipInclude)
 
 
 class OtherBedFile(BedFile[AnyBedT]):
@@ -1114,7 +1128,7 @@ class Build_(BaseModel, Generic[AnyBedT, AnyBedT_, IncludeT]):
 # class HaploidBuild(Build_[AnyBedT, AnyBedT_]):
 #     """Spec for a stratification build."""
 
-#     include: HaploidInclude = IncludeHaploid()
+#     include: HapInclude = IncludeHaploid()
 
 
 # # # AnyDipBedSrcT = TypeVar("AnyDipBedSrcT", DipChrSource1[BedSrc], DipChrSource2[BedSrc])
@@ -1123,7 +1137,7 @@ class Build_(BaseModel, Generic[AnyBedT, AnyBedT_, IncludeT]):
 # class DiploidBuild(Build_[AnyBedT, AnyBedT_]):
 #     """Spec for a stratification build."""
 
-#     include: DiploidInclude = DiploidInclude()
+#     include: DipInclude = DipInclude()
 
 
 # BenchT = TypeVar(
@@ -1260,22 +1274,14 @@ RefSourceT = TypeVar(
 )
 
 
-# HaploidRefData = RefData_[HapChrSource[RefSrc], HaploidStratInputs]
-# Diploid1RefData = RefData_[DipChrSource1[RefSrc], DiploidStratInputs]
-# Diploid2RefData = RefData_[DipChrSource2[RefSrc], DiploidStratInputs]
-# AnyRefData = HaploidRefData | Diploid1RefData | Diploid2RefData
-
-
 @dataclass
-class BuildData_(Generic[RefKeyT_, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, IncludeT]):
-    refkey: RefKey_[RefKeyT_]
+class BuildData_(Generic[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, IncludeT]):
+    refdata: "RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]"
     buildkey: BuildKeyT
-    ref: RefSourceT
-    strat_inputs: StratInputs_[AnyBedT]
     build: Build_[AnyBedT, AnyBedT_, IncludeT]
 
     # @property
-    # def include(self) -> HaploidInclude:
+    # def include(self) -> HapInclude:
     #     return self.build.include
 
     @property
@@ -1283,7 +1289,7 @@ class BuildData_(Generic[RefKeyT_, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, Inc
         return fmap_maybe_def(
             [],
             lambda m: m.unplaced_chr_patterns,
-            self.strat_inputs.mappability,
+            self.refdata.strat_inputs.mappability,
         )
 
     @property
@@ -1314,16 +1320,48 @@ class BuildData_(Generic[RefKeyT_, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, Inc
 
 
 @dataclass(frozen=True)
-class RefData_(Generic[RefKeyT_, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]):
-    refkey: RefKey_[RefKeyT_]
+class RefData_(Generic[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]):
+    refkey: RefKeyT
     ref: RefSourceT
     strat_inputs: StratInputs_[AnyBedT]
     builds: dict[BuildKeyT, Build_[AnyBedT, AnyBedT_, IncludeT]]
 
+    @property
+    def nohap_final(self) -> RefFinalKey[RefKeyT]:
+        return RefFinalKey(self.refkey, None)
+
+    @property
+    def hap1_final(self) -> RefFinalKey[RefKeyT]:
+        return RefFinalKey(self.refkey, Haplotype.HAP1)
+
+    @property
+    def hap2_final(self) -> RefFinalKey[RefKeyT]:
+        return RefFinalKey(self.refkey, Haplotype.HAP2)
+
+    @property
+    def haps_final(self) -> tuple[RefFinalKey[RefKeyT], RefFinalKey[RefKeyT]]:
+        return (self.hap1_final, self.hap2_final)
+
+    @property
+    def nohap_src(self) -> RefSrcKey[RefKeyT]:
+        return RefSrcKey(self.refkey, None)
+
+    @property
+    def hap1_src(self) -> RefSrcKey[RefKeyT]:
+        return RefSrcKey(self.refkey, Haplotype.HAP1)
+
+    @property
+    def hap2_src(self) -> RefSrcKey[RefKeyT]:
+        return RefSrcKey(self.refkey, Haplotype.HAP2)
+
+    @property
+    def haps_src(self) -> tuple[RefSrcKey[RefKeyT], RefSrcKey[RefKeyT]]:
+        return (self.hap1_src, self.hap2_src)
+
     def to_build_data_unsafe(
         self,
         bk: BuildKeyT,
-    ) -> BuildData_[RefKeyT_, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, IncludeT]:
+    ) -> BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, IncludeT]:
         bd = self.to_build_data(bk)
         if bd is None:
             raise DesignError(f"Could not create build data from key '{bk}'")
@@ -1332,30 +1370,22 @@ class RefData_(Generic[RefKeyT_, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, Inclu
     def to_build_data(
         self,
         bk: BuildKeyT,
-    ) -> (
-        BuildData_[RefKeyT_, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, IncludeT] | None
-    ):
+    ) -> BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, IncludeT] | None:
         try:
-            return BuildData_(
-                self.refkey,
-                bk,
-                self.ref,
-                self.strat_inputs,
-                self.builds[bk],
-            )
+            return BuildData_(self, bk, self.builds[bk])
         except KeyError:
             return None
 
     # def to_build_data_unsafe(
     #     self,
-    #     rk: RefKeyT_,
+    #     rk: RefKeyT,
     #     bk: BuildKeyT,
     # ) -> BuildData_[RefSourceT, AnyBedT, AnyBedT_, IncludeT]:
     #     return self.to_ref_data_unsafe(rk).to_build_data_unsafe(bk)
 
     # def to_build_data(
     #     self,
-    #     rk: RefKeyT_,
+    #     rk: RefKeyT,
     #     bk: BuildKeyT,
     # ) -> BuildData_[RefSourceT, AnyBedT, AnyBedT_, IncludeT] | None:
     #     try:
@@ -1372,12 +1402,96 @@ class RefData_(Generic[RefKeyT_, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, Inclu
         )
 
 
+class HapRefData(
+    RefData_[
+        HapRefKey_,
+        HapChrSource[RefSrc],
+        HapBedSrc,
+        HapBedSrc,
+        HapBuildKey,
+        HapInclude,
+    ]
+):
+    pass
+
+
+class Dip1RefData(
+    RefData_[
+        Dip1RefKey_,
+        DipChrSource1[RefSrc],
+        DipBedSrc,
+        Dip1BedSrc,
+        Dip1BuildKey,
+        DipInclude,
+    ]
+):
+    pass
+
+
+class Dip2RefData(
+    RefData_[
+        Dip2RefKey_,
+        DipChrSource2[RefSrc],
+        DipBedSrc,
+        Dip2BedSrc,
+        Dip2BuildKey,
+        DipInclude,
+    ]
+):
+    pass
+
+
+AnyRefData = HapRefData | Dip1RefData | Dip2RefData
+
+
+def with_ref_data(
+    rd: AnyRefData,
+    hap_f: Callable[[HapRefData], X],
+    dip1_f: Callable[[Dip1RefData], X],
+    dip2_f: Callable[[Dip2RefData], X],
+) -> X:
+    if isinstance(rd.ref, HapChrSource):
+        return hap_f(rd)
+    elif isinstance(rd.ref, DipChrSource1):
+        return dip1_f(rd)
+    elif isinstance(rd.ref, DipChrSource2):
+        return dip2_f(rd)
+    else:
+        assert_never(rd)
+
+
+# def with_ref_data(
+#     x: ,
+#     hap_f: Callable[[HapRefData], X],
+#     dip1_f: Callable[[Dip1RefData], X],
+#     dip2_f: Callable[[Dip2RefData], X],
+# ) -> X:
+#     if isinstance(rd.ref, HapChrSource):
+#         return hap_f(rd)
+#     elif isinstance(rd.ref, DipChrSource1):
+#         return dip1_f(rd)
+#     elif isinstance(rd.ref, DipChrSource2):
+#         return dip2_f(rd)
+#     else:
+#         assert_never(rd)
+
+
 class BuildDataToBed(Protocol):
     A = TypeVar("A", HapBedSrc, DipBedSrc)
 
     def __call__(
-        self, __x: BuildData_[RefKeyT_, BuildKeyT, RefSourceT, A, AnyBedT_, IncludeT]
+        self, __x: BuildData_[RefKeyT, BuildKeyT, RefSourceT, A, AnyBedT_, IncludeT]
     ) -> BedFile[A] | None:
+        pass
+
+
+Xcov = TypeVar("Xcov", covariant=True)
+
+
+class OutputPattern(Protocol, Generic[Xcov]):
+    A = TypeVar("A", HapRefKey_, Dip1RefKey_, Dip2RefKey_)
+
+    def __call__(self, __x: RefFinalKey[A]) -> Xcov:
         pass
 
 
@@ -1391,38 +1505,32 @@ class Stratification(
     builds: dict[BuildKeyT, Build_[AnyBedT, AnyBedT_, IncludeT]]
 
 
-# TODO wrap this in the instance classes for the chromosome converters
-# def filter_sort_bed_conv(conv: HapToHapChrConversion, df: pd.DataFrame) -> pd.DataFrame:
-#     """Filter and sort a bed file from a dataframe."""
-#     from_map = conv.init_mapper
-#     to_map = conv.final_mapper
-#     return bed.filter_sort_bed(from_map, to_map, df)
-
-
 @dataclass
-class HaploidBuildData(
+class HapBuildData(
     BuildData_[
         HapRefKey_,
         HapBuildKey,
         HapChrSource[RefSrc],
         HapBedSrc,
         HapBedSrc,
-        HaploidInclude,
+        HapInclude,
     ]
 ):
     @property
     def final_mapper(self) -> bed.FinalMapper:
-        return self.ref.chr_pattern.final_mapper(self.chr_indices, Haplotype.HAP1)
+        return self.refdata.ref.chr_pattern.final_mapper(
+            self.chr_indices, Haplotype.HAP1
+        )
 
     @property
     def ref_chr_conversion(self) -> HapToHapChrConversion:
-        p = self.ref.chr_pattern
+        p = self.refdata.ref.chr_pattern
         return HapToHapChrConversion(p, p, self.chr_indices)
 
     def chr_conversion(self, fromChr: HapChrPattern) -> HapToHapChrConversion:
         return HapToHapChrConversion(
             fromChr,
-            self.ref.chr_pattern,
+            self.refdata.ref.chr_pattern,
             self.chr_indices,
         )
 
@@ -1445,23 +1553,23 @@ class HaploidBuildData(
 
 
 @dataclass
-class Diploid1BuildData(
+class Dip1BuildData(
     BuildData_[
         Dip1RefKey_,
         Dip1BuildKey,
         DipChrSource1[RefSrc],
         DipBedSrc,
         Dip1BedSrc,
-        DiploidInclude,
+        DipInclude,
     ]
 ):
     @property
     def final_mapper(self) -> bed.FinalMapper:
-        return self.ref.chr_pattern.final_mapper(self.chr_indices)
+        return self.refdata.ref.chr_pattern.final_mapper(self.chr_indices)
 
     @property
     def ref_chr_conversion(self) -> DipToDipChrConversion:
-        p = self.ref.chr_pattern
+        p = self.refdata.ref.chr_pattern
         return DipToDipChrConversion(p, p, self.chr_indices)
 
     def hap_chr_conversion(
@@ -1470,7 +1578,7 @@ class Diploid1BuildData(
     ) -> HapToDipChrConversion:
         return HapToDipChrConversion(
             fromChr,
-            self.ref.chr_pattern,
+            self.refdata.ref.chr_pattern,
             self.chr_indices,
         )
 
@@ -1480,7 +1588,7 @@ class Diploid1BuildData(
     ) -> DipToDipChrConversion:
         return DipToDipChrConversion(
             fromChr,
-            self.ref.chr_pattern,
+            self.refdata.ref.chr_pattern,
             self.chr_indices,
         )
 
@@ -1545,19 +1653,19 @@ class Diploid1BuildData(
 
 
 @dataclass
-class Diploid2BuildData(
+class Dip2BuildData(
     BuildData_[
-        Dip1RefKey_,
+        Dip2RefKey_,
         Dip2BuildKey,
         DipChrSource2[RefSrc],
         DipBedSrc,
         Dip2BedSrc,
-        DiploidInclude,
+        DipInclude,
     ]
 ):
     @property
     def final_mapper(self) -> tuple[bed.FinalMapper, bed.FinalMapper]:
-        p = self.ref.chr_pattern
+        p = self.refdata.ref.chr_pattern
         i = self.chr_indices
         return (
             p.hap1.final_mapper(i, Haplotype.HAP1),
@@ -1569,14 +1677,14 @@ class Diploid2BuildData(
         def go(h: HapChrPattern) -> HapToHapChrConversion:
             return HapToHapChrConversion(h, h, self.chr_indices)
 
-        p = self.ref.chr_pattern
+        p = self.refdata.ref.chr_pattern
         return (go(p.hap1), go(p.hap2))
 
     def hap_chr_conversion(
         self,
         fromChr: Diploid_[HapChrPattern],
     ) -> tuple[HapToHapChrConversion, HapToHapChrConversion]:
-        toChr = self.ref.chr_pattern
+        toChr = self.refdata.ref.chr_pattern
         cis = self.chr_indices
         return (
             HapToHapChrConversion(fromChr.hap1, toChr.hap1, cis),
@@ -1589,7 +1697,7 @@ class Diploid2BuildData(
     ) -> DipToHapChrConversion:
         return DipToHapChrConversion(
             fromChr,
-            self.ref.chr_pattern,
+            self.refdata.ref.chr_pattern,
             self.chr_indices,
         )
 
@@ -1645,33 +1753,33 @@ class Diploid2BuildData(
         bed.write_bed(opath[1], g1(df1))
 
 
-AnyBuildData = HaploidBuildData | Diploid1BuildData | Diploid2BuildData
+AnyBuildData = HapBuildData | Dip1BuildData | Dip2BuildData
 
 
-# def apply_build_data(
-#     bd: AnyBuildData,
-#     f: Callable[[HaploidBuildData], X],
-#     g: Callable[[Diploid1BuildData], X],
-#     h: Callable[[Diploid2BuildData], X],
-# ) -> X:
-#     if isinstance(bd, HaploidBuildData):
-#         return f(bd)
-#     elif isinstance(bd, Diploid1BuildData):
-#         return g(bd)
-#     elif isinstance(bd, Diploid2BuildData):
-#         return h(bd)
-#     else:
-#         assert_never(bd)
+def with_build_data(
+    bd: AnyBuildData,
+    hap_f: Callable[[HapBuildData], X],
+    dip1_f: Callable[[Dip1BuildData], X],
+    dip2_f: Callable[[Dip2BuildData], X],
+) -> X:
+    if isinstance(bd, HapBuildData):
+        return hap_f(bd)
+    elif isinstance(bd, Dip1BuildData):
+        return dip1_f(bd)
+    elif isinstance(bd, Dip2BuildData):
+        return dip2_f(bd)
+    else:
+        assert_never(bd)
 
 
 class StratDict_(
-    dict[RefKeyT_, Stratification[RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]],
-    Generic[RefKeyT_, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT],
+    dict[RefKeyT, Stratification[RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]],
+    Generic[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT],
 ):
     def to_ref_data_unsafe(
         self,
-        rk: RefKeyT_,
-    ) -> RefData_[RefKeyT_, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]:
+        rk: RefKeyT,
+    ) -> RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]:
         rd = self.to_ref_data(rk)
         if rd is None:
             raise DesignError(f"Could not get ref data for key '{rk}'")
@@ -1679,13 +1787,33 @@ class StratDict_(
 
     def to_ref_data(
         self,
-        rk: RefKeyT_,
-    ) -> RefData_[RefKeyT_, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT] | None:
+        rk: RefKeyT,
+    ) -> RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT] | None:
         try:
             s = self[rk]
-            return RefData_(RefKey_(rk), s.ref, s.strat_inputs, s.builds)
+            return RefData_(rk, s.ref, s.strat_inputs, s.builds)
         except KeyError:
             return None
+
+    @property
+    def all_ref_data(
+        self,
+    ) -> list[RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]]:
+        return [self.to_ref_data_unsafe(x) for x in self]
+
+    @property
+    def all_ref_keys(self) -> list[RefKey_]:
+        return [r.refkey for r in self.all_ref_data]
+
+    @property
+    def all_build_data(
+        self,
+    ) -> list[BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, IncludeT]]:
+        return [r.to_build_data_unsafe(b) for r in self.all_ref_data for b in r.builds]
+
+    @property
+    def all_build_keys(self) -> list[tuple[RefKey_, BuildKeyT]]:
+        return [(r.refdata.refkey, r.buildkey) for r in self.all_build_data]
 
 
 # class HaploidStratDict(
@@ -1701,14 +1829,14 @@ class StratDict_(
 #         self,
 #         rk: HapRefKey,
 #         bk: HapBuildKey,
-#     ) -> HaploidBuildData:
-#         return HaploidBuildData(*astuple(super().to_build_data_unsafe(rk, bk)))
+#     ) -> HapBuildData:
+#         return HapBuildData(*astuple(super().to_build_data_unsafe(rk, bk)))
 
 #     def to_build_data(
 #         self,
 #         rk: HapRefKey,
 #         bk: HapBuildKey,
-#     ) -> HaploidBuildData | None:
+#     ) -> HapBuildData | None:
 #         try:
 #             return self.to_build_data_unsafe(rk, bk)
 #         except KeyError:
@@ -1728,14 +1856,14 @@ class StratDict_(
 #         self,
 #         rk: Dip1RefKey,
 #         bk: Dip1BuildKey,
-#     ) -> Diploid1BuildData:
-#         return Diploid1BuildData(*astuple(super().to_build_data_unsafe(rk, bk)))
+#     ) -> Dip1BuildData:
+#         return Dip1BuildData(*astuple(super().to_build_data_unsafe(rk, bk)))
 
 #     def to_build_data(
 #         self,
 #         rk: Dip1RefKey,
 #         bk: Dip1BuildKey,
-#     ) -> Diploid1BuildData | None:
+#     ) -> Dip1BuildData | None:
 #         try:
 #             return self.to_build_data_unsafe(rk, bk)
 #         except KeyError:
@@ -1755,41 +1883,41 @@ class StratDict_(
 #         self,
 #         rk: Dip2RefKey,
 #         bk: Dip2BuildKey,
-#     ) -> Diploid2BuildData:
-#         return Diploid2BuildData(*astuple(super().to_build_data_unsafe(rk, bk)))
+#     ) -> Dip2BuildData:
+#         return Dip2BuildData(*astuple(super().to_build_data_unsafe(rk, bk)))
 
 #     def to_build_data(
 #         self,
 #         rk: Dip2RefKey,
 #         bk: Dip2BuildKey,
-#     ) -> Diploid2BuildData | None:
+#     ) -> Dip2BuildData | None:
 #         try:
 #             return self.to_build_data_unsafe(rk, bk)
 #         except KeyError:
 #             return None
 
-HaploidStratification = Stratification[
+HapStrat = Stratification[
     HapChrSource[RefSrc],
     HapBedSrc,
     HapBedSrc,
     HapBuildKey,
-    HaploidInclude,
+    HapInclude,
 ]
 Dip1Strat = Stratification[
     DipChrSource1[RefSrc],
     DipBedSrc,
     Dip1BedSrc,
     Dip1BuildKey,
-    DiploidInclude,
+    DipInclude,
 ]
 Dip2Strat = Stratification[
     DipChrSource2[RefSrc],
     DipBedSrc,
     Dip2BedSrc,
     Dip2BuildKey,
-    DiploidInclude,
+    DipInclude,
 ]
-AnyStratification = HaploidStratification | Dip1Strat | Dip2Strat
+AnyStratification = HapStrat | Dip1Strat | Dip2Strat
 
 HaploidStratDict = StratDict_[
     HapRefKey_,
@@ -1797,7 +1925,7 @@ HaploidStratDict = StratDict_[
     HapBedSrc,
     HapBedSrc,
     HapBuildKey,
-    HaploidInclude,
+    HapInclude,
 ]
 
 Diploid1StratDict = StratDict_[
@@ -1806,7 +1934,7 @@ Diploid1StratDict = StratDict_[
     DipBedSrc,
     Dip1BedSrc,
     Dip1BuildKey,
-    DiploidInclude,
+    DipInclude,
 ]
 
 Diploid2StratDict = StratDict_[
@@ -1815,7 +1943,7 @@ Diploid2StratDict = StratDict_[
     DipBedSrc,
     Dip2BedSrc,
     Dip2BuildKey,
-    DiploidInclude,
+    DipInclude,
 ]
 
 
@@ -1866,9 +1994,9 @@ class GiabStrats(BaseModel):
     @validator("stratifications", each_item=True)
     def builds_have_valid_existing(
         cls,
-        v: HaploidStratification,
+        v: HapStrat,
         values: dict[str, Any],
-    ) -> HaploidStratification:
+    ) -> HapStrat:
         try:
             levels = cast(list[OtherLevelKey], values["other_levels"])
             bad = [
@@ -1888,9 +2016,9 @@ class GiabStrats(BaseModel):
     @validator("haploid_stratifications", each_item=True)
     def builds_have_valid_old_version(
         cls,
-        v: HaploidStratification,
+        v: HapStrat,
         values: dict[str, Any],
-    ) -> HaploidStratification:
+    ) -> HapStrat:
         try:
             prev = cast(dict[CompareKey, HttpUrl], values["previous"])
             bad = [
@@ -2011,34 +2139,34 @@ class GiabStrats(BaseModel):
 
     # general accessors
 
-    def refkey_to_ref_src(self, rk: str) -> RefSrc | None:
-        return self.with_ref_data_unsafe(
-            rk,
+    def reffinalkey_to_ref_src(self, rfk: str) -> RefSrc | None:
+        return self.with_ref_data_final(
+            rfk,
             lambda rd: rd.ref.src,
             lambda rd: rd.ref.src,
-            lambda hap, rd: hap.from_either(rd.ref.src.hap1, rd.ref.src.hap2),
+            lambda hap, rd: rd.ref.src.from_either(hap),
         )
 
     def refkey_to_bed_refsrckeys(self, f: StratInputToBed, rk: str) -> list[str]:
         return self.with_ref_data_and_bed(
             rk,
             f,
-            lambda rk, _, __: [rk],
-            lambda rk, _, __: [rk],
-            lambda rk, _, __: [f"{rk}_{h.name}" for h in Haplotype],
-            lambda rk, _, __: [rk],
-            lambda rk, _, __: [f"{rk}_{h.name}" for h in Haplotype],
+            lambda rd, _: [rd.nohap_src.name],
+            lambda rd, _: [rd.nohap_src.name],
+            lambda rd, _: [*both(lambda x: x.name, rd.haps_src)],
+            lambda rd, _: [rd.nohap_src.name],
+            lambda rd, _: [*both(lambda x: x.name, rd.haps_src)],
         )
 
     def refsrckey_to_bed_src(self, f: StratInputToBed, rsk: str) -> BedSrc:
         return self.with_ref_data_bed_unsafe(
             rsk,
             f,
-            lambda _, __, bf: bf.data.src,
-            lambda _, __, bf: bf.data.src,
-            lambda _, __, bf: bf.data.src,
-            lambda hap, _, __, bf: bf.data.src.from_either(hap),
-            lambda hap, _, __, bf: bf.data.src.from_either(hap),
+            lambda _, bf: bf.data.src,
+            lambda _, bf: bf.data.src,
+            lambda _, bf: bf.data.src,
+            lambda hap, _, bf: bf.data.src.from_either(hap),
+            lambda hap, _, bf: bf.data.src.from_either(hap),
         )
 
     # def _refkey_to_bed(self, f: StratInputToBed, rk: str) -> BedSrcAndKey:
@@ -2104,7 +2232,7 @@ class GiabStrats(BaseModel):
     #     else:
     #         assert_never(p)
 
-    # def buildkey_to_include(self, p: BuildPair) -> HaploidInclude:
+    # def buildkey_to_include(self, p: BuildPair) -> HapInclude:
     #     return self.buildkey_to_build(p).include
 
     # def buildkey_to_chr_indices(self, p: BuildPair) -> set[ChrIndex]:
@@ -2453,50 +2581,38 @@ class GiabStrats(BaseModel):
 
     # key lists for downloading resources
 
-    @property
-    def _all_haploid_builds(self) -> list[HaploidBuildPair]:
-        return [
-            HaploidBuildPair(rk, bk)
-            for rk, s in self.haploid_stratifications.items()
-            for bk in s.builds
-        ]
+    # @property
+    # def _all_haploid_builds(self) -> list[tuple[HapRefKey, HapBuildKey]]:
+    #     return self.haploid_stratifications.all_build_keys
 
-    @property
-    def _all_diploid1_builds(self) -> list[Diploid1BuildPair]:
-        return [
-            Diploid1BuildPair(rk, bk)
-            for rk, s in self.diploid1_stratifications.items()
-            for bk in s.builds
-        ]
+    # @property
+    # def _all_diploid1_builds(self) -> list[tuple[Dip1RefKey, Dip1BuildKey]]:
+    #     return self.diploid1_stratifications.all_build_keys
 
-    @property
-    def _all_diploid2_builds(self) -> list[Diploid2BuildPair]:
-        return [
-            Diploid2BuildPair(rk, bk)
-            for rk, s in self.diploid2_stratifications.items()
-            for bk in s.builds
-        ]
+    # @property
+    # def _all_diploid2_builds(self) -> list[tuple[Dip2RefKey, Dip2BuildKey]]:
+    #     return self.diploid2_stratifications.all_build_keys
 
-    @property
-    def _all_builds(self) -> list[BuildPair]:
-        return (
-            self._all_haploid_builds
-            + self._all_diploid1_builds
-            + self._all_diploid2_builds
-        )
+    # @property
+    # def _all_builds(self) -> list[BuildPair]:
+    #     return (
+    #         self._all_haploid_builds
+    #         + self._all_diploid1_builds
+    #         + self._all_diploid2_builds
+    #     )
 
-    @property
-    def all_refkeys(self) -> list[RefKey]:
-        return (
-            [*self.haploid_stratifications]
-            + [*self.diploid1_stratifications]
-            + [*self.diploid2_stratifications]
-        )
+    # @property
+    # def all_refkeys(self) -> list[RefKey]:
+    #     return (
+    #         [*self.haploid_stratifications]
+    #         + [*self.diploid1_stratifications]
+    #         + [*self.diploid2_stratifications]
+    #     )
 
     # def strat_dict(
     #     self, rk: str, bk: str
     # ) -> (
-    #     tuple[HapRefKey, HapBuildKey, HaploidStratification]
+    #     tuple[HapRefKey, HapBuildKey, HapStrat]
     #     | tuple[Dip1RefKey, Dip1BuildKey, Dip1Strat]
     #     | tuple[Dip2RefKey, Dip2BuildKey, Dip2Strat]
     # ):
@@ -2527,145 +2643,79 @@ class GiabStrats(BaseModel):
 
     def parse_refkey(self, rk: str) -> AnyRefKey:
         if HapRefKey_(rk) in self.haploid_stratifications:
-            return RefKey_(HapRefKey_(rk))
+            return HapRefKey_(rk)
         elif Dip1RefKey_(rk) in self.diploid1_stratifications:
-            return RefKey_(Dip1RefKey_(rk))
+            return Dip1RefKey_(rk)
         elif Dip2RefKey_(rk) in self.diploid2_stratifications:
-            return RefKey_(Dip2RefKey_(rk))
+            return Dip2RefKey_(rk)
         else:
-            raise DesignError(f"could not get stratification data for ref key '{rk}'")
+            raise DesignError(f"invalid ref key: '{rk}'")
 
-    def to_ref_data(self, rk: str) -> AnyStratification:
-        try:
-            return self.haploid_stratifications[HapRefKey_(rk)]
-        except KeyError:
-            pass
+    # def parse_final_refkey(self, rfk: str) -> AnyRefFinalKey:
+    #     rk, hap = parse_final_refkey(rfk)
+    #     return RefFinalKey(self.to_ref_data(rk).refkey, hap)
+    # if isinstance(rd, HapRefData):
+    #     return HapBuildData(*astuple(rd.to_build_data_unsafe(HapBuildKey(bk))))
+    # elif isinstance(rd, Dip1RefData):
+    #     return HapBuildData(*astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk))))
+    # elif isinstance(rd, Dip2RefData):
+    #     return HapBuildData(*astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk))))
+    # else:
+    #     assert_never(rd)
 
-        try:
-            return self.diploid1_stratifications[Dip1RefKey_(rk)]
-        except KeyError:
-            pass
+    # def to_ref_data_(self, rk: AnyRefKey) -> AnyRefData:
+    #     if isinstance(rk, HapRefKey_):
+    #         return HapRefData(
+    #             *astuple(self.haploid_stratifications.to_ref_data_unsafe(rk))
+    #         )
+    #     elif isinstance(rk, Dip1RefKey_):
+    #         return Dip1RefData(
+    #             *astuple(self.diploid1_stratifications.to_ref_data_unsafe(rk))
+    #         )
+    #     elif isinstance(rk, Dip2RefKey_):
+    #         return Dip2RefData(
+    #             *astuple(self.diploid2_stratifications.to_ref_data_unsafe(rk))
+    #         )
+    #     else:
+    #         assert_never(rk)
 
-        try:
-            return self.diploid2_stratifications[Dip2RefKey_(rk)]
-        except KeyError:
-            pass
+    def to_ref_data(self, rk: str) -> AnyRefData:
+        k = self.parse_refkey(rk)
+        if isinstance(k, HapRefKey_):
+            return HapRefData(
+                *astuple(self.haploid_stratifications.to_ref_data_unsafe(k))
+            )
+        elif isinstance(k, Dip1RefKey_):
+            return Dip1RefData(
+                *astuple(self.diploid1_stratifications.to_ref_data_unsafe(k))
+            )
+        elif isinstance(k, Dip2RefKey_):
+            return Dip2RefData(
+                *astuple(self.diploid2_stratifications.to_ref_data_unsafe(k))
+            )
+        else:
+            assert_never(k)
 
-        raise DesignError(f"could not get stratification data for ref key '{rk}'")
+    def with_ref_data(
+        self,
+        rk: str,
+        hap_f: Callable[[HapRefData], X],
+        dip1_f: Callable[[Dip1RefData], X],
+        dip2_f: Callable[[Dip2RefData], X],
+    ) -> X:
+        return with_ref_data(self.to_ref_data(rk), hap_f, dip1_f, dip2_f)
 
     def to_build_data(self, rk: str, bk: str) -> AnyBuildData:
-        try:
-            return HaploidBuildData(
-                *astuple(
-                    self.haploid_stratifications.to_build_data_unsafe(
-                        HapRefKey(rk), HapBuildKey(bk)
-                    )
-                )
-            )
-        except KeyError:
-            pass
-
-        try:
-            return Diploid1BuildData(
-                *astuple(
-                    self.diploid1_stratifications.to_build_data_unsafe(
-                        Dip1RefKey(rk), Dip1BuildKey(bk)
-                    )
-                )
-            )
-        except KeyError:
-            pass
-
-        try:
-            return Diploid2BuildData(
-                *astuple(
-                    self.diploid2_stratifications.to_build_data_unsafe(
-                        Dip2RefKey(rk), Dip2BuildKey(bk)
-                    )
-                )
-            )
-        except KeyError:
-            pass
-
-        raise DesignError(
-            f"could not get build data for ref key '{rk}' and build key '{bk}'"
-        )
-
-    def with_ref_data_unsafe(
-        self,
-        rfk: str,
-        hap_f: Callable[[HaploidStratification], X],
-        dip1_f: Callable[[Dip1Strat], X],
-        dip2_f: Callable[[Haplotype, Dip2Strat], X],
-    ) -> X:
-        rk_, hap = parse_refkey(rfk)
-        rd = self.to_ref_data(rk_)
-        if isinstance(rd.ref, HapChrSource) and hap is None:
-            return hap_f(rd)
-        elif isinstance(rd.ref, DipChrSource1) and hap is None:
-            return dip1_f(rd)
-        elif isinstance(rd.ref, DipChrSource2) and hap is not None:
-            return dip2_f(hap, rd)
-        else:
-            raise DesignError(
-                f"Invalid ref data with type '{type(rd)}' for key '{rfk}'"
-            )
-
-    # def with_ref_data_0_unsafe(
-    #     self,
-    #     rk: str,
-    #     hap_f: Callable[[HaploidStratification], X],
-    #     dip1_f: Callable[[Dip1Strat], X],
-    #     hap1_f: Callable[[Haplotype, Dip1Strat], X],
-    #     dip2_f: Callable[[Dip2Strat], X],
-    #     hap2_f: Callable[[Haplotype, Dip2Strat], X],
-    # ) -> X:
-    #     rk_, hap = parse_refkey(rk)
-    #     rd = self.to_ref_data(rk_)
-    #     if isinstance(rd.ref, HapChrSource) and hap is None:
-    #         return hap_f(rd)
-    #     elif isinstance(rd.ref, DipChrSource1) and hap is None:
-    #         return dip1_f(rd)
-    #     elif isinstance(rd.ref, DipChrSource2) and hap is None:
-    #         return dip2_f(rd)
-    #     elif isinstance(rd.ref, DipChrSource1) and hap is not None:
-    #         return hap1_f(hap, rd)
-    #     elif isinstance(rd.ref, DipChrSource2) and hap is not None:
-    #         return hap2_f(hap, rd)
-    #     else:
-    #         raise DesignError(f"Invalid ref data with type '{type(rd)}' for key '{rk}'")
-
-    def with_build_data_ref_unsafe(
-        self,
-        rsk: str,
-        bk: str,
-        hap_f: Callable[[HaploidBuildData], X],
-        dip1_f: Callable[[Diploid1BuildData], X],
-        dip2_f: Callable[[Haplotype, Diploid2BuildData], X],
-    ) -> X:
-        return self.with_ref_data_unsafe(
-            rsk,
-            lambda s: hap_f(
-                HaploidBuildData(
-                    *astuple(
-                        s.to_build_data_unsafe(HapBuildKey(bk)),
-                    )
-                )
+        return with_ref_data(
+            self.to_ref_data(rk),
+            lambda rd: HapBuildData(
+                *astuple(rd.to_build_data_unsafe(HapBuildKey(bk))),
             ),
-            lambda s: dip1_f(
-                Diploid1BuildData(
-                    *astuple(
-                        s.to_build_data_unsafe(Dip1BuildKey(bk)),
-                    )
-                )
+            lambda rd: HapBuildData(
+                *astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk))),
             ),
-            lambda hap, s: dip2_f(
-                hap,
-                Diploid2BuildData(
-                    *astuple(
-                        s.to_build_data_unsafe(Dip2BuildKey(bk)),
-                    )
-                ),
+            lambda rd: HapBuildData(
+                *astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk))),
             ),
         )
 
@@ -2673,122 +2723,94 @@ class GiabStrats(BaseModel):
         self,
         rk: str,
         bk: str,
-        hap_f: Callable[[HaploidBuildData], X],
-        dip1_f: Callable[[Diploid1BuildData], X],
-        dip2_f: Callable[[Haplotype, Diploid2BuildData], X],
+        hap_f: Callable[[HapBuildData], X],
+        dip1_f: Callable[[Dip1BuildData], X],
+        dip2_f: Callable[[Dip2BuildData], X],
     ) -> X:
-        rk_, hap = parse_refkey(rk)
-        bd = self.to_build_data(rk_, bk)
-        if isinstance(bd, HaploidBuildData) and hap is None:
-            return hap_f(bd)
-        elif isinstance(bd, Diploid1BuildData) and hap is None:
-            return dip1_f(bd)
-        elif isinstance(bd, Diploid2BuildData) and hap is not None:
-            return dip2_f(hap, bd)
-        else:
-            raise DesignError(
-                f"Invalid build data with type '{type(bd)}' for keys '{rk}' and '{bk}'"
-            )
+        return with_build_data(self.to_build_data(rk, bk), hap_f, dip1_f, dip2_f)
 
-    # TODO feed refkey to the HO-functions so that there is no confusion as to
-    # when the refkey has been parsed
+    def with_ref_data_final(
+        self,
+        rfk: str,
+        hap_f: Callable[[HapRefData], X],
+        dip1_f: Callable[[Dip1RefData], X],
+        dip2_f: Callable[[Haplotype, Dip2RefData], X],
+    ) -> X:
+        rk_, hap = parse_final_refkey(rfk)
+        return self.with_ref_data(
+            rk_,
+            lambda rd: none_unsafe(hap, hap_f(rd)),
+            lambda rd: none_unsafe(hap, dip1_f(rd)),
+            lambda rd: not_none_unsafe(hap, lambda hap: dip2_f(hap, rd)),
+        )
+
     def with_ref_data_and_bed(
         self,
-        rk: RefKey_[RefKeyT_],
+        rk: str,
         get_bed_f: StratInputToBed,
-        hap_f: Callable[[HapRefKey, HaploidStratification, HapBedFile], Z],
-        dip_1to1_f: Callable[[Dip1RefKey, Dip1Strat, Dip1BedFile], Z],
-        dip_1to2_f: Callable[[Dip2RefKey, Dip2Strat, Dip1BedFile], Z],
-        dip_2to1_f: Callable[[Dip1RefKey, Dip1Strat, Dip2BedFile], Z],
-        dip_2to2_f: Callable[[Dip2RefKey, Dip2Strat, Dip2BedFile], Z],
-    ) -> Z:
-        rd = self.to_ref_data(rk)
-        # ref and bed are both haploid
-        if (
-            isinstance(rd.ref, HapChrSource)
-            and (bf0 := get_bed_f(rd.strat_inputs)) is not None
-        ):
-            return hap_f(HapRefKey(rk), rd, bf0)
-        # ref and bed are both diploid1
-        elif (
-            isinstance(rd.ref, DipChrSource1)
-            and (bf1 := get_bed_f(rd.strat_inputs)) is not None
-            and is_dip1_bed(bf1)
-        ):
-            return dip_1to1_f(Dip1RefKey(rk), rd, bf1)
-        # ref is diploid2, bed is diploid1 (combine)
-        elif (
-            isinstance(rd.ref, DipChrSource2)
-            and (bf3 := get_bed_f(rd.strat_inputs)) is not None
-            and is_dip1_bed(bf3)
-        ):
-            return dip_1to2_f(Dip2RefKey(rk), rd, bf3)
-        # ref is diploid1, bed is diploid2 (split)
-        elif (
-            isinstance(rd.ref, DipChrSource1)
-            and (bf4 := get_bed_f(rd.strat_inputs)) is not None
-            and is_dip2_bed(bf4)
-        ):
-            return dip_2to1_f(Dip1RefKey(rk), rd, bf4)
-        # ref and bed are both diploid2
-        elif (
-            isinstance(rd.ref, DipChrSource2)
-            and (bf2 := get_bed_f(rd.strat_inputs)) is not None
-            and is_dip2_bed(bf2)
-        ):
-            return dip_2to2_f(Dip2RefKey(rk), rd, bf2)
-        else:
-            # TODO this errror seems wonky
-            raise DesignError(f"Invalid ref data with type '{type(rd)}' for key '{rk}'")
+        hap_f: Callable[[HapRefData, HapBedFile], X],
+        dip_1to1_f: Callable[[Dip1RefData, Dip1BedFile], X],
+        dip_1to2_f: Callable[[Dip2RefData, Dip1BedFile], X],
+        dip_2to1_f: Callable[[Dip1RefData, Dip2BedFile], X],
+        dip_2to2_f: Callable[[Dip2RefData, Dip2BedFile], X],
+    ) -> X:
+        return self.with_ref_data(
+            rk,
+            lambda rd: not_none_unsafe(
+                get_bed_f(rd.strat_inputs), lambda bd: hap_f(rd, bd)
+            ),
+            lambda rd: with_dip_bedfile(
+                not_none_unsafe(get_bed_f(rd.strat_inputs), lambda bd: bd),
+                lambda bf: dip_1to1_f(rd, bf),
+                lambda bf: dip_2to1_f(rd, bf),
+            ),
+            lambda rd: with_dip_bedfile(
+                not_none_unsafe(get_bed_f(rd.strat_inputs), lambda bd: bd),
+                lambda bf: dip_1to2_f(rd, bf),
+                lambda bf: dip_2to2_f(rd, bf),
+            ),
+        )
 
     def with_ref_data_and_bed_hap(
         self,
         rfk: str,
         get_bed_f: StratInputToBed,
-        hap_f: Callable[[HapRefKey, HaploidStratification, HapBedFile], Z],
-        dip_1to1_f: Callable[[Dip1RefKey, Dip1Strat, Dip1BedFile], Z],
-        dip_1to2_f: Callable[[Haplotype, Dip2RefKey, Dip2Strat, Dip1BedFile], Z],
-        dip_2to1_f: Callable[[Dip1RefKey, Dip1Strat, Dip2BedFile], Z],
-        dip_2to2_f: Callable[[Haplotype, Dip2RefKey, Dip2Strat, Dip2BedFile], Z],
+        hap_f: Callable[[HapRefData, HapBedFile], Z],
+        dip_1to1_f: Callable[[Dip1RefData, Dip1BedFile], Z],
+        dip_1to2_f: Callable[[Haplotype, Dip2RefData, Dip1BedFile], Z],
+        dip_2to1_f: Callable[[Dip1RefData, Dip2BedFile], Z],
+        dip_2to2_f: Callable[[Haplotype, Dip2RefData, Dip2BedFile], Z],
     ) -> Z:
-        rk, hap = parse_refkey(rfk)
+        rk, hap = parse_final_refkey(rfk)
         return self.with_ref_data_and_bed(
             rk,
             get_bed_f,
             hap_f,
             dip_1to1_f,
-            lambda rk, rd, bf: not_none_unsafe(
-                hap, lambda h: dip_1to2_f(h, rk, rd, bf)
-            ),
+            lambda rd, bf: not_none_unsafe(hap, lambda h: dip_1to2_f(h, rd, bf)),
             dip_2to1_f,
-            lambda rk, rd, bf: not_none_unsafe(
-                hap, lambda h: dip_2to2_f(h, rk, rd, bf)
-            ),
+            lambda rd, bf: not_none_unsafe(hap, lambda h: dip_2to2_f(h, rd, bf)),
         )
 
     def with_ref_data_bed_unsafe(
         self,
         rsk: str,
         get_bed_f: StratInputToBed,
-        hap_f: Callable[[HapRefKey, HaploidStratification, HapBedFile], X],
-        dip_1to1_f: Callable[[Dip1RefKey, Dip1Strat, Dip1BedFile], X],
-        dip_1to2_f: Callable[[Dip2RefKey, Dip2Strat, Dip1BedFile], X],
-        dip_2to1_f: Callable[[Haplotype, Dip1RefKey, Dip1Strat, Dip2BedFile], X],
-        dip_2to2_f: Callable[[Haplotype, Dip2RefKey, Dip2Strat, Dip2BedFile], X],
+        hap_f: Callable[[HapRefData, HapBedFile], X],
+        dip_1to1_f: Callable[[Dip1RefData, Dip1BedFile], X],
+        dip_1to2_f: Callable[[Dip2RefData, Dip1BedFile], X],
+        dip_2to1_f: Callable[[Haplotype, Dip1RefData, Dip2BedFile], X],
+        dip_2to2_f: Callable[[Haplotype, Dip2RefData, Dip2BedFile], X],
     ) -> X:
-        rk, hap = parse_refkey(rsk)
+        rk, hap = parse_final_refkey(rsk)
         return self.with_ref_data_and_bed(
             rsk,
             get_bed_f,
-            lambda rk, rd, bd: none_unsafe(hap, hap_f(rk, rd, bd)),
-            lambda rk, rd, bd: none_unsafe(hap, dip_1to1_f(rk, rd, bd)),
-            lambda rk, rd, bd: none_unsafe(hap, dip_1to2_f(rk, rd, bd)),
-            lambda rk, rd, bf: not_none_unsafe(
-                hap, lambda h: dip_2to1_f(h, rk, rd, bf)
-            ),
-            lambda rk, rd, bf: not_none_unsafe(
-                hap, lambda h: dip_2to2_f(h, rk, rd, bf)
-            ),
+            lambda rd, bd: none_unsafe(hap, hap_f(rd, bd)),
+            lambda rd, bd: none_unsafe(hap, dip_1to1_f(rd, bd)),
+            lambda rd, bd: none_unsafe(hap, dip_1to2_f(rd, bd)),
+            lambda rd, bf: not_none_unsafe(hap, lambda h: dip_2to1_f(h, rd, bf)),
+            lambda rd, bf: not_none_unsafe(hap, lambda h: dip_2to2_f(h, rd, bf)),
         )
 
     def with_build_data_and_bed(
@@ -2796,38 +2818,33 @@ class GiabStrats(BaseModel):
         rk: str,
         bk: str,
         get_bed_f: BuildDataToBed,
-        hap_f: Callable[[HapRefKey, HaploidBuildData, HapBedFile], Z],
-        dip_1to1_f: Callable[[Dip1RefKey, Diploid1BuildData, Dip1BedFile], Z],
-        dip_1to2_f: Callable[[Dip2RefKey, Diploid2BuildData, Dip1BedFile], Z],
-        dip_2to1_f: Callable[[Dip1RefKey, Diploid1BuildData, Dip2BedFile], Z],
-        dip_2to2_f: Callable[[Dip2RefKey, Diploid2BuildData, Dip2BedFile], Z],
+        hap_f: Callable[[HapBuildData, HapBedFile], Z],
+        dip_1to1_f: Callable[[Dip1BuildData, Dip1BedFile], Z],
+        dip_1to2_f: Callable[[Dip2BuildData, Dip1BedFile], Z],
+        dip_2to1_f: Callable[[Dip1BuildData, Dip2BedFile], Z],
+        dip_2to2_f: Callable[[Dip2BuildData, Dip2BedFile], Z],
     ) -> Z:
         return self.with_ref_data_and_bed(
             rk,
             lambda bd: get_bed_f(bd.strat_inputs),
-            lambda rk, rd, bf: hap_f(
-                rk,
-                HaploidBuildData(*astuple(rd.to_build_data_unsafe(HapBuildKey(bk)))),
+            lambda rd, bf: hap_f(
+                HapBuildData(*astuple(rd.to_build_data_unsafe(HapBuildKey(bk)))),
                 bf,
             ),
-            lambda rk, rd, bf: dip_1to1_f(
-                rk,
-                Diploid1BuildData(*astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk)))),
+            lambda rd, bf: dip_1to1_f(
+                Dip1BuildData(*astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk)))),
                 bf,
             ),
-            lambda rk, rd, bf: dip_1to2_f(
-                rk,
-                Diploid2BuildData(*astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk)))),
+            lambda rd, bf: dip_1to2_f(
+                Dip2BuildData(*astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk)))),
                 bf,
             ),
-            lambda rk, rd, bf: dip_2to1_f(
-                rk,
-                Diploid1BuildData(*astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk)))),
+            lambda rd, bf: dip_2to1_f(
+                Dip1BuildData(*astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk)))),
                 bf,
             ),
-            lambda rk, rd, bf: dip_2to2_f(
-                rk,
-                Diploid2BuildData(*astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk)))),
+            lambda rd, bf: dip_2to2_f(
+                Dip2BuildData(*astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk)))),
                 bf,
             ),
         )
@@ -2838,32 +2855,24 @@ class GiabStrats(BaseModel):
         bk: str,
         inputs: list[X],
         get_bed_f: BuildDataToBed,
-        hap_f: Callable[[X, HapRefKey, HaploidBuildData, HapBedFile], Z],
-        dip_1to1_f: Callable[[X, Dip1RefKey, Diploid1BuildData, Dip1BedFile], Z],
-        dip_1to2_f: Callable[[X, Dip2RefKey, Diploid2BuildData, Dip1BedFile], Z],
-        dip_2to1_f: Callable[
-            [tuple[X, X], Dip1RefKey, Diploid1BuildData, Dip2BedFile], Z
-        ],
-        dip_2to2_f: Callable[
-            [tuple[X, X], Dip2RefKey, Diploid2BuildData, Dip2BedFile], Z
-        ],
+        hap_f: Callable[[X, HapBuildData, HapBedFile], Z],
+        dip_1to1_f: Callable[[X, Dip1BuildData, Dip1BedFile], Z],
+        dip_1to2_f: Callable[[X, Dip2BuildData, Dip1BedFile], Z],
+        dip_2to1_f: Callable[[tuple[X, X], Dip1BuildData, Dip2BedFile], Z],
+        dip_2to2_f: Callable[[tuple[X, X], Dip2BuildData, Dip2BedFile], Z],
     ) -> Z:
         return self.with_build_data_and_bed(
             rk,
             bk,
             get_bed_f,
-            lambda rk, bd, bf: match1_unsafe(inputs, lambda i: hap_f(i, rk, bd, bf)),
-            lambda rk, bd, bf: match1_unsafe(
-                inputs, lambda i: dip_1to1_f(i, rk, bd, bf)
+            lambda bd, bf: match1_unsafe(inputs, lambda i: hap_f(i, bd, bf)),
+            lambda bd, bf: match1_unsafe(inputs, lambda i: dip_1to1_f(i, bd, bf)),
+            lambda bd, bf: match1_unsafe(inputs, lambda i: dip_1to2_f(i, bd, bf)),
+            lambda bd, bf: match2_unsafe(
+                inputs, lambda i0, i1: dip_2to1_f((i0, i1), bd, bf)
             ),
-            lambda rk, bd, bf: match1_unsafe(
-                inputs, lambda i: dip_1to2_f(i, rk, bd, bf)
-            ),
-            lambda rk, bd, bf: match2_unsafe(
-                inputs, lambda i0, i1: dip_2to1_f((i0, i1), rk, bd, bf)
-            ),
-            lambda rk, bd, bf: match2_unsafe(
-                inputs, lambda i0, i1: dip_2to2_f((i0, i1), rk, bd, bf)
+            lambda bd, bf: match2_unsafe(
+                inputs, lambda i0, i1: dip_2to2_f((i0, i1), bd, bf)
             ),
         )
 
@@ -2872,39 +2881,31 @@ class GiabStrats(BaseModel):
         rk: str,
         bk: str,
         inputs: list[X],
-        output_f: Callable[[str], Y],
+        output_f: OutputPattern[Y],
         get_bed_f: BuildDataToBed,
-        hap_f: Callable[[X, Y, HaploidBuildData, HapBedFile], Z],
-        dip_1to1_f: Callable[[X, Y, Diploid1BuildData, Dip1BedFile], Z],
-        dip_1to2_f: Callable[[X, tuple[Y, Y], Diploid2BuildData, Dip1BedFile], Z],
-        dip_2to1_f: Callable[[tuple[X, X], Y, Diploid1BuildData, Dip2BedFile], Z],
-        dip_2to2_f: Callable[
-            [tuple[X, X], tuple[Y, Y], Diploid2BuildData, Dip2BedFile], Z
-        ],
+        hap_f: Callable[[X, Y, HapBuildData, HapBedFile], Z],
+        dip_1to1_f: Callable[[X, Y, Dip1BuildData, Dip1BedFile], Z],
+        dip_1to2_f: Callable[[X, tuple[Y, Y], Dip2BuildData, Dip1BedFile], Z],
+        dip_2to1_f: Callable[[tuple[X, X], Y, Dip1BuildData, Dip2BedFile], Z],
+        dip_2to2_f: Callable[[tuple[X, X], tuple[Y, Y], Dip2BuildData, Dip2BedFile], Z],
     ) -> Z:
         return self.with_build_data_and_bed_i(
             rk,
             bk,
             inputs,
             get_bed_f,
-            lambda i, rk, bd, bf: hap_f(i, output_f(rk), bd, bf),
-            lambda i, rk, bd, bf: dip_1to1_f(i, output_f(rk), bd, bf),
-            lambda i, rk, bd, bf: dip_1to2_f(
+            lambda i, bd, bf: hap_f(i, output_f(bd.refdata.nohap_final), bd, bf),
+            lambda i, bd, bf: dip_1to1_f(i, output_f(bd.refdata.nohap_final), bd, bf),
+            lambda i, bd, bf: dip_1to2_f(
                 i,
-                (
-                    output_f(f"{rk}_{Haplotype.HAP1.name}"),
-                    output_f(f"{rk}_{Haplotype.HAP2.name}"),
-                ),
+                both(output_f, bd.refdata.haps_final),
                 bd,
                 bf,
             ),
-            lambda i, rk, bd, bf: dip_2to1_f(i, output_f(rk), bd, bf),
-            lambda i, rk, bd, bf: dip_2to2_f(
+            lambda i, bd, bf: dip_2to1_f(i, output_f(bd.refdata.nohap_final), bd, bf),
+            lambda i, bd, bf: dip_2to2_f(
                 i,
-                (
-                    output_f(f"{rk}_{Haplotype.HAP1.name}"),
-                    output_f(f"{rk}_{Haplotype.HAP2.name}"),
-                ),
+                both(output_f, bd.refdata.haps_final),
                 bd,
                 bf,
             ),
@@ -2915,18 +2916,18 @@ class GiabStrats(BaseModel):
         rk: str,
         bk: str,
         inputs: list[X],
-        output_f: Callable[[str], Y],
+        output_f: OutputPattern[Y],
         get_bed_f: BuildDataToBed,
-        hap_f: Callable[[X, Y, HaploidBuildData, HapBedFile], None],
-        dip_1to1_f: Callable[[X, Y, Diploid1BuildData, Dip1BedFile], None],
-        dip_1to2_f: Callable[[X, tuple[Y, Y], Diploid2BuildData, Dip1BedFile], None],
-        dip_2to1_f: Callable[[tuple[X, X], Y, Diploid1BuildData, Dip2BedFile], None],
-        dip_2to2_f: Callable[[X, Y, Haplotype, Diploid2BuildData, Dip2BedFile], None],
+        hap_f: Callable[[X, Y, HapBuildData, HapBedFile], None],
+        dip_1to1_f: Callable[[X, Y, Dip1BuildData, Dip1BedFile], None],
+        dip_1to2_f: Callable[[X, tuple[Y, Y], Dip2BuildData, Dip1BedFile], None],
+        dip_2to1_f: Callable[[tuple[X, X], Y, Dip1BuildData, Dip2BedFile], None],
+        dip_2to2_f: Callable[[X, Y, Haplotype, Dip2BuildData, Dip2BedFile], None],
     ) -> None:
         def _dip_2to2_f(
             i: tuple[X, X],
             o: tuple[Y, Y],
-            bd: Diploid2BuildData,
+            bd: Dip2BuildData,
             bf: Dip2BedFile,
         ) -> None:
             dip_2to2_f(i[0], o[0], Haplotype.HAP1, bd, bf)
@@ -2952,34 +2953,34 @@ class GiabStrats(BaseModel):
     #     inputs: list[X],
     #     outputs: list[Y],
     #     hap: Haplotype | None,
-    #     hap_f: Callable[[X, Y, HaploidBuildData], Z],
-    #     dip1_f: Callable[[X, Y, Diploid1BuildData], Z],
-    #     hap2_f: Callable[[X, Y, Haplotype, Diploid2BuildData], Z],
-    #     dip_1to2_f: Callable[[X, tuple[Y, Y], Diploid2BuildData], Z],
-    #     dip_1to2_f: Callable[[tuple[X, X], Y, Diploid1BuildData], Z],
+    #     hap_f: Callable[[X, Y, HapBuildData], Z],
+    #     dip1_f: Callable[[X, Y, Dip1BuildData], Z],
+    #     hap2_f: Callable[[X, Y, Haplotype, Dip2BuildData], Z],
+    #     dip_1to2_f: Callable[[X, tuple[Y, Y], Dip2BuildData], Z],
+    #     dip_1to2_f: Callable[[tuple[X, X], Y, Dip1BuildData], Z],
     # ) -> None:
     #     # TODO make these errors more meaningful
     #     bd = self.to_build_data(rk, bk)
     #     match (inputs, outputs):
     #         case ([i], [o]):
     #             # one haplotype for both bed and ref (no combine)
-    #             if isinstance(bd, HaploidBuildData) and hap is None:
+    #             if isinstance(bd, HapBuildData) and hap is None:
     #                 hap_f(i, o, bd)
     #             # one bed with both haps in it; one reference with both haps (no combine)
-    #             elif isinstance(bd, Diploid1BuildData) and hap is None:
+    #             elif isinstance(bd, Dip1BuildData) and hap is None:
     #                 dip1_f(i, o, bd)
     #             # one bed and one ref for a single haplotype in a diploid reference
-    #             elif isinstance(bd, Diploid2BuildData) and hap is not None:
+    #             elif isinstance(bd, Dip2BuildData) and hap is not None:
     #                 hap2_f(i, o, hap, bd)
     #         case ([i], [o0, o1]):
     #             # one bed with both haps in it; two references for both haps (split)
-    #             if isinstance(bd, Diploid2BuildData) and hap is None:
+    #             if isinstance(bd, Dip2BuildData) and hap is None:
     #                 dip_1to2_f(i, (o0, o1), bd)
     #             else:
     #                 assert False, "this should not happen"
     #         case ([i0, i1], [o]):
     #             # two beds for both haps; one reference with both haps (combine)
-    #             if isinstance(bd, Diploid1BuildData) and hap is None:
+    #             if isinstance(bd, Dip1BuildData) and hap is None:
     #                 dip_1to2_f((i0, i1), o, bd)
     #             else:
     #                 assert False, "this should not happen"
@@ -2997,11 +2998,11 @@ class GiabStrats(BaseModel):
     #         # TODO this seems sloppy, not sure if I want it here
     #         assert False, "this should not happen"
 
-    def _all_refkey_from_want(
-        self,
-        f: Callable[[BuildPair], bool],
-    ) -> list[RefKey]:
-        return [*unique_everseen(x[0] for x in self._all_builds if f(x))]
+    # def _all_refkey_from_want(
+    #     self,
+    #     f: Callable[[BuildPair], bool],
+    # ) -> list[RefKey]:
+    #     return [*unique_everseen(x[0] for x in self._all_builds if f(x))]
 
     # TODO probably need to redo these
     # @property
