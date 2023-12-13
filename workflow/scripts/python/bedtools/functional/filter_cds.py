@@ -1,11 +1,12 @@
 import pandas as pd
 from pathlib import Path
 import json
-from typing import Any, Callable
-from typing_extensions import assert_never
+from typing import Any, Callable, TypeVar
 import common.config as cfg
-from common.io import DesignError, match1_unsafe, match12_unsafe, match2_unsafe
+from common.functional import DesignError, match1_unsafe, match12_unsafe, both
 from common.bed import filter_sort_bed, read_bed, InitMapper, split_bed, write_bed
+
+X = TypeVar("X")
 
 # This seems a bit wonky since it is unlike many of the other chromosome name
 # mapping operations. The FTBL file has a mapping b/t bare chromosome names (ie
@@ -78,19 +79,14 @@ def read_ftbl(path: Path, cis: set[cfg.ChrIndex], hap: cfg.Haplotype) -> FTBLMap
         raise DesignError("Feature table has wonky chromosome names, fixmeplz")
 
 
-def write_vdj1_maybe(os: list[Path], want_vdj: bool, gff: pd.DataFrame) -> None:
-    match (os, want_vdj):
-        case ([v], True):
-            write_gff(v, vdj_mask, gff)
-        case ([], False):
-            pass
-        case _:
-            raise DesignError(f"Invalid VDJ combination: {os}, {want_vdj}")
-
-
 def iamnotlivingimasleep(_: Any) -> Any:
     """Don't go down the rabbit whole"""
     raise DesignError("NOT IMPLEMENTED")
+
+
+def write_outputs(p: Path, xs: list[X]) -> None:
+    with open(p, "w") as f:
+        json.dump(xs, f)
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
@@ -99,16 +95,41 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ftbl_inputs: list[Path] = [Path(i) for i in smk.input["ftbl"]]
     gff_inputs: list[Path] = [Path(i) for i in smk.input["gff"]]
     cds_out: Path = smk.output["cds"]
-    vdj_out: Path = smk.output["cds"]
-    cds_outputs = [Path(i) for i in ps["cds_outputs"]]
-    vdj_outputs = [Path(i) for i in ps["vdj_outputs"]]
+    vdj_out: Path = smk.output["vdj"]
+    cds_pattern: str = ps["cds_outputs"]
+    vdj_pattern: str = ps["vdj_outputs"]
 
-    rk_ = cfg.strip_refkey(ws["ref_final_key"])
-    bd = sconf.to_build_data(rk_, ws["build_key"])
-    want_vdj = bd.build.include.vdj
+    def write_vdj_maybe1(
+        switch: bool,
+        rfk: cfg.RefFinalKey[cfg.RefKeyT],
+        df: pd.DataFrame,
+    ) -> list[Path]:
+        if switch:
+            v = cfg.sub_output_path(vdj_pattern, rfk)
+            write_gff(v, vdj_mask, df)
+            return [v]
+        else:
+            return []
 
-    def hap(bd: cfg.HaploidBuildData) -> None:
-        def go(f: Path, g: Path, c: Path) -> pd.DataFrame:
+    def write_vdj_maybe2(
+        switch: bool,
+        rfks: tuple[cfg.RefFinalKey[cfg.RefKeyT], cfg.RefFinalKey[cfg.RefKeyT]],
+        df: tuple[pd.DataFrame, pd.DataFrame],
+    ) -> list[Path]:
+        if switch:
+            vs: tuple[Path, Path] = both(
+                lambda r: cfg.sub_output_path(vdj_pattern, r), rfks
+            )
+            write_gff(vs[0], vdj_mask, df[0])
+            write_gff(vs[1], vdj_mask, df[1])
+            return [*vs]
+        else:
+            return []
+
+    def hap(bd: cfg.HapBuildData) -> tuple[list[Path], list[Path]]:
+        c = cfg.sub_output_path(cds_pattern, bd.refdata.nohap_final)
+
+        def go(f: Path, g: Path) -> pd.DataFrame:
             im = read_ftbl(f, bd.chr_indices, cfg.Haplotype.HAP1)
             gff = read_gff(g)
             gff_ = filter_sort_bed(im, bd.final_mapper, gff)
@@ -116,13 +137,14 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             return gff_
 
         gff = match1_unsafe(
-            list(zip(ftbl_inputs, gff_inputs, cds_outputs)),
+            list(zip(ftbl_inputs, gff_inputs)),
             lambda x: go(*x),
         )
 
-        write_vdj1_maybe(vdj_outputs, want_vdj, gff)
+        v = write_vdj_maybe1(bd.build.include.vdj, bd.refdata.nohap_final, gff)
+        return [c], v
 
-    def dip1(bd: cfg.Diploid1BuildData) -> None:
+    def dip1(bd: cfg.Dip1BuildData) -> tuple[list[Path], list[Path]]:
         fm = bd.final_mapper
 
         im = match12_unsafe(
@@ -144,11 +166,13 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             ),
         )
 
-        match1_unsafe(cds_outputs, lambda c: write_gff(c, cds_mask, gff))
+        c = cfg.sub_output_path(cds_pattern, bd.refdata.nohap_final)
+        write_gff(c, cds_mask, gff)
 
-        write_vdj1_maybe(vdj_outputs, want_vdj, gff)
+        v = write_vdj_maybe1(bd.build.include.vdj, bd.refdata.nohap_final, gff)
+        return [c], v
 
-    def dip2(bd: cfg.Diploid2BuildData) -> None:
+    def dip2(bd: cfg.Dip2BuildData) -> tuple[list[Path], list[Path]]:
         fm0, fm1 = bd.final_mapper
         im0, im1 = match12_unsafe(
             ftbl_inputs,
@@ -158,7 +182,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
                 read_ftbl(f1, bd.chr_indices, cfg.Haplotype.HAP2),
             ),
         )
-        gff0, gff1 = match12_unsafe(
+        gffs = match12_unsafe(
             gff_inputs,
             # TODO set a new PR for number of characters in one lambda :)
             lambda g: (
@@ -175,37 +199,20 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             ),
         )
 
-        # TODO ...because lambdas can't have two statements (and python doesn't
-        # have the >> operator)
-        def go(c0: Path, c1: Path) -> None:
-            write_gff(c0, cds_mask, gff0)
-            write_gff(c1, cds_mask, gff1)
+        rfks = bd.refdata.haps_final
 
-        match2_unsafe(cds_outputs, go)
+        cs = both(lambda r: cfg.sub_output_path(cds_pattern, r), rfks)
 
-        match (vdj_outputs, want_vdj):
-            case ([v0, v1], True):
-                write_gff(v0, vdj_mask, gff0)
-                write_gff(v1, vdj_mask, gff1)
-            case ([], False):
-                pass
-            case _:
-                raise DesignError(f"Invalid VDJ combination: {vdj_outputs}, {want_vdj}")
+        write_gff(cs[0], cds_mask, gffs[0])
+        write_gff(cs[1], cds_mask, gffs[1])
 
-    if isinstance(bd, cfg.HaploidBuildData):
-        return hap(bd)
-    elif isinstance(bd, cfg.Diploid1BuildData):
-        return dip1(bd)
-    elif isinstance(bd, cfg.Diploid2BuildData):
-        return dip2(bd)
-    else:
-        assert_never(bd)
+        vs = write_vdj_maybe2(bd.build.include.vdj, rfks, gffs)
+        return [*cs], vs
 
-    with open(cds_out, "w") as f:
-        json.dump(cds_outputs, f)
+    cs, vs = sconf.with_build_data(ws["ref_key"], ws["build_key"], hap, dip1, dip2)
 
-    with open(vdj_out, "w") as f:
-        json.dump(vdj_outputs, f)
+    write_outputs(cds_out, cs)
+    write_outputs(vdj_out, vs)
 
 
 main(snakemake, snakemake.config)  # type: ignore

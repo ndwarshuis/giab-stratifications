@@ -1927,6 +1927,11 @@ Diploid2StratDict = StratDict_[
 ]
 
 
+def sub_output_path(pat: str, rk: RefFinalKey[RefKeyT]) -> Path:
+    # TODO assert that there are no unsubbed wildcards in the path
+    return Path(pat.replace("%s", rk.name))
+
+
 # TODO add validator to ensure none of the keys in the strat/build dicts overlap
 class GiabStrats(BaseModel):
     """Top level stratification object."""
@@ -2944,10 +2949,6 @@ class GiabStrats(BaseModel):
             dip_2to2_f(i[0], o[0], Haplotype.HAP1, bd, bf)
             dip_2to2_f(i[1], o[1], Haplotype.HAP2, bd, bf)
 
-        def output_f(rk: RefFinalKey[RefKeyT]) -> Path:
-            # TODO assert that there are no unsubbed wildcards in the path
-            return Path(output_pattern.replace("%s", rk.name))
-
         def write_output(ps: list[Path]) -> None:
             with open(output, "w") as f:
                 json.dump(ps, f)
@@ -2956,7 +2957,7 @@ class GiabStrats(BaseModel):
             rk,
             bk,
             inputs,
-            output_f,
+            lambda rk: sub_output_path(output_pattern, rk),
             write_output,
             get_bed_f,
             hap_f,
@@ -2965,47 +2966,6 @@ class GiabStrats(BaseModel):
             dip_2to1_f,
             _dip_2to2_f,
         )
-
-    # def with_build_src_data_unsafe(
-    #     self,
-    #     rk: str,
-    #     bk: str,
-    #     inputs: list[X],
-    #     outputs: list[Y],
-    #     hap: Haplotype | None,
-    #     hap_f: Callable[[X, Y, HapBuildData], Z],
-    #     dip1_f: Callable[[X, Y, Dip1BuildData], Z],
-    #     hap2_f: Callable[[X, Y, Haplotype, Dip2BuildData], Z],
-    #     dip_1to2_f: Callable[[X, tuple[Y, Y], Dip2BuildData], Z],
-    #     dip_1to2_f: Callable[[tuple[X, X], Y, Dip1BuildData], Z],
-    # ) -> None:
-    #     # TODO make these errors more meaningful
-    #     bd = self.to_build_data(rk, bk)
-    #     match (inputs, outputs):
-    #         case ([i], [o]):
-    #             # one haplotype for both bed and ref (no combine)
-    #             if isinstance(bd, HapBuildData) and hap is None:
-    #                 hap_f(i, o, bd)
-    #             # one bed with both haps in it; one reference with both haps (no combine)
-    #             elif isinstance(bd, Dip1BuildData) and hap is None:
-    #                 dip1_f(i, o, bd)
-    #             # one bed and one ref for a single haplotype in a diploid reference
-    #             elif isinstance(bd, Dip2BuildData) and hap is not None:
-    #                 hap2_f(i, o, hap, bd)
-    #         case ([i], [o0, o1]):
-    #             # one bed with both haps in it; two references for both haps (split)
-    #             if isinstance(bd, Dip2BuildData) and hap is None:
-    #                 dip_1to2_f(i, (o0, o1), bd)
-    #             else:
-    #                 assert False, "this should not happen"
-    #         case ([i0, i1], [o]):
-    #             # two beds for both haps; one reference with both haps (combine)
-    #             if isinstance(bd, Dip1BuildData) and hap is None:
-    #                 dip_1to2_f((i0, i1), o, bd)
-    #             else:
-    #                 assert False, "this should not happen"
-    #         case _:
-    #             assert False, "this should not happen"
 
     # def to_build_pair(self, rk: str, bk: str) -> BuildPair:
     #     if rk in self.haploid_stratifications:

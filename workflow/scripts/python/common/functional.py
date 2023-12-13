@@ -33,10 +33,10 @@ def constf(f: Callable[[X], Y]) -> Callable[[Z, X], Y]:
     return lambda _, x: f(x)
 
 
-def seq(f: Callable[[], X], g: Callable[[], Y]) -> Y:
+def seq(f: X, g: Y) -> Y:
     """The >> operator. For cases where I need more than on thing in a lambda."""
-    f()
-    return g()
+    f
+    return g
 
 
 def with_first(x: X, g: Callable[[X], Y]) -> X:
