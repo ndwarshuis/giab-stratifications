@@ -156,9 +156,18 @@ def strat_files(path: str) -> list[Path]:
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
-    rk = cfg.RefKey(smk.wildcards["ref_key"])
-    bk = cfg.BuildKey(smk.wildcards["build_key"])
-    reverse_map = {v: k for k, v in sconf.buildkey_to_final_chr_mapping(rk, bk).items()}
+    fm = sconf.with_build_data_final(
+        smk.wildcards["ref_key"],
+        smk.wildcards["build_key"],
+        lambda bd: bd.refdata.ref.chr_pattern.final_mapper,
+        lambda bd: bd.refdata.ref.chr_pattern.final_mapper,
+        lambda hap, bd: bd.refdata.ref.chr_pattern.from_either(hap).final_mapper,
+    )
+    reverse_map = {v: k for k, v in fm.items()}
+
+    # rk = cfg.RefKey(smk.wildcards["ref_key"])
+    # bk = cfg.BuildKey(smk.wildcards["build_key"])
+    # reverse_map = {v: k for k, v in sconf.buildkey_to_final_chr_mapping(rk, bk).items()}
 
     # check global stuff first (since this is faster)
 
