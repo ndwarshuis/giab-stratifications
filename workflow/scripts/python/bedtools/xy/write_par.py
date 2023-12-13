@@ -6,7 +6,8 @@ import common.config as cfg
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     i = cfg.ChrIndex.from_name(smk.wildcards["sex_chr"])
 
-    cxy, pat = sconf.with_ref_data_unsafe(
+    # NOTE tuple thing is to appease mypy...be nice to mypy...respect mypy
+    cxy, pat = sconf.with_ref_data_final(
         smk.wildcards["ref_key"],
         lambda rd: (
             rd.strat_inputs.xy,
@@ -24,6 +25,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     par_fun = i.choose_xy_unsafe(cxy.fmt_x_par_unsafe, cxy.fmt_y_par_unsafe)
 
+    # TODO not dry?
     with bgzf.BgzfWriter(smk.output[0], "w") as f:
         f.write(par_fun(pat))
 

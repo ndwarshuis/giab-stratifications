@@ -41,6 +41,9 @@ rule filter_sort_other:
         "../scripts/python/bedtools/other/filter_sort_other.py"
 
 
+# TODO move genome/gapless removal stage to own rule to make the script simpler
+
+
 def all_other(ref_key, build_key):
     other = config.buildkey_to_build(ref_key, build_key).other_strats
     return [

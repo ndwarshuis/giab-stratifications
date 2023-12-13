@@ -10,7 +10,7 @@ import json
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, str] = smk.wildcards
 
-    im, fm = sconf.with_build_data_ref_unsafe(
+    im, fm = sconf.with_build_data_final(
         ws["ref_final_key"],
         ws["build_key"],
         lambda bd: ((c := bd.ref_chr_conversion).init_mapper, c.final_mapper),

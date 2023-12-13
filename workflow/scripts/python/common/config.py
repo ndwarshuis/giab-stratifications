@@ -4,6 +4,7 @@ Conventions:
   code is incorrect. This is in contrast with other errors which may happen due
   to network issues, invalid inputs, etc.
 """
+import json
 import pandas as pd
 import re
 from pathlib import Path
@@ -26,16 +27,18 @@ from typing import (
     Protocol,
 )
 from typing_extensions import Self, assert_never
-from more_itertools import unique_everseen
-from common.io import (
-    is_gzip,
-    is_bgzip,
+from common.functional import (
+    fmap_maybe,
+    fmap_maybe_def,
+    both,
+    with_first,
     DesignError,
     match1_unsafe,
     match2_unsafe,
     not_none_unsafe,
     none_unsafe,
 )
+from common.io import is_gzip, is_bgzip
 import common.bed as bed
 
 W = TypeVar("W")
@@ -192,29 +195,6 @@ HaplotypeName = NewType("HaplotypeName", str)
 
 CHR_INDEX_PLACEHOLDER = "%i"
 CHR_HAP_PLACEHOLDER = "%h"
-
-
-def fmap_maybe(
-    f: Callable[[X], Y],
-    x: X | None,
-) -> None | Y:
-    return None if x is None else f(x)
-
-
-def fmap_maybe_def(
-    default: Y,
-    f: Callable[[X], Y],
-    x: X | None,
-) -> Y:
-    return default if x is None else f(x)
-
-
-def both(f: Callable[[X], Y], x: tuple[X, X]) -> tuple[Y, Y]:
-    return (f(x[0]), f(x[1]))
-
-
-def from_maybe(default: X, x: X | None) -> X:
-    return default if x is None else x
 
 
 class BaseModel(BaseModel_):
@@ -2153,10 +2133,21 @@ class GiabStrats(BaseModel):
             f,
             lambda rd, _: [rd.nohap_src.name],
             lambda rd, _: [rd.nohap_src.name],
-            lambda rd, _: [*both(lambda x: x.name, rd.haps_src)],
             lambda rd, _: [rd.nohap_src.name],
             lambda rd, _: [*both(lambda x: x.name, rd.haps_src)],
+            lambda rd, _: [*both(lambda x: x.name, rd.haps_src)],
         )
+
+    # def refkey_to_bed_reffinalkeys(self, f: StratInputToBed, rk: str) -> list[str]:
+    #     return self.with_ref_data_and_bed(
+    #         rk,
+    #         f,
+    #         lambda rd, _: [rd.nohap_final.name],
+    #         lambda rd, _: [rd.nohap_final.name],
+    #         lambda rd, _: [*both(lambda x: x.name, rd.haps_final)],
+    #         lambda rd, _: [rd.nohap_src.name],
+    #         lambda rd, _: [*both(lambda x: x.name, rd.haps_final)],
+    #     )
 
     def refsrckey_to_bed_src(self, f: StratInputToBed, rsk: str) -> BedSrc:
         return self.with_ref_data_bed_unsafe(
@@ -2744,6 +2735,23 @@ class GiabStrats(BaseModel):
             lambda rd: not_none_unsafe(hap, lambda hap: dip2_f(hap, rd)),
         )
 
+    def with_build_data_final(
+        self,
+        rfk: str,
+        bk: str,
+        hap_f: Callable[[HapBuildData], X],
+        dip1_f: Callable[[Dip1BuildData], X],
+        dip2_f: Callable[[Haplotype, Dip2BuildData], X],
+    ) -> X:
+        rk_, hap = parse_final_refkey(rfk)
+        return self.with_build_data(
+            rk_,
+            bk,
+            lambda bd: none_unsafe(hap, hap_f(bd)),
+            lambda bd: none_unsafe(hap, dip1_f(bd)),
+            lambda bd: not_none_unsafe(hap, lambda hap: dip2_f(hap, bd)),
+        )
+
     def with_ref_data_and_bed(
         self,
         rk: str,
@@ -2882,6 +2890,7 @@ class GiabStrats(BaseModel):
         bk: str,
         inputs: list[X],
         output_f: OutputPattern[Y],
+        write_outputs: Callable[[list[Y]], None],
         get_bed_f: BuildDataToBed,
         hap_f: Callable[[X, Y, HapBuildData, HapBedFile], Z],
         dip_1to1_f: Callable[[X, Y, Dip1BuildData, Dip1BedFile], Z],
@@ -2889,55 +2898,66 @@ class GiabStrats(BaseModel):
         dip_2to1_f: Callable[[tuple[X, X], Y, Dip1BuildData, Dip2BedFile], Z],
         dip_2to2_f: Callable[[tuple[X, X], tuple[Y, Y], Dip2BuildData, Dip2BedFile], Z],
     ) -> Z:
+        def _output1(rk: RefFinalKey[RefKeyT]) -> Y:
+            return with_first(output_f(rk), lambda o: write_outputs([o]))
+
+        def _output2(
+            rk0: RefFinalKey[RefKeyT],
+            rk1: RefFinalKey[RefKeyT],
+        ) -> tuple[Y, Y]:
+            return with_first(both(output_f, (rk0, rk1)), lambda o: write_outputs([*o]))
+
         return self.with_build_data_and_bed_i(
             rk,
             bk,
             inputs,
             get_bed_f,
-            lambda i, bd, bf: hap_f(i, output_f(bd.refdata.nohap_final), bd, bf),
-            lambda i, bd, bf: dip_1to1_f(i, output_f(bd.refdata.nohap_final), bd, bf),
-            lambda i, bd, bf: dip_1to2_f(
-                i,
-                both(output_f, bd.refdata.haps_final),
-                bd,
-                bf,
-            ),
-            lambda i, bd, bf: dip_2to1_f(i, output_f(bd.refdata.nohap_final), bd, bf),
-            lambda i, bd, bf: dip_2to2_f(
-                i,
-                both(output_f, bd.refdata.haps_final),
-                bd,
-                bf,
-            ),
+            lambda i, bd, bf: hap_f(i, _output1(bd.refdata.nohap_final), bd, bf),
+            lambda i, bd, bf: dip_1to1_f(i, _output1(bd.refdata.nohap_final), bd, bf),
+            lambda i, bd, bf: dip_1to2_f(i, _output2(*bd.refdata.haps_final), bd, bf),
+            lambda i, bd, bf: dip_2to1_f(i, _output1(bd.refdata.nohap_final), bd, bf),
+            lambda i, bd, bf: dip_2to2_f(i, _output2(*bd.refdata.haps_final), bd, bf),
         )
 
+    # TODO refactor this so it takes only a builddata and not these weird
+    # strings, which will make this function independent of the class
     def with_build_data_and_bed_io_(
         self,
         rk: str,
         bk: str,
         inputs: list[X],
-        output_f: OutputPattern[Y],
+        output: Path,
+        output_pattern: str,
         get_bed_f: BuildDataToBed,
-        hap_f: Callable[[X, Y, HapBuildData, HapBedFile], None],
-        dip_1to1_f: Callable[[X, Y, Dip1BuildData, Dip1BedFile], None],
-        dip_1to2_f: Callable[[X, tuple[Y, Y], Dip2BuildData, Dip1BedFile], None],
-        dip_2to1_f: Callable[[tuple[X, X], Y, Dip1BuildData, Dip2BedFile], None],
-        dip_2to2_f: Callable[[X, Y, Haplotype, Dip2BuildData, Dip2BedFile], None],
+        hap_f: Callable[[X, Path, HapBuildData, HapBedFile], None],
+        dip_1to1_f: Callable[[X, Path, Dip1BuildData, Dip1BedFile], None],
+        dip_1to2_f: Callable[[X, tuple[Path, Path], Dip2BuildData, Dip1BedFile], None],
+        dip_2to1_f: Callable[[tuple[X, X], Path, Dip1BuildData, Dip2BedFile], None],
+        dip_2to2_f: Callable[[X, Path, Haplotype, Dip2BuildData, Dip2BedFile], None],
     ) -> None:
         def _dip_2to2_f(
             i: tuple[X, X],
-            o: tuple[Y, Y],
+            o: tuple[Path, Path],
             bd: Dip2BuildData,
             bf: Dip2BedFile,
         ) -> None:
             dip_2to2_f(i[0], o[0], Haplotype.HAP1, bd, bf)
             dip_2to2_f(i[1], o[1], Haplotype.HAP2, bd, bf)
 
+        def output_f(rk: RefFinalKey[RefKeyT]) -> Path:
+            # TODO assert that there are no unsubbed wildcards in the path
+            return Path(output_pattern.replace("%s", rk.name))
+
+        def write_output(ps: list[Path]) -> None:
+            with open(output, "w") as f:
+                json.dump(ps, f)
+
         self.with_build_data_and_bed_io(
             rk,
             bk,
             inputs,
             output_f,
+            write_output,
             get_bed_f,
             hap_f,
             dip_1to1_f,

@@ -23,8 +23,17 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     parY_out = Path(smk.output["parY"])
     ws: dict[str, str] = smk.wildcards
 
-    def go(x: cfg.StratInputs_[cfg.AnyBedT]) -> cfg.BedFile[cfg.AnyBedT] | None:
-        return x.gap
+    def go(
+        x: cfg.BuildData_[
+            cfg.RefKeyT,
+            cfg.BuildKeyT,
+            cfg.RefSourceT,
+            cfg.AnyBedT,
+            cfg.AnyBedT_,
+            cfg.IncludeT,
+        ]
+    ) -> cfg.BedFile[cfg.AnyBedT] | None:
+        return x.refdata.strat_inputs.gap
 
     # convert genome to bed file (where each region is just the length of
     # one chromosome)
@@ -35,6 +44,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     if hasattr(inputs, "gaps"):
         gap_inputs: list[Path] = inputs["gaps"]
 
+        # TODO the gaps bed file needs to be written from this function
         gaps_df = sconf.with_build_data_and_bed_i(
             ws["ref_final_key"],
             ws["build_key"],
