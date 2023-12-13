@@ -1572,7 +1572,28 @@ class Dip1BuildData(
             self.chr_indices,
         )
 
-    def read_filter_sort_hap_bed(
+    def read_filter_sort_dip1_bed(
+        self,
+        bf: Dip1BedFile,
+        ipath: Path,
+    ) -> pd.DataFrame:
+        """Read a diploid bed file, sort it, and write it in bgzip format."""
+        conv = self.dip_chr_conversion(bf.data.chr_pattern)
+        df = bf.read(ipath)
+        return bed.filter_sort_bed(conv.init_mapper, conv.final_mapper, df)
+
+    def read_write_filter_sort_dip1_bed(
+        self,
+        bf: Dip1BedFile,
+        ipath: Path,
+        opath: Path,
+        g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
+    ) -> None:
+        """Read a haploid bed file, sort it, and write it in bgzip format."""
+        df = self.read_filter_sort_dip1_bed(bf, ipath)
+        bed.write_bed(opath, g(df))
+
+    def read_filter_sort_dip2_bed(
         self,
         bf: Dip2BedFile,
         ipath: tuple[Path, Path],
@@ -1599,7 +1620,7 @@ class Dip1BuildData(
             ]
         )
 
-    def read_write_filter_sort_hap_bed(
+    def read_write_filter_sort_dip2_bed(
         self,
         bf: Dip2BedFile,
         ipath: tuple[Path, Path],
@@ -1607,28 +1628,7 @@ class Dip1BuildData(
         g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
     ) -> None:
         """Read a haploid bed file, sort it, and write it in bgzip format."""
-        df = self.read_filter_sort_hap_bed(bf, ipath)
-        bed.write_bed(opath, g(df))
-
-    def read_filter_sort_dip_bed(
-        self,
-        bf: Dip1BedFile,
-        ipath: Path,
-    ) -> pd.DataFrame:
-        """Read a diploid bed file, sort it, and write it in bgzip format."""
-        conv = self.dip_chr_conversion(bf.data.chr_pattern)
-        df = bf.read(ipath)
-        return bed.filter_sort_bed(conv.init_mapper, conv.final_mapper, df)
-
-    def read_write_filter_sort_dip_bed(
-        self,
-        bf: Dip1BedFile,
-        ipath: Path,
-        opath: Path,
-        g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
-    ) -> None:
-        """Read a haploid bed file, sort it, and write it in bgzip format."""
-        df = self.read_filter_sort_dip_bed(bf, ipath)
+        df = self.read_filter_sort_dip2_bed(bf, ipath)
         bed.write_bed(opath, g(df))
 
 
@@ -1681,29 +1681,7 @@ class Dip2BuildData(
             self.chr_indices,
         )
 
-    def read_filter_sort_hap_bed(
-        self,
-        bf: Dip2BedFile,
-        ipath: Path,
-        hap: Haplotype,
-    ) -> pd.DataFrame:
-        conv = self.hap_chr_conversion(bf.data.chr_pattern)
-        df = bf.read(ipath)
-        conv_ = hap.from_either(conv[0], conv[1])
-        return bed.filter_sort_bed(conv_.init_mapper, conv_.final_mapper, df)
-
-    def read_write_filter_sort_hap_bed(
-        self,
-        bf: Dip2BedFile,
-        ipath: Path,
-        opath: Path,
-        hap: Haplotype,
-        g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
-    ) -> None:
-        df = self.read_filter_sort_hap_bed(bf, ipath, hap)
-        bed.write_bed(opath, g(df))
-
-    def read_filter_sort_dip_bed(
+    def read_filter_sort_dip1_bed(
         self,
         bf: Dip1BedFile,
         ipath: Path,
@@ -1719,7 +1697,7 @@ class Dip2BuildData(
         df0, df1 = bed.split_bed(splitter, df)
         return (go(df0, fmap0), go(df1, fmap1))
 
-    def read_write_filter_sort_dip_bed(
+    def read_write_filter_sort_dip1_bed(
         self,
         bf: Dip1BedFile,
         ipath: Path,
@@ -1728,9 +1706,31 @@ class Dip2BuildData(
         g1: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
     ) -> None:
         """Read a haploid bed file, sort it, and write it in bgzip format."""
-        df0, df1 = self.read_filter_sort_dip_bed(bf, ipath)
+        df0, df1 = self.read_filter_sort_dip1_bed(bf, ipath)
         bed.write_bed(opath[0], g0(df0))
         bed.write_bed(opath[1], g1(df1))
+
+    def read_filter_sort_dip2_bed(
+        self,
+        bf: Dip2BedFile,
+        ipath: Path,
+        hap: Haplotype,
+    ) -> pd.DataFrame:
+        conv = self.hap_chr_conversion(bf.data.chr_pattern)
+        df = bf.read(ipath)
+        conv_ = hap.from_either(conv[0], conv[1])
+        return bed.filter_sort_bed(conv_.init_mapper, conv_.final_mapper, df)
+
+    def read_write_filter_sort_dip2_bed(
+        self,
+        bf: Dip2BedFile,
+        ipath: Path,
+        opath: Path,
+        hap: Haplotype,
+        g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
+    ) -> None:
+        df = self.read_filter_sort_dip2_bed(bf, ipath, hap)
+        bed.write_bed(opath, g(df))
 
 
 AnyBuildData = HapBuildData | Dip1BuildData | Dip2BuildData
@@ -2857,6 +2857,45 @@ class GiabStrats(BaseModel):
                 bf,
             ),
             lambda rd, bf: dip_2to2_f(
+                Dip2BuildData(*astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk)))),
+                bf,
+            ),
+        )
+
+    def with_build_data_and_bed_hap(
+        self,
+        rfk: str,
+        bk: str,
+        get_bed_f: BuildDataToBed,
+        hap_f: Callable[[HapBuildData, HapBedFile], Z],
+        dip_1to1_f: Callable[[Dip1BuildData, Dip1BedFile], Z],
+        dip_1to2_f: Callable[[Haplotype, Dip2BuildData, Dip1BedFile], Z],
+        dip_2to1_f: Callable[[Dip1BuildData, Dip2BedFile], Z],
+        dip_2to2_f: Callable[[Haplotype, Dip2BuildData, Dip2BedFile], Z],
+    ) -> Z:
+        # rk, hap = parse_final_refkey(rfk)
+        return self.with_ref_data_and_bed_hap(
+            rfk,
+            lambda rd: get_bed_f(rd.to_build_data_unsafe(bk)),
+            lambda rd, bf: hap_f(
+                HapBuildData(*astuple(rd.to_build_data_unsafe(HapBuildKey(bk)))),
+                bf,
+            ),
+            lambda rd, bf: dip_1to1_f(
+                Dip1BuildData(*astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk)))),
+                bf,
+            ),
+            lambda hap, rd, bf: dip_1to2_f(
+                hap,
+                Dip2BuildData(*astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk)))),
+                bf,
+            ),
+            lambda rd, bf: dip_2to1_f(
+                Dip1BuildData(*astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk)))),
+                bf,
+            ),
+            lambda hap, rd, bf: dip_2to2_f(
+                hap,
                 Dip2BuildData(*astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk)))),
                 bf,
             ),

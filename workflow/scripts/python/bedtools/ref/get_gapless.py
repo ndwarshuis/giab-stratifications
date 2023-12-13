@@ -3,6 +3,7 @@ from pathlib import Path
 import common.config as cfg
 from pybedtools import BedTool as bt  # type: ignore
 from common.bed import write_bed
+from common.functional import match1_unsafe, match2_unsafe
 import pandas as pd
 
 
@@ -41,23 +42,35 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     # If we have gap input, make the gapless file, otherwise just symlink to the
     # genome bed file (which just means the entire genome is gapless)
-    if hasattr(inputs, "gaps"):
+    if not hasattr(inputs, "gaps"):
+        write_bed(auto_out, genome_bed)
+        parY_out.symlink_to(auto_out.resolve())
+    else:
         gap_inputs: list[Path] = inputs["gaps"]
 
-        # TODO the gaps bed file needs to be written from this function
-        gaps_df = sconf.with_build_data_and_bed_i(
+        gaps_df = sconf.with_build_data_and_bed_hap(
             ws["ref_final_key"],
             ws["build_key"],
-            gap_inputs,
             go,
-            lambda i, bd, bf: bd.read_filter_sort_hap_bed(bf, i),
-            lambda i, bd, bf: bd.read_filter_sort_dip_bed(bf, i),
-            lambda i, bd, bf: bd.read_filter_sort_dip_bed(bf, i),
-            lambda i, bd, bf: pd.concat([*bd.read_filter_sort_hap_bed(bf, i)]),
-            lambda i, hap, bd, bf: bd.read_filter_sort_hap_bed(
-                bf,
-                *hap.from_either(
-                    (i[0], cfg.Haplotype.HAP1), (i[1], cfg.Haplotype.HAP2)
+            lambda bd, bf: match1_unsafe(
+                gap_inputs, lambda i: bd.read_filter_sort_hap_bed(bf, i)
+            ),
+            lambda bd, bf: match1_unsafe(
+                gap_inputs, lambda i: bd.read_filter_sort_dip1_bed(bf, i)
+            ),
+            lambda hap, bd, bf: match1_unsafe(
+                gap_inputs,
+                lambda i: hap.from_either(*bd.read_filter_sort_dip1_bed(bf, i)),
+            ),
+            lambda bd, bf: match2_unsafe(
+                gap_inputs,
+                lambda i0, i1: bd.read_filter_sort_dip2_bed(bf, (i0, i1)),
+            ),
+            lambda hap, bd, bf: match2_unsafe(
+                gap_inputs,
+                lambda i0, i1: bd.read_filter_sort_dip2_bed(
+                    bf,
+                    *hap.from_either((i0, cfg.Haplotype.HAP1), (i1, cfg.Haplotype.HAP2))
                 ),
             ),
         )
@@ -68,6 +81,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
         # If we have a parY bed, subtract parY from the gaps bed, otherwise
         # just link them since we have nothing to subtract off
+        # TODO add logic to ignore parY when on maternal hap (not necessary but
+        # makes things cleaner)
         if hasattr(inputs, "parY"):
             parY_src = Path(inputs["parY"])
             gaps_no_parY = gaps_with_parY.subtract(bt(parY_src))
@@ -77,9 +92,6 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         else:
             write_bed(auto_out, gaps)
             parY_out.symlink_to(auto_out.resolve())
-    else:
-        write_bed(auto_out, genome_bed)
-        parY_out.symlink_to(auto_out.resolve())
 
 
 main(snakemake, snakemake.config)  # type: ignore

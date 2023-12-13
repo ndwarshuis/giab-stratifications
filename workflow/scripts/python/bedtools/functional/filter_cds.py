@@ -94,8 +94,6 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ps: dict[str, str] = smk.params
     ftbl_inputs: list[Path] = [Path(i) for i in smk.input["ftbl"]]
     gff_inputs: list[Path] = [Path(i) for i in smk.input["gff"]]
-    cds_out: Path = smk.output["cds"]
-    vdj_out: Path = smk.output["vdj"]
     cds_pattern: str = ps["cds_outputs"]
     vdj_pattern: str = ps["vdj_outputs"]
 
@@ -211,8 +209,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     cs, vs = sconf.with_build_data(ws["ref_key"], ws["build_key"], hap, dip1, dip2)
 
-    write_outputs(cds_out, cs)
-    write_outputs(vdj_out, vs)
+    write_outputs(smk.output["cds"], cs)
+    write_outputs(smk.output["vdj"], vs)
 
 
 main(snakemake, snakemake.config)  # type: ignore
