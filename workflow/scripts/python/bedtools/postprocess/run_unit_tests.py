@@ -6,9 +6,12 @@ from os.path import dirname, basename
 from os import scandir
 import common.config as cfg
 from common.io import setup_logging, is_bgzip
+from common.bed import InternalChrIndex
 import subprocess as sp
 
 log = setup_logging(snakemake.log[0])  # type: ignore
+
+RevMapper = dict[str, InternalChrIndex]
 
 
 class GaplessBT(NamedTuple):
@@ -23,7 +26,7 @@ def test_bgzip(strat_file: Path) -> list[str]:
 
 def test_bed(
     strat_file: Path,
-    reverse_map: dict[str, int],
+    reverse_map: RevMapper,
     gapless: GaplessBT,
 ) -> list[str]:
     """Each stratification should be a valid bed file."""
@@ -141,7 +144,7 @@ def test_tsv_list(tsv_list: Path) -> list[str]:
 
 def run_all_tests(
     strat_file: Path,
-    reverse_map: dict[str, int],
+    reverse_map: RevMapper,
     gapless: GaplessBT,
 ) -> list[tuple[Path, str]]:
     return [
@@ -156,18 +159,15 @@ def strat_files(path: str) -> list[Path]:
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
+    ws: dict[str, str] = smk.wildcards
     fm = sconf.with_build_data_final(
-        smk.wildcards["ref_key"],
-        smk.wildcards["build_key"],
-        lambda bd: bd.refdata.ref.chr_pattern.final_mapper,
-        lambda bd: bd.refdata.ref.chr_pattern.final_mapper,
-        lambda hap, bd: bd.refdata.ref.chr_pattern.from_either(hap).final_mapper,
+        ws["ref_key"],
+        ws["build_key"],
+        lambda bd: bd.ref_chr_conversion.final_mapper,
+        lambda bd: bd.ref_chr_conversion.final_mapper,
+        lambda hap, bd: hap.from_either(*bd.ref_chr_conversion).final_mapper,
     )
     reverse_map = {v: k for k, v in fm.items()}
-
-    # rk = cfg.RefKey(smk.wildcards["ref_key"])
-    # bk = cfg.BuildKey(smk.wildcards["build_key"])
-    # reverse_map = {v: k for k, v in sconf.buildkey_to_final_chr_mapping(rk, bk).items()}
 
     # check global stuff first (since this is faster)
 

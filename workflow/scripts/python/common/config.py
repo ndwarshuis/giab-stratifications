@@ -3073,3 +3073,36 @@ class GiabStrats(BaseModel):
 #         # ASSUME this is unreachable
 #         return None
 #         # assert_never(y)
+
+
+def filter_sort_bed_main(
+    f: BuildDataToBed,
+    smk: Any,
+    g: Callable[[pd.DataFrame], pd.DataFrame] = lambda x: x,
+) -> None:
+    """Read a bed and filter/sort it appropriately.
+
+    This is meant to be called in snakemake scripts, as this operations is
+    very common. 'smk' is the snakemake object and 'f' is a function to
+    retrieve the bed configuration from the config instance (which will be
+    obtained from the snakemake object).
+    """
+    sconf: GiabStrats = smk.config
+    ws: dict[str, str] = smk.wildcards
+    ps: dict[str, str] = smk.params
+    ins: list[Path] = smk.input
+    output_pattern: str = ps["output_pattern"]
+
+    sconf.with_build_data_and_bed_io_(
+        ws["ref_final_key"],
+        ws["build_key"],
+        ins,
+        smk.output[0],
+        output_pattern,
+        f,
+        lambda i, o, bd, b: bd.read_write_filter_sort_hap_bed(b, i, o, g),
+        lambda i, o, bd, b: bd.read_write_filter_sort_dip1_bed(b, i, o, g),
+        lambda i, o, bd, b: bd.read_write_filter_sort_dip1_bed(b, i, o, g, g),
+        lambda i, o, bd, b: bd.read_write_filter_sort_dip2_bed(b, i, o, g),
+        lambda i, o, hap, bd, b: bd.read_write_filter_sort_dip2_bed(b, i, o, hap, g),
+    )

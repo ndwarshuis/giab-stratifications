@@ -3,19 +3,28 @@ from typing import Any
 import common.config as cfg
 from common.stratdiff.lib.diff import compare_all
 from common.io import setup_logging
+from common.functional import DesignError
 
 
 log = setup_logging(snakemake.log[0])  # type: ignore
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
-    rk = cfg.RefKey(smk.wildcards.ref_key)
-    bk = cfg.BuildKey(smk.wildcards.build_key)
-    comparison = sconf.buildkey_to_build(rk, bk).comparison
-    pattern = sconf.refkey_to_final_chr_pattern(rk)
-    ixs = sconf.buildkey_to_chr_indices(rk, bk)
+    ws: dict[str, str] = smk.wildcards
+    bd = sconf.to_build_data(ws["ref_final_key"], ws["build_key"])
+    comparison = bd.build.comparison
 
-    assert comparison is not None, "this should not happen"
+    fm = sconf.with_build_data_final(
+        ws["ref_key"],
+        ws["build_key"],
+        lambda bd: bd.ref_chr_conversion.final_mapper,
+        lambda bd: bd.ref_chr_conversion.final_mapper,
+        lambda hap, bd: hap.from_either(*bd.ref_chr_conversion).final_mapper,
+    )
+    chr_names = list(fm.values())
+
+    if comparison is None:
+        raise DesignError("comparison should not be none")
 
     outdir = Path(smk.output[0]).parent
 
@@ -25,7 +34,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         outdir,
         comparison.path_mapper,
         comparison.replacements,
-        [i.chr_name_full(pattern) for i in ixs],
+        chr_names,
+        # [i.chr_name_full(pattern) for i in ixs],
         comparison.ignore_generated,
         comparison.ignore_other,
     )
