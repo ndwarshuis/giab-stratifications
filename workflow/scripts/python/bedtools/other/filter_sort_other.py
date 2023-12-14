@@ -14,6 +14,7 @@ def main(smk: Any) -> None:
             cfg.RefSourceT,
             cfg.AnyBedT,
             cfg.AnyBedT_,
+            cfg.AnySrcT,
             cfg.IncludeT,
         ]
     ) -> cfg.OtherBedFile[cfg.AnyBedT] | None:

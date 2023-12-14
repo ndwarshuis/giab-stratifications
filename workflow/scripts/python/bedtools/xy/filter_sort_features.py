@@ -31,6 +31,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             cfg.RefSourceT,
             cfg.AnyBedT,
             cfg.AnyBedT_,
+            cfg.AnySrcT,
             cfg.IncludeT,
         ],
         refPat: cfg.HapChrPattern,

@@ -265,8 +265,8 @@ def insert_suffix(p: Path, i: str) -> Path:
 
 
 # dummy Identity type to make higher-order types more consistent
-HaploidOnly = Union[X]
-HaploidOrDiploid = Union[X, Diploid_[X]]
+HapOnly = Union[X]
+HapOrDip = Union[X, Diploid_[X]]
 
 
 @unique
@@ -542,10 +542,12 @@ RefSrc = RefFileSrc | RefHttpSrc
 # file that is either not zipped or gzipped but not bgzipped")
 BedSrc = BedFileSrc | BedHttpSrc
 
+AnySrcT = TypeVar("AnySrcT", BedSrc, Diploid_[BedSrc])
 
-class BedSrcAndKey(NamedTuple):
-    src: BedSrc
-    key: list[str]  # TODO newtype here?
+
+# class BedSrcAndKey(NamedTuple):
+#     src: BedSrc
+#     key: list[str]  # TODO newtype here?
 
 
 # TODO clean this up with real polymorphism when mypy catches up with Haskell
@@ -671,7 +673,6 @@ class Tools(BaseModel):
     gemlib: HttpUrl = "https://sourceforge.net/projects/gemlibrary/files/gem-library/Binary%20pre-release%203/GEM-binaries-Linux-x86_64-core_i3-20130406-045632.tbz2/download"  # type: ignore
 
 
-# TODO non-negative ints which cannot equal each other
 class BedColumns(BaseModel):
     """Denotes coordinate columns in a bed file (0-indexed)."""
 
@@ -1154,14 +1155,13 @@ class Functional(BaseModel, Generic[X]):
     gff_src: X
 
 
-class StratInputs_(BaseModel, Generic[AnyBedT]):
+class StratInputs_(BaseModel, Generic[AnyBedT, AnySrcT]):
     gap: BedFile[AnyBedT] | None
     low_complexity: LowComplexity[AnyBedT]
     xy: XY
     mappability: Mappability | None
     segdups: SegDups[AnyBedT]
-    # TODO this type is wrong (specifically is has too much information)
-    functional: Functional[AnyBedT] | None
+    functional: Functional[AnySrcT] | None
 
     def _to_bed_src(
         self,
@@ -1204,15 +1204,15 @@ class StratInputs_(BaseModel, Generic[AnyBedT]):
     def superdups_src(self) -> list[BedSrc]:
         return self._to_bed_src(lambda x: x.segdups.superdups)
 
-    @property
-    def ftbl_src(self) -> list[BedSrc]:
-        return fmap_maybe_def(
-            [], lambda x: diploid_to_list(x.ftbl_src), self.functional
-        )
+    # @property
+    # def ftbl_src(self) -> list[BedSrc]:
+    #     return fmap_maybe_def(
+    #         [], lambda x: diploid_to_list(x.ftbl_src), self.functional
+    #     )
 
-    @property
-    def gff_src(self) -> list[BedSrc]:
-        return fmap_maybe_def([], lambda x: diploid_to_list(x.gff_src), self.functional)
+    # @property
+    # def gff_src(self) -> list[BedSrc]:
+    #     return fmap_maybe_def([], lambda x: diploid_to_list(x.gff_src), self.functional)
 
     @property
     def xy_features_unsafe(self) -> XYFeatures:
@@ -1229,12 +1229,12 @@ class StratInputs_(BaseModel, Generic[AnyBedT]):
 class StratInputToBed(Protocol):
     A = TypeVar("A", HapChrSource[BedSrc], DipChrSource[BedSrc])
 
-    def __call__(self, __x: StratInputs_[A]) -> BedFile[A] | None:
+    def __call__(self, __x: StratInputs_[A, AnySrcT]) -> BedFile[A] | None:
         pass
 
 
-HaploidStratInputs = StratInputs_[HapChrSource[BedSrc]]
-DiploidStratInputs = StratInputs_[DipChrSource[BedSrc]]
+HaploidStratInputs = StratInputs_[HapChrSource[BedSrc], BedSrc]
+DiploidStratInputs = StratInputs_[DipChrSource[BedSrc], Diploid_[BedSrc]]
 AnyStratInputs = HaploidStratInputs | DiploidStratInputs
 
 StratInputT = TypeVar("StratInputT", HaploidStratInputs, DiploidStratInputs)
@@ -1255,8 +1255,10 @@ RefSourceT = TypeVar(
 
 
 @dataclass
-class BuildData_(Generic[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, IncludeT]):
-    refdata: "RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]"
+class BuildData_(
+    Generic[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT]
+):
+    refdata: "RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT]"
     buildkey: BuildKeyT
     build: Build_[AnyBedT, AnyBedT_, IncludeT]
 
@@ -1300,10 +1302,12 @@ class BuildData_(Generic[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, Incl
 
 
 @dataclass(frozen=True)
-class RefData_(Generic[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]):
+class RefData_(
+    Generic[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT]
+):
     refkey: RefKeyT
     ref: RefSourceT
-    strat_inputs: StratInputs_[AnyBedT]
+    strat_inputs: StratInputs_[AnyBedT, AnySrcT]
     builds: dict[BuildKeyT, Build_[AnyBedT, AnyBedT_, IncludeT]]
 
     @property
@@ -1341,7 +1345,9 @@ class RefData_(Generic[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, Includ
     def to_build_data_unsafe(
         self,
         bk: BuildKeyT,
-    ) -> BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, IncludeT]:
+    ) -> BuildData_[
+        RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT
+    ]:
         bd = self.to_build_data(bk)
         if bd is None:
             raise DesignError(f"Could not create build data from key '{bk}'")
@@ -1350,7 +1356,10 @@ class RefData_(Generic[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, Includ
     def to_build_data(
         self,
         bk: BuildKeyT,
-    ) -> BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, IncludeT] | None:
+    ) -> (
+        BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT]
+        | None
+    ):
         try:
             return BuildData_(self, bk, self.builds[bk])
         except KeyError:
@@ -1388,6 +1397,7 @@ class HapRefData(
         HapChrSource[RefSrc],
         HapBedSrc,
         HapBedSrc,
+        BedSrc,
         HapBuildKey,
         HapInclude,
     ]
@@ -1401,6 +1411,7 @@ class Dip1RefData(
         DipChrSource1[RefSrc],
         DipBedSrc,
         Dip1BedSrc,
+        Diploid_[BedSrc],
         Dip1BuildKey,
         DipInclude,
     ]
@@ -1414,6 +1425,7 @@ class Dip2RefData(
         DipChrSource2[RefSrc],
         DipBedSrc,
         Dip2BedSrc,
+        Diploid_[BedSrc],
         Dip2BuildKey,
         DipInclude,
     ]
@@ -1460,7 +1472,8 @@ class BuildDataToBed(Protocol):
     A = TypeVar("A", HapBedSrc, DipBedSrc)
 
     def __call__(
-        self, __x: BuildData_[RefKeyT, BuildKeyT, RefSourceT, A, AnyBedT_, IncludeT]
+        self,
+        __x: BuildData_[RefKeyT, BuildKeyT, RefSourceT, A, AnyBedT_, AnySrcT, IncludeT],
     ) -> BedFile[A] | None:
         pass
 
@@ -1476,12 +1489,12 @@ class OutputPattern(Protocol, Generic[Xcov]):
 
 
 class Stratification(
-    BaseModel, Generic[RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]
+    BaseModel, Generic[RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT]
 ):
     """Configuration for stratifications for a given reference."""
 
     ref: RefSourceT
-    strat_inputs: StratInputs_[AnyBedT]
+    strat_inputs: StratInputs_[AnyBedT, AnySrcT]
     builds: dict[BuildKeyT, Build_[AnyBedT, AnyBedT_, IncludeT]]
 
 
@@ -1493,6 +1506,7 @@ class HapBuildData(
         HapChrSource[RefSrc],
         HapBedSrc,
         HapBedSrc,
+        BedSrc,
         HapInclude,
     ]
 ):
@@ -1540,6 +1554,7 @@ class Dip1BuildData(
         DipChrSource1[RefSrc],
         DipBedSrc,
         Dip1BedSrc,
+        Diploid_[BedSrc],
         DipInclude,
     ]
 ):
@@ -1640,6 +1655,7 @@ class Dip2BuildData(
         DipChrSource2[RefSrc],
         DipBedSrc,
         Dip2BedSrc,
+        Diploid_[BedSrc],
         DipInclude,
     ]
 ):
@@ -1753,13 +1769,16 @@ def with_build_data(
 
 
 class StratDict_(
-    dict[RefKeyT, Stratification[RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]],
-    Generic[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT],
+    dict[
+        RefKeyT,
+        Stratification[RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT],
+    ],
+    Generic[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT],
 ):
     def to_ref_data_unsafe(
         self,
         rk: RefKeyT,
-    ) -> RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]:
+    ) -> RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT]:
         rd = self.to_ref_data(rk)
         if rd is None:
             raise DesignError(f"Could not get ref data for key '{rk}'")
@@ -1768,7 +1787,10 @@ class StratDict_(
     def to_ref_data(
         self,
         rk: RefKeyT,
-    ) -> RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT] | None:
+    ) -> (
+        RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT]
+        | None
+    ):
         try:
             s = self[rk]
             return RefData_(rk, s.ref, s.strat_inputs, s.builds)
@@ -1778,7 +1800,9 @@ class StratDict_(
     @property
     def all_ref_data(
         self,
-    ) -> list[RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, BuildKeyT, IncludeT]]:
+    ) -> list[
+        RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT]
+    ]:
         return [self.to_ref_data_unsafe(x) for x in self]
 
     @property
@@ -1788,7 +1812,9 @@ class StratDict_(
     @property
     def all_build_data(
         self,
-    ) -> list[BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, IncludeT]]:
+    ) -> list[
+        BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT]
+    ]:
         return [r.to_build_data_unsafe(b) for r in self.all_ref_data for b in r.builds]
 
     @property
@@ -1880,6 +1906,7 @@ HapStrat = Stratification[
     HapChrSource[RefSrc],
     HapBedSrc,
     HapBedSrc,
+    BedSrc,
     HapBuildKey,
     HapInclude,
 ]
@@ -1887,6 +1914,7 @@ Dip1Strat = Stratification[
     DipChrSource1[RefSrc],
     DipBedSrc,
     Dip1BedSrc,
+    Diploid_[BedSrc],
     Dip1BuildKey,
     DipInclude,
 ]
@@ -1894,6 +1922,7 @@ Dip2Strat = Stratification[
     DipChrSource2[RefSrc],
     DipBedSrc,
     Dip2BedSrc,
+    Diploid_[BedSrc],
     Dip2BuildKey,
     DipInclude,
 ]
@@ -1904,6 +1933,7 @@ HaploidStratDict = StratDict_[
     HapChrSource[RefSrc],
     HapBedSrc,
     HapBedSrc,
+    BedSrc,
     HapBuildKey,
     HapInclude,
 ]
@@ -1913,6 +1943,7 @@ Diploid1StratDict = StratDict_[
     DipChrSource1[RefSrc],
     DipBedSrc,
     Dip1BedSrc,
+    Diploid_[BedSrc],
     Dip1BuildKey,
     DipInclude,
 ]
@@ -1922,6 +1953,7 @@ Diploid2StratDict = StratDict_[
     DipChrSource2[RefSrc],
     DipBedSrc,
     Dip2BedSrc,
+    Diploid_[BedSrc],
     Dip2BuildKey,
     DipInclude,
 ]
