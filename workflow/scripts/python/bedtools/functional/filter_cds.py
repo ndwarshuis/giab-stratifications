@@ -94,8 +94,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ps: dict[str, str] = smk.params
     ftbl_inputs: list[Path] = [Path(i) for i in smk.input["ftbl"]]
     gff_inputs: list[Path] = [Path(i) for i in smk.input["gff"]]
-    cds_pattern: str = ps["cds_outputs"]
-    vdj_pattern: str = ps["vdj_outputs"]
+    cds_pattern: str = ps["cds_output"]
+    vdj_pattern: str = ps["vdj_output"]
 
     def write_vdj_maybe1(
         switch: bool,

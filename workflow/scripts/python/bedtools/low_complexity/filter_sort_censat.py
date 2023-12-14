@@ -8,20 +8,11 @@ def filter_ct(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def main(smk: Any) -> None:
-    def go(
-        x: cfg.BuildData_[
-            cfg.RefKeyT,
-            cfg.BuildKeyT,
-            cfg.RefSourceT,
-            cfg.AnyBedT,
-            cfg.AnyBedT_,
-            cfg.AnySrcT,
-            cfg.IncludeT,
-        ]
-    ) -> cfg.BedFile[cfg.AnyBedT] | None:
-        return x.refdata.strat_inputs.low_complexity.simreps
-
-    cfg.filter_sort_bed_main(go, smk, filter_ct)
+    cfg.filter_sort_bed_main(
+        lambda bd: cfg.bd_to_si(cfg.si_to_satellites, bd),
+        smk,
+        filter_ct,
+    )
 
 
 main(snakemake)  # type: ignore

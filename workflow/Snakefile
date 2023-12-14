@@ -21,6 +21,27 @@ def read_checkpoint(rulename, wildcards):
         return json.load(f)
 
 
+def read_named_checkpoint(rulename, name, wildcards):
+    # TODO not DRY
+    r = getattr(checkpoints, rulename)
+    c = r.get(
+        ref_key=strip_refkey(wildcards.ref_final_key),
+        build_key=wildcards.build_key,
+    )
+    with c.output[name][0].open() as f:
+        return json.load(f)
+
+
+def bed_src_inputs(pathlist, f, wildcards):
+    rk = wildcards.ref_key
+    rsks = config.refkey_to_bed_refsrckey(f, wildcards.ref_key)
+    return expand(pathlist, ref_src_key=rsks)
+
+
+def to_bed_src(f, wildcards):
+    return config.refsrckey_to_bed_src(f, wildcards.ref_src_key)
+
+
 # TODO change the "ref_key" name to something else that actually reflects the
 # fact it may/may not have a haplotype tagged on the end of it and doesn't
 # correspond to the key in the config corresponding to each reference)

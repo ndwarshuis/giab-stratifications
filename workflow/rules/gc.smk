@@ -3,12 +3,7 @@ from common.config import CoreLevel
 from more_itertools import unzip
 import json
 
-gc_dir = CoreLevel.GC
-gc_inter_dir = config.intermediate_build_dir / gc_dir.value
-
-
-def gc_final_path(name):
-    return config.build_strat_path(gc_dir, name)
+gc = config.to_bed_dirs(CoreLevel.GC)
 
 
 def seqtk_args(wildcards):
@@ -34,7 +29,7 @@ rule find_gc_content:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        gc_inter_dir / "gc{frac}.bed.gz",
+        gc.inter.postsort.data / "gc{frac}.bed.gz",
     params:
         args=seqtk_args,
     conda:
@@ -55,7 +50,7 @@ rule find_gc_content:
 
 use rule find_gc_content as find_gc_content_final with:
     output:
-        gc_final_path("gc{frac}_slop50"),
+        gc.final("gc{frac}_slop50"),
 
 
 def range_inputs(wildcards):
@@ -68,7 +63,7 @@ def range_inputs(wildcards):
     def expand_final(frac):
         return _expand(rules.find_gc_content_final.output, frac)
 
-    rk = wildcards.ref_key
+    rk = wildcards.ref_final_key
     bk = wildcards.build_key
     gps = config.buildkey_to_include(rk, bk).gc
     lowest, lower = gps.low_bounds
@@ -86,26 +81,29 @@ checkpoint intersect_gc_ranges:
         genome=rules.get_genome.output[0],
         gapless=rules.get_gapless.output.auto,
     output:
-        gc_inter_dir / "intersect_output.json",
+        gc.inter.postsort.data / "intersect_output.json",
     conda:
         "../envs/bedtools.yml"
     # hack together a format pattern that will be used for output
     params:
         path_pattern=lambda w: expand(
-            gc_final_path("{{}}"),
-            ref_key=w.ref_key,
+            gc.final("{{}}"),
+            ref_final_key=w.ref_final_key,
             build_key=w.build_key,
         )[0],
     script:
         "../scripts/python/bedtools/gc/intersect_ranges.py"
 
 
-def gc_inputs(ref_key, build_key):
-    c = checkpoints.intersect_gc_ranges.get(ref_key=ref_key, build_key=build_key)
+def gc_inputs(ref_final_key, build_key):
+    c = checkpoints.intersect_gc_ranges.get(
+        ref_final_key=ref_final_key,
+        build_key=build_key,
+    )
     with c.output[0].open() as f:
         return json.load(f)
 
 
-def gc_inputs_flat(ref_key, build_key):
-    res = gc_inputs(ref_key, build_key)
+def gc_inputs_flat(ref_final_key, build_key):
+    res = gc_inputs(ref_final_key, build_key)
     return [*res["gc_ranges"], res["widest_extreme"], *res["other_extremes"]]

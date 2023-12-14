@@ -1,20 +1,14 @@
 from common.config import CoreLevel
 
-xy_dir = CoreLevel.XY
-xy_src_dir = config.ref_src_dir / xy_dir.value
-xy_inter_dir = config.intermediate_build_dir / xy_dir.value
-xy_log_src_dir = config.log_src_dir / xy_dir.value
+xy = config.to_bed_dirs(CoreLevel.XY)
 
 
-def xy_final_path(name):
-    return config.build_strat_path(xy_dir, name)
-
-
+# TODO refkey or refsrckey?
 use rule download_ref as download_genome_features_bed with:
     output:
-        xy_src_dir / "genome_features_{sex_chr}.bed.gz",
+        xy.src.data / "genome_features_{sex_chr}.bed.gz",
     log:
-        xy_log_src_dir / "genome_features_{sex_chr}.log",
+        xy.src.log / "genome_features_{sex_chr}.log",
     params:
         src=lambda w: (
             config.refkey_to_y_features_src
@@ -30,7 +24,7 @@ rule write_PAR_final:
         gapless=rules.get_gapless.output.parY,
         genome=rules.get_genome.output,
     output:
-        xy_final_path("chr{sex_chr}_PAR"),
+        xy.final("chr{sex_chr}_PAR"),
     conda:
         "../envs/bedtools.yml"
     shell:
@@ -46,7 +40,7 @@ rule filter_XTR_features:
         gapless=rules.get_gapless.output.parY,
         genome=rules.get_genome.output,
     output:
-        xy_final_path("chr{sex_chr}_XTR"),
+        xy.final("chr{sex_chr}_XTR"),
     conda:
         "../envs/bedtools.yml"
     params:
@@ -61,7 +55,7 @@ use rule filter_XTR_features as filter_ampliconic_features with:
         gapless=rules.get_gapless.output.parY,
         genome=rules.get_genome.output,
     output:
-        xy_final_path("chr{sex_chr}_ampliconic"),
+        xy.final("chr{sex_chr}_ampliconic"),
     params:
         level="Ampliconic",
 
@@ -81,7 +75,7 @@ rule invert_PAR:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.parY,
     output:
-        xy_final_path("chr{sex_chr}_nonPAR"),
+        xy.final("chr{sex_chr}_nonPAR"),
     conda:
         "../envs/bedtools.yml"
     shell:
@@ -99,7 +93,7 @@ rule filter_autosomes:
         gapless=rules.get_gapless.output.auto,
         genome=rules.get_genome.output,
     output:
-        xy_final_path("AllAutosomes"),
+        xy.final("AllAutosomes"),
     conda:
         "../envs/bedtools.yml"
     shell:

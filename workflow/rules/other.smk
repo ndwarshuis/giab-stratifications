@@ -18,8 +18,10 @@ use rule download_ref as download_other with:
     log:
         config.log_build_dir / "existing" / "{other_level_key}_{other_strat_key}.log",
     params:
-        src=lambda w: config.otherkey_to_src(
-            w.ref_key, w.build_key, w.other_level_key, w.other_strat_key
+        src=lambda w: config.buildkey_to_bed_src(
+            lambda bd: bd_to_other(w.other_level_key, w.other_strat_key, bd),
+            w.ref_src_key,
+            w.build_key,
         ),
     wildcard_constraints:
         **other_constraints,
@@ -28,11 +30,28 @@ use rule download_ref as download_other with:
 
 rule filter_sort_other:
     input:
-        bed=rules.download_other.output,
-        genome=rules.get_genome.output,
-        gapless=rules.get_gapless.output.auto,
+        lambda w: expand(
+            rules.download_other.output,
+            ref_src_key=config.buildkey_to_bed_refsrckeys(
+                lambda bd: bd_to_other(w.other_level_key, w.other_strat_key, bd),
+                w.ref_key,
+                w.build_key,
+            ),
+        ),
     output:
-        config.build_final_strat_path("{other_level_key}", "{other_strat_key}"),
+        self.intermediate_build_hapless_dir
+        / "{other_level_key}"
+        / "{other_strat_key}.json",
+    params:
+        output_pattern=lambda w: expand(
+            self.intermediate_build_dir
+            / "{other_level_key}"
+            / "{other_strat_key}.bed.gz",
+            ref_final_key="%s",
+            build_key=w.build_key,
+            other_level_key=w.other_level_key,
+            other_strat_key=w.other_strat_key,
+        ),
     conda:
         "../envs/bedtools.yml"
     wildcard_constraints:
@@ -41,15 +60,28 @@ rule filter_sort_other:
         "../scripts/python/bedtools/other/filter_sort_other.py"
 
 
-# TODO move genome/gapless removal stage to own rule to make the script simpler
+rule remove_gaps_other:
+    input:
+        bed=lambda w: read_checkpoint("filter_sort_other", w),
+        genome=rules.get_genome.output,
+        gapless=rules.get_gapless.output.auto,
+    output:
+        config.build_final_strat_path("{other_level_key}", "{other_strat_key}"),
+    conda:
+        "../envs/bedtools.yml"
+    shell:
+        """
+        intersectBed -a {input.bed} -b {input.gapless} -sorted -g {input.genome} | \
+        bgzip -c > {output}
+        """
 
 
-def all_other(ref_key, build_key):
-    other = config.buildkey_to_build(ref_key, build_key).other_strats
+def all_other(ref_final_key, build_key):
+    other = config.buildkey_to_build(ref_final_key, build_key).other_strats
     return [
         expand(
-            rules.filter_sort_other.output,
-            ref_key=ref_key,
+            rules.remove_gaps_other.output,
+            ref_final_key=ref_final_key,
             build_key=build_key,
             other_level_key=lk,
             other_strat_key=sk,

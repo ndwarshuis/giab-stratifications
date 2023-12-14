@@ -1,11 +1,6 @@
 from common.config import CoreLevel
 
-otherdiff_dir = CoreLevel.OtherDifficult
-otherdiff_inter_dir = config.intermediate_build_dir / otherdiff_dir.value
-
-
-def other_difficult_final_path(name):
-    return config.build_strat_path(otherdiff_dir, name)
+odiff = config.to_bed_dirs(CoreLevel.OtherDifficult)
 
 
 rule get_gaps:
@@ -13,7 +8,7 @@ rule get_gaps:
         gapless=rules.get_gapless.output.auto,
         genome=rules.get_genome.output,
     output:
-        other_difficult_final_path("gaps_slop15kb"),
+        odiff.final("gaps_slop15kb"),
     conda:
         "../envs/bedtools.yml"
     shell:
@@ -26,26 +21,13 @@ rule get_gaps:
         """
 
 
-# rule filter_vdj:
-#     input:
-#         mapper=rules.ftbl_to_mapper.output[0],
-#         bed=rules.gff_to_bed.output[0],
-#     output:
-#         otherdiff_inter_dir / "vdj.bed.gz",
-#     conda:
-#         "../envs/bedtools.yml"
-#     script:
-#         "../scripts/python/bedtools/otherdifficult/filter_vdj.py"
-
-
-# TODO use checkpoint here
 rule remove_vdj_gaps:
     input:
-        bed=rules.filter_vdj.output,
+        bed=lambda w: read_named_checkpoint("filter_cds", "vdj", w),
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        other_difficult_final_path("VDJ"),
+        odiff.final("VDJ"),
     conda:
         "../envs/bedtools.yml"
     shell:

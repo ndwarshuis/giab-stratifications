@@ -2,15 +2,7 @@ from os.path import splitext, basename
 from pathlib import Path
 from common.config import CoreLevel
 
-map_dir = CoreLevel.MAPPABILITY
-map_inter_dir = config.intermediate_build_dir / map_dir.value
-map_log_dir = config.log_build_dir / map_dir.value
-map_bench_dir = config.bench_build_dir / map_dir.value
-
-
-def map_final_path(name):
-    return config.build_strat_path(map_dir, name)
-
+mlty = config.to_bed_dirs(CoreLevel.MAPPABILITY)
 
 ################################################################################
 # download a bunch of stuff to run GEM
@@ -75,7 +67,7 @@ rule filter_mappability_ref:
         fa=rules.download_ref.output[0],
         idx=rules.index_ref.output[0],
     output:
-        map_inter_dir / "ref.fa",
+        mlty.inter.postsort.data / "ref.fa",
     conda:
         "../envs/bedtools.yml"
     script:
@@ -87,7 +79,7 @@ rule gem_index:
         fa=rules.filter_mappability_ref.output,
         bin=rules.unpack_gem.output.indexer,
     output:
-        map_inter_dir / "index.gem",
+        mlty.inter.postsort.data / "index.gem",
     params:
         base=lambda wildcards, output: splitext(output[0])[0],
     threads: 8
@@ -111,7 +103,7 @@ rule gem_mappability:
         fa=rules.gem_index.output,
         bin=rules.unpack_gem.output.mappability,
     output:
-        map_inter_dir / "unique_l{l}_m{m}_e{e}.mappability",
+        mlty.inter.postsort.data / "unique_l{l}_m{m}_e{e}.mappability",
     params:
         base=lambda wildcards, output: splitext(output[0])[0],
     threads: 8
@@ -139,7 +131,7 @@ rule gem_to_wig:
         map=rules.gem_mappability.output,
         bin=rules.unpack_gem.output.gem2wig,
     output:
-        map_inter_dir / "unique_l{l}_m{m}_e{e}.wig",
+        mlty.inter.postsort.data / "unique_l{l}_m{m}_e{e}.wig",
     params:
         base=lambda wildcards, output: splitext(output[0])[0],
     log:
@@ -163,7 +155,7 @@ rule wig_to_bed:
     input:
         rules.gem_to_wig.output,
     output:
-        map_inter_dir / "unique_l{l}_m{m}_e{e}.bed.gz",
+        mlty.inter.postsort.data / "unique_l{l}_m{m}_e{e}.bed.gz",
     conda:
         "../envs/map.yml"
     wildcard_constraints:
@@ -184,7 +176,7 @@ rule wig_to_bed:
 
 
 def nonunique_inputs(wildcards):
-    rk = wildcards.ref_key
+    rk = wildcards.ref_final_key
     bk = wildcards.build_key
     l, m, e = config.to_build_data(rk, bk).mappability_params
     return expand(rules.wig_to_bed.output, zip, allow_missing=True, l=l, m=m, e=e)
@@ -196,11 +188,11 @@ checkpoint merge_nonunique:
         gapless=rules.get_gapless.output.auto,
         genome=rules.get_genome.output,
     output:
-        map_inter_dir / "nonunique_output.json",
+        mlty.inter.postsort.data / "nonunique_output.json",
     params:
         path_pattern=lambda w: expand(
-            map_final_path("{{}}"),
-            ref_key=w.ref_key,
+            mtly.final("{{}}"),
+            ref_final_key=w.ref_final_key,
             build_key=w.build_key,
         )[0],
     conda:
@@ -209,17 +201,19 @@ checkpoint merge_nonunique:
         "../scripts/python/bedtools/mappability/merge_nonunique.py"
 
 
-def nonunique_inputs(ref_key, build_key):
-    c = checkpoints.merge_nonunique.get(ref_key=ref_key, build_key=build_key)
+def nonunique_inputs(ref_final_key, build_key):
+    c = checkpoints.merge_nonunique.get(
+        ref_final_key=ref_final_key, build_key=build_key
+    )
     with c.output[0].open() as f:
         return json.load(f)
 
 
 rule invert_merged_nonunique:
     input:
-        lambda w: nonunique_inputs(w.ref_key, w.build_key)["all_lowmap"],
+        lambda w: nonunique_inputs(w.ref_final_key, w.build_key)["all_lowmap"],
     output:
-        map_final_path("notinlowmappabilityall"),
+        mtly.final("notinlowmappabilityall"),
     conda:
         "../envs/bedtools.yml"
     params:
@@ -233,12 +227,14 @@ rule invert_merged_nonunique:
         """
 
 
-def nonunique_inputs_flat(ref_key, build_key):
-    res = nonunique_inputs(ref_key, build_key)
+def nonunique_inputs_flat(ref_final_key, build_key):
+    res = nonunique_inputs(ref_final_key, build_key)
     return [res["all_lowmap"], *res["single_lowmap"]]
 
 
-def mappabilty_inputs(ref_key, build_key):
-    return nonunique_inputs_flat(ref_key, build_key) + expand(
-        rules.invert_merged_nonunique.output, ref_key=ref_key, build_key=build_key
+def mappabilty_inputs(ref_final_key, build_key):
+    return nonunique_inputs_flat(ref_final_key, build_key) + expand(
+        rules.invert_merged_nonunique.output,
+        ref_final_key=ref_final_key,
+        build_key=build_key,
     )

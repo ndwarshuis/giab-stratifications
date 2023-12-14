@@ -1,20 +1,13 @@
 from common.config import CoreLevel
 
-func_dir = CoreLevel.FUNCTIONAL
-func_src_dir = config.ref_src_dir / func_dir.value
-func_inter_dir = config.intermediate_build_dir / func_dir.value
-func_log_build_dir = config.log_src_dir / func_dir.value
-
-
-def func_final_path(name):
-    return config.build_strat_path(func_dir, name)
+func = config.to_bed_dirs(CoreLevel.FUNCTIONAL)
 
 
 use rule download_ref as download_ftbl with:
     output:
-        config.ref_src_dir / "ftbl.txt.gz",
+        func.src.data / "ftbl.txt.gz",
     params:
-        src=lambda w: config.refkey_to_functional_ftbl_src(w.ref_key),
+        src=lambda w: config.refkey_to_functional_refsrckeys(si_to_ftbl, w.ref_src_key),
     localrule: True
     log:
         ref_master_log_dir / "ftbl.log",
@@ -22,22 +15,40 @@ use rule download_ref as download_ftbl with:
 
 use rule download_ref as download_gff with:
     output:
-        config.ref_src_dir / "gff.txt.gz",
+        func.src.data / "gff.txt.gz",
     params:
-        src=lambda w: config.refkey_to_functional_gff_src(w.ref_key),
+        src=lambda w: config.refkey_to_functional_refsrckeys(si_to_gff, w.ref_src_key),
     localrule: True
     log:
         ref_master_log_dir / "gff.log",
 
 
-rule filter_cds:
+checkpoint filter_cds:
     input:
-        gff=rules.download_gff.output,
-        ftbl=rules.download_ftbl.output,
+        unpack(
+            lambda w: {
+                k: expand(
+                    p,
+                    ref_src_key=config.refkey_to_functional_refsrckey(f, w.ref_key),
+                )
+                for k, f, p in zip(
+                    ["ftbl", "gff"],
+                    [si_to_ftbl, si_to_gff],
+                    [rules.download_ftbl.output, rules.download_gff.output],
+                )
+            }
+        ),
     output:
-        vdj=TODO,
-        cds=TODO,
-        # func_inter_dir / "refseq_cds.bed.gz",
+        {k: func.inter.filtersort.data / f"{k}.json" for k in ["cds", "vdj"]},
+    params:
+        cds_output=lambda w: expand(
+            func.inter.postsort.subbed / "cds.bed.gz",
+            build_key=w.build_key,
+        ),
+        vdj_output=lambda w: expand(
+            func.inter.postsort.subbed / "vdj.bed.gz",
+            build_key=w.build_key,
+        ),
     conda:
         "../envs/bedtools.yml"
     script:
@@ -46,11 +57,11 @@ rule filter_cds:
 
 rule merge_functional:
     input:
-        bed=rules.filter_cds.output,
+        bed=lambda w: read_named_checkpoint("filter_cds", "cds", w),
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        func_final_path("refseq_cds"),
+        func.final("refseq_cds"),
     conda:
         "../envs/bedtools.yml"
     shell:
@@ -67,7 +78,7 @@ rule invert_functional:
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
-        func_final_path("notinrefseq_cds"),
+        func.final("notinrefseq_cds"),
     conda:
         "../envs/bedtools.yml"
     shell:

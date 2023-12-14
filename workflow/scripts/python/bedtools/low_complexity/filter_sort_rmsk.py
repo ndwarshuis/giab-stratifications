@@ -3,20 +3,7 @@ import common.config as cfg
 
 
 def main(smk: Any) -> None:
-    def go(
-        x: cfg.BuildData_[
-            cfg.RefKeyT,
-            cfg.BuildKeyT,
-            cfg.RefSourceT,
-            cfg.AnyBedT,
-            cfg.AnyBedT_,
-            cfg.AnySrcT,
-            cfg.IncludeT,
-        ]
-    ) -> cfg.BedFile[cfg.AnyBedT] | None:
-        return x.refdata.strat_inputs.low_complexity.rmsk
-
-    cfg.filter_sort_bed_main(go, smk)
+    cfg.filter_sort_bed_main(lambda bd: cfg.bd_to_si(cfg.si_to_rmsk, bd), smk)
 
 
 main(snakemake)  # type: ignore
