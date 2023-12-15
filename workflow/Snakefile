@@ -11,6 +11,10 @@ from common.config import GiabStrats
 config = GiabStrats.parse_obj(config)
 
 
+def expand_final_to_src(paths, wildcards):
+    return expand(paths, ref_src_key=wildcards.ref_final_key)
+
+
 def read_checkpoint(rulename, wildcards):
     r = getattr(checkpoints, rulename)
     c = r.get(

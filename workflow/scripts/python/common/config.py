@@ -1471,28 +1471,22 @@ def with_ref_data(
         assert_never(rd)
 
 
-# def with_ref_data(
-#     x: ,
-#     hap_f: Callable[[HapRefData], X],
-#     dip1_f: Callable[[Dip1RefData], X],
-#     dip2_f: Callable[[Dip2RefData], X],
-# ) -> X:
-#     if isinstance(rd.ref, HapChrSource):
-#         return hap_f(rd)
-#     elif isinstance(rd.ref, DipChrSource1):
-#         return dip1_f(rd)
-#     elif isinstance(rd.ref, DipChrSource2):
-#         return dip2_f(rd)
-#     else:
-#         assert_never(rd)
-
-
 class BuildDataToBed(Protocol):
     A = TypeVar("A", HapBedSrc, DipBedSrc)
 
     def __call__(
         self,
         __x: BuildData_[RefKeyT, BuildKeyT, RefSourceT, A, AnyBedT_, AnySrcT, IncludeT],
+    ) -> BedFile[A] | None:
+        pass
+
+
+class BuildDataToVCF(Protocol):
+    A = TypeVar("A", HapBedSrc, Dip1BedSrc, Dip2BedSrc)
+
+    def __call__(
+        self,
+        __x: BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, A, AnySrcT, IncludeT],
     ) -> BedFile[A] | None:
         pass
 
@@ -2017,6 +2011,21 @@ class BedDirs(NamedTuple):
     final: Callable[[str], Path]
 
 
+class RefInterDirs(NamedTuple):
+    prebuild: DataLogBenchDirs
+    build: DataLogBenchDirs
+
+
+class RefSrcDirs(NamedTuple):
+    benchmark: DataLogDirs
+    reference: DataLogDirs
+
+
+class RefDirs(NamedTuple):
+    src: RefSrcDirs
+    inter: RefInterDirs
+
+
 # TODO add validator to ensure none of the keys in the strat/build dicts overlap
 class GiabStrats(BaseModel):
     """Top level stratification object."""
@@ -2199,6 +2208,33 @@ class GiabStrats(BaseModel):
     def build_strat_path(self, level: CoreLevel, name: str) -> Path:
         return self.build_final_strat_path(level.value, name)
 
+    @property
+    def ref_dirs(self) -> RefDirs:
+        return RefDirs(
+            src=RefSrcDirs(
+                reference=DataLogDirs(
+                    data=self.ref_src_dir / "reference",
+                    log=self.log_src_dir / "reference",
+                ),
+                benchmark=DataLogDirs(
+                    data=self.ref_src_dir / "benchmark" / "{build_key}",
+                    log=self.log_src_dir / "benchmark" / "{build_key}",
+                ),
+            ),
+            inter=RefInterDirs(
+                prebuild=DataLogBenchDirs(
+                    data=self.intermediate_root_dir / "{ref_final_key}",
+                    log=self.log_results_dir / "{ref_final_key}",
+                    bench=self.bench_root_dir / "{ref_final_key}",
+                ),
+                build=DataLogBenchDirs(
+                    data=self.intermediate_root_dir / "{ref_final_key}@{build_key}",
+                    log=self.log_results_dir / "{ref_final_key}@{build_key}",
+                    bench=self.bench_root_dir / "{ref_final_key}@{build_key}",
+                ),
+            ),
+        )
+
     def to_bed_dirs(self, level: CoreLevel) -> BedDirs:
         v = level.value
         return BedDirs(
@@ -2294,6 +2330,21 @@ class GiabStrats(BaseModel):
 
     def buildkey_to_bed_src(self, f: BuildDataToBed, rsk: str, bk: str) -> BedSrc:
         return self.refsrckey_to_bed_src(lambda rd: f(rd.to_build_data(bk)), rsk)
+
+    def buildkey_to_vcf_src(self, f: BuildDataToVCF, rsk: str, bk: str) -> BedSrc:
+        rk, hap = parse_final_refkey(rsk)
+        # TODO this doesn't feel DRY but might be because of the way vcf files
+        # correspond to the reference
+        return self.with_build_data(
+            rk,
+            bk,
+            lambda bd: none_unsafe(hap, not_none_unsafe(f(bd), lambda v: v.data.src)),
+            lambda bd: none_unsafe(hap, not_none_unsafe(f(bd), lambda v: v.data.src)),
+            lambda bd: not_none_unsafe(
+                f(bd),
+                lambda v: not_none_unsafe(hap, lambda h: v.data.src.from_either(h)),
+            ),
+        )
 
     def refkey_to_funcational_refsrckeys(
         self, f: StratInputToSrc, rk: str
@@ -3320,12 +3371,34 @@ def si_to_superdups(x: StratInputs_[AnyBedT, AnySrcT]) -> BedFile[AnyBedT] | Non
     return x.segdups.superdups
 
 
+def si_to_gaps(x: StratInputs_[AnyBedT, AnySrcT]) -> BedFile[AnyBedT] | None:
+    return x.gap
+
+
 def bd_to_other(
     lk: OtherLevelKey,
     sk: OtherStratKey,
     x: BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT],
 ) -> OtherBedFile[AnyBedT] | None:
     return x.build.other_strats[lk][sk]
+
+
+def bd_to_bench_bed(
+    x: BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT],
+) -> BedFile[AnyBedT] | None:
+    return fmap_maybe(lambda y: y.bench_bed, x.build.bench)
+
+
+def bd_to_bench_vcf(
+    x: BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT],
+) -> VCFFile[AnyBedT_] | None:
+    return fmap_maybe(lambda y: y.bench_vcf, x.build.bench)
+
+
+def bd_to_query_vcf(
+    x: BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT],
+) -> VCFFile[AnyBedT_] | None:
+    return fmap_maybe(lambda y: y.query_vcf, x.build.bench)
 
 
 def si_to_ftbl(x: StratInputs_[AnyBedT, AnySrcT]) -> AnySrcT | None:

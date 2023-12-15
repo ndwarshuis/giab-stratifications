@@ -1,20 +1,10 @@
-ref_dir = Path("ref")
-ref_inter_dir = config.intermediate_build_dir / ref_dir
-ref_log_src_dir = config.log_src_dir / ref_dir
-ref_log_build_dir = config.log_build_dir / ref_dir
-
-_ref_master_dir = ref_dir / "{ref_key}"
-ref_master_dir = config.intermediate_root_dir / _ref_master_dir
-ref_master_log_dir = config.log_results_dir / _ref_master_dir
-
-bench_src_dir = config.ref_src_dir / "bench"
-bench_src_log_dir = ref_log_src_dir / "bench"
+ref = config.ref_dirs
 
 
 # lots of things depend on PAR which is why this isn't part of the XY module
 rule write_PAR_intermediate:
     output:
-        ref_inter_dir / "chr{sex_chr}_PAR.bed.gz",
+        ref.inter.build.data / "chr{sex_chr}_PAR.bed.gz",
     conda:
         "../envs/bedtools.yml"
     localrule: True
@@ -24,11 +14,11 @@ rule write_PAR_intermediate:
 
 rule download_ref:
     output:
-        config.ref_src_dir / "ref.fna.gz",
+        ref.src.reference.data / "ref.fna.gz",
     params:
         src=lambda w: config.refkey_to_ref_src(w.ref_src_key),
     log:
-        ref_log_src_dir / "download_ref.log",
+        ref.src.reference.log / "download_ref.log",
     conda:
         "../envs/bedtools.yml"
     localrule: True
@@ -38,13 +28,13 @@ rule download_ref:
 
 rule index_ref:
     input:
-        lambda w: expand(rules.download_ref.output, ref_src_key=w.ref_key),
+        lambda w: expand_final_to_src(rules.download_ref.output, w),
     output:
-        ref_master_dir / "ref.fna.fai",
+        ref.inter.prebuild.data / "ref.fna.fai",
     conda:
         "../envs/utils.yml"
     log:
-        ref_master_log_dir / "index_ref.log",
+        ref.inter.prebuild.log / "index_ref.log",
     shell:
         """
         gunzip -c {input} | \
@@ -57,25 +47,25 @@ rule get_genome:
     input:
         rules.index_ref.output,
     output:
-        ref_inter_dir / "genome.txt",
+        ref.inter.build.data / "genome.txt",
     conda:
         "../envs/bedtools.yml"
     log:
-        ref_log_build_dir / "get_genome.log",
+        ref.inter.build.src / "get_genome.log",
     script:
         "../scripts/python/bedtools/ref/get_genome.py"
 
 
 rule filter_sort_ref:
     input:
-        fa=lambda w: expand(rules.download_ref.output, ref_src_key=w.ref_key),
+        fa=lambda w: expand_final_to_src(rules.download_ref.output, w),
         genome=rules.get_genome.output,
     output:
-        ref_inter_dir / "ref_filtered.fa",
+        ref.inter.build.data / "ref_filtered.fa",
     conda:
         "../envs/utils.yml"
     log:
-        ref_log_build_dir / "filter_sort_ref.log",
+        ref.inter.build.log / "filter_sort_ref.log",
     shell:
         """
         samtools faidx {input.fa} $(cut -f1 {input.genome} | tr '\n' ' ') 2> {log} | \
@@ -85,12 +75,12 @@ rule filter_sort_ref:
 
 use rule download_ref as download_gaps with:
     output:
-        config.ref_src_dir / "gap.bed.gz",
+        ref.src.reference.data / "gap.bed.gz",
     params:
-        src=lambda w: config.refkey_to_gap(w.ref_src_key).src,
+        src=lambda w: config.refsrckey_to_bed_src(si_to_gaps, w.ref_src_key),
     localrule: True
     log:
-        ref_log_src_dir / "download_gaps.log",
+        ref.src.reference.log / "download_gaps.log",
 
 
 def gapless_input(wildcards):
@@ -100,8 +90,9 @@ def gapless_input(wildcards):
         gaps = {
             "gaps": expand(
                 rules.download_gaps.output,
-                ref_src_key=sconf.refkey_to_refsrckey(
-                    lambda si: si.gaps,
+                ref_src_key=sconf.refkey_to_bed_refsrckeys(
+                    si_to_gaps,
+                    # TODO strip this to just the ref key
                     wildcards.ref_final_key,
                 ),
             )
@@ -126,78 +117,63 @@ rule get_gapless:
         unpack(gapless_input),
         genome=rules.get_genome.output[0],
     output:
-        auto=ref_inter_dir / "genome_gapless.bed.gz",
-        parY=ref_inter_dir / "genome_gapless_parY.bed.gz",
+        auto=ref.inter.build.data / "genome_gapless.bed.gz",
+        parY=ref.inter.build.data / "genome_gapless_parY.bed.gz",
     conda:
         "../envs/bedtools.yml"
     script:
         "../scripts/python/bedtools/ref/get_gapless.py"
 
 
-# rule ftbl_to_mapper:
-#     input:
-#         rules.download_ftbl.output,
-#     output:
-#         ref_inter_dir / "ftbl_mapper.json",
-#     conda:
-#         "../envs/bedtools.yml"
-#     script:
-#         "../scripts/python/bedtools/ref/get_ftbl_mapper.py"
-
-
-# rule gff_to_bed:
-#     input:
-#         rules.download_gff.output,
-#     output:
-#         ref_master_dir / "gff.bed.gz",
-#     conda:
-#         "../envs/bedtools.yml"
-#     shell:
-#         """
-#         gunzip -c {input} | \
-#         grep -v '^#' | \
-#         awk -F "\t" 'OFS="\t" {{ print $1,$4,$5,$2,$3,$9 }}' | \
-#         bgzip -c > {output}
-#         """
-
-
 use rule download_ref as download_bench_vcf with:
     output:
-        bench_src_dir / "{build_key}_bench.vcf.gz",
+        ref.src.benchmark.data / "bench.vcf.gz",
     params:
-        src=lambda w: config.refkey_to_bench_vcf_src(w.ref_key, w.build_key),
+        src=lambda w: config.buildkey_to_bed_src(
+            bd_to_bench_bed,
+            w.ref_src_key,
+            w.build_key,
+        ),
     localrule: True
     log:
-        bench_src_log_dir / "{build_key}_download_bench_vcf.log",
+        ref.src.benchmark.log / "download_bench_vcf.log",
 
 
 use rule download_ref as download_bench_bed with:
     output:
-        bench_src_dir / "{build_key}_bench.bed.gz",
+        ref.src.benchmark.data / "bench.bed.gz",
     params:
-        src=lambda w: config.refkey_to_bench_bed_src(w.ref_key, w.build_key),
+        src=lambda w: config.buildkey_to_vcf_src(
+            bd_to_bench_vcf,
+            w.ref_src_key,
+            w.build_key,
+        ),
     localrule: True
     log:
-        bench_src_log_dir / "{build_key}_download_bench_bed.log",
+        ref.src.benchmark.log / "download_bench_bed.log",
 
 
 use rule download_ref as download_query_vcf with:
     output:
-        bench_src_dir / "{build_key}_query.vcf.gz",
+        ref.src.benchmark.data / "{key}_query.vcf.gz",
     params:
-        src=lambda w: config.refkey_to_query_vcf_src(w.ref_key, w.build_key),
+        src=lambda w: config.buildkey_to_vcf_src(
+            bd_to_query_vcf,
+            w.ref_src_key,
+            w.build_key,
+        ),
     localrule: True
     log:
-        bench_src_log_dir / "{build_key}_download_query_vcf.log",
+        ref.src.benchmark.log / "{key}_download_query_vcf.log",
 
 
 rule filter_sort_bench_bed:
     input:
         rules.download_bench_bed.output,
     output:
-        ref_inter_dir / "bench_filtered.bed.gz",
+        ref.inter.build.data / "bench_filtered.bed.gz",
     log:
-        ref_log_build_dir / "bench_filtered.bed.gz",
+        ref.inter.build.log / "bench_filtered.bed.gz",
     conda:
         "../envs/bedtools.yml"
     script:
