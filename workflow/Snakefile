@@ -81,16 +81,17 @@ include: "rules/postprocess.smk"
 # the big stuff, like .fa files and large bed files)
 rule all_resources:
     input:
-        expand(rules.download_ref.output, ref_key=config.all_refkeys),
-        expand(rules.download_gaps.output, ref_key=config.all_refkey_gap),
-        expand(rules.download_rmsk.output, ref_key=config.all_refkey_rmsk),
-        expand(rules.download_trf.output, ref_key=config.all_refkey_trf),
-        expand(rules.download_censat.output, ref_key=config.all_refkey_censat),
-        expand(
-            rules.download_ftbl.output + rules.download_gff.output,
-            ref_key=config.all_refkey_functional,
-        ),
-        expand(rules.download_superdups.output, ref_key=config.all_refkey_segdups),
+        expand(rules.download_ref.output, ref_src_key=config.all_ref_refsrckeys),
+        expand(rules.download_gaps.output, ref_src_key=config.all_refkey_gap),
+        expand(rules.download_rmsk.output, ref_src_key=config.all_refkey_rmsk),
+        expand(rules.download_trf.output, ref_src_key=config.all_refkey_trf),
+        expand(rules.download_censat.output, ref_src_key=config.all_refkey_censat),
+        expand(rules.download_superdups.output, ref_src_key=config.all_refkey_segdups),
+        expand(rules.download_ftbl.output, ref_src_key=config.all_refkey_ftbl),
+        expand(rules.download_gff.output, ref_src_key=config.all_refkey_gff),
+        expand(rules.download_bench_vcf.output, ref_src_key=config.all_refkey_bench_vcf),
+        expand(rules.download_bench_bed.output, ref_src_key=config.all_refkey_bench_bed),
+        expand(rules.download_query_vcf.output, ref_src_key=config.all_refkey_query_vcf),
 
 
 rule all:

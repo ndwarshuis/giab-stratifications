@@ -5,6 +5,10 @@ Y = TypeVar("Y")
 Z = TypeVar("Z")
 
 
+def compose(g: Callable[[Y], Z], f: Callable[[X], Y]) -> Callable[[X], Z]:
+    return lambda x: g(f(x))
+
+
 def from_maybe(default: X, x: X | None) -> X:
     return default if x is None else x
 

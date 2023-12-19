@@ -8,30 +8,27 @@ post_log_dir = config.log_build_dir / "postprocess"
 validation_dir = config.final_root_dir / "validation"
 
 
-def expand_strat_targets_inner(ref_key, build_key):
+def expand_strat_targets_inner(ref_final_key, build_key):
+    bd = config.to_build_data(ref_final_key, build_key)
     function_targets = [
-        (all_low_complexity, config.want_low_complexity),
-        (gc_inputs_flat, config.want_gc),
-        (mappabilty_inputs, config.want_mappability),
-        (all_xy_sex, lambda *_: True),
-        (all_other, lambda *_: True),
+        (all_low_complexity, bd.want_low_complexity),
+        (gc_inputs_flat, bd.want_gc),
+        (mappabilty_inputs, bd.want_mappability),
+        (all_xy_sex, True),
+        (all_other, True),
     ]
     rule_targets = [
-        (rules.filter_autosomes.output, config.want_xy_auto),
-        (rules.all_functional.input, config.want_functional),
-        (rules.all_segdups.input, config.want_segdups),
-        (rules.find_telomeres.output, config.want_telomeres),
-        (rules.all_segdup_and_map.input, config.want_segdup_and_map),
-        (rules.all_alldifficult.input, config.want_alldifficult),
-        (rules.get_gaps.output, lambda r, _: config.want_gaps(r)),
-        (rules.remove_vdj_gaps.output, config.want_vdj),
+        (rules.filter_autosomes.output, bd.want_xy_auto),
+        (rules.all_functional.input, bd.want_functional),
+        (rules.all_segdups.input, bd.want_segdups),
+        (rules.find_telomeres.output, bd.want_telomeres),
+        (rules.all_segdup_and_map.input, bd.want_segdup_and_map),
+        (rules.all_alldifficult.input, bd.want_alldifficult),
+        (rules.get_gaps.output, lambda r, _: bd.want_gaps(r)),
+        (rules.remove_vdj_gaps.output, bd.want_vdj),
     ]
-    all_function = [
-        f(ref_key, build_key)
-        for f, test in function_targets
-        if test(ref_key, build_key)
-    ]
-    all_rule = [tgt for tgt, test in rule_targets if test(ref_key, build_key)]
+    all_function = [f(ref_final_key, build_key) for f, test in function_targets if test]
+    all_rule = [tgt for tgt, test in rule_targets if test]
 
     # combine and ensure that all "targets" refer to final bed files
     all_targets = [y for xs in all_function + all_rule for y in xs]
@@ -41,7 +38,7 @@ def expand_strat_targets_inner(ref_key, build_key):
 
 
 def expand_strat_targets(wildcards):
-    return expand_strat_targets_inner(wildcards.ref_key, wildcards.build_key)
+    return expand_strat_targets_inner(wildcards.ref_final_key, wildcards.build_key)
 
 
 rule list_all_strats:
@@ -58,7 +55,7 @@ rule generate_md5sums:
     input:
         rules.list_all_strats.output,
     output:
-        config.final_build_dir / "{ref_key}-genome-stratifications-md5s.txt",
+        config.final_build_dir / "{ref_final_key}-genome-stratifications-md5s.txt",
     conda:
         "../envs/bedtools.yml"
     script:
@@ -69,7 +66,7 @@ rule generate_tsv_list:
     input:
         rules.list_all_strats.output,
     output:
-        config.final_build_dir / "{ref_key}-all-stratifications.tsv",
+        config.final_build_dir / "{ref_final_key}-all-stratifications.tsv",
     localrule: True
     script:
         "../scripts/python/bedtools/postprocess/generate_tsv.py"
@@ -92,6 +89,7 @@ rule unit_test_strats:
         "../scripts/python/bedtools/postprocess/run_unit_tests.py"
 
 
+# TODO this is totally incorrect
 rks, bks = map(
     list,
     unzip([(rk, bk) for rk, r in config.stratifications.items() for bk in r.builds]),
@@ -121,18 +119,18 @@ rule compare_strats:
         _test=expand(
             rules.unit_test_strats.output,
             zip,
-            ref_key=rks,
+            ref_final_key=rks,
             build_key=bks,
         ),
         old=lambda w: expand(
             rules.download_comparison_strat_tarball.output,
-            compare_key=config.buildkey_to_comparekey(w.ref_key, w.build_key),
+            compare_key=config.buildkey_to_comparekey(w.ref_final_key, w.build_key),
         )[0],
         # use this to target a specific rule to satisfy the snakemake scheduler,
         # the thing I actually need here is the parent directory
         new_list=rules.generate_tsv_list.output[0],
     output:
-        validation_dir / "{ref_key}@{build_key}" / "diagnostics.tsv",
+        validation_dir / "{ref_final_key}@{build_key}" / "diagnostics.tsv",
     log:
         post_log_dir / "comparison.log",
     conda:
@@ -145,7 +143,7 @@ rule compare_strats:
 rule all_comparisons:
     input:
         [
-            expand(rules.compare_strats.output, ref_key=rk, build_key=bk)[0]
+            expand(rules.compare_strats.output, ref_final_key=rk, build_key=bk)[0]
             for rk, r in config.stratifications.items()
             for bk in r.builds
             if config.buildkey_to_comparekey(rk, bk) is not None
@@ -153,31 +151,27 @@ rule all_comparisons:
     localrule: True
 
 
-# Silly rule to make a dataframe which maps chromosome names to a common
-# nomenclature (for the validation markdown). The only reason this exists is
-# because snakemake apparently mangles this elegant list of tuples when I pass
-# it as a param to the rmd script...dataframe in IO monad it is :/
+# Rule to make a dataframe which maps chromosome names to a common nomenclature
+# (for the validation markdown). The only reason this exists is because
+# snakemake flattens this list of tuples when I pass it as a param to the rmd
+# script...dataframe in IO monad it is :/
 rule write_chr_name_mapper:
     output:
         config.intermediate_root_dir / ".validation" / "chr_mapper.tsv",
     localrule: True
     run:
         with open(output[0], "w") as f:
-            for ref_key, build_key in zip(rks, bks):
-                for i in config.buildkey_to_chr_indices(ref_key, build_key):
-                    pattern = config.refkey_to_final_chr_pattern(ref_key)
+            for ref_final_key, build_key in zip(rks, bks):
+                for i in config.buildkey_to_chr_indices(ref_final_key, build_key):
+                    pattern = config.refkey_to_final_chr_pattern(ref_final_key)
                     line = [
                         str(i.value),
-                        f"{ref_key}@{build_key}",
+                        f"{ref_final_key}@{build_key}",
                         i.chr_name_full(pattern),
                     ]
                     f.write("\t".join(line) + "\n")
 
 
-# TODO not sure how to make this work with diploid/haploid yet, my first
-# instinct is to just run it as haploid twice in the case of diploid just so I
-# don't need to add more logic to the Rmd. This will also inform how the above
-# dataframe hack should change (if at all)
 rule validate_strats:
     input:
         # this first input isn't actually used, but ensures the unit tests pass
@@ -185,19 +179,19 @@ rule validate_strats:
         _test=expand(
             rules.unit_test_strats.output,
             zip,
-            ref_key=rks,
+            ref_final_key=rks,
             build_key=bks,
         ),
         strats=expand(
             rules.list_all_strats.output,
             zip,
-            ref_key=rks,
+            ref_final_key=rks,
             build_key=bks,
         ),
         nonN=expand(
             rules.get_gapless.output.auto,
             zip,
-            ref_key=rks,
+            ref_final_key=rks,
             build_key=bks,
         ),
         chr_mapper=rules.write_chr_name_mapper.output,
@@ -239,7 +233,7 @@ rule run_happy:
         _test=expand(
             rules.unit_test_strats.output,
             zip,
-            ref_key=rks,
+            ref_final_key=rks,
             build_key=bks,
         ),
         refi=rules.index_unzipped_ref.output,
@@ -247,7 +241,6 @@ rule run_happy:
         bench_vcf=rules.download_bench_vcf.output,
         bench_bed=rules.filter_sort_bench_bed.output,
         query_vcf=rules.download_query_vcf.output,
-        # query_bed=rules.run_dipcall.output.bed,
         strats=rules.generate_tsv_list.output,
     output:
         post_inter_dir / "happy" / "happy.extended.csv",
@@ -267,7 +260,7 @@ rule summarize_happy:
         [
             expand(
                 rules.run_happy.output,
-                ref_key=rk,
+                ref_final_key=rk,
                 build_key=bk,
             )
             for rk, bk in zip(rks, bks)
@@ -302,7 +295,8 @@ rule generate_tarballs:
         all_strats=rules.generate_tsv_list.output,
         _checksums=rules.generate_md5sums.output,
     output:
-        config.final_root_dir / "genome-stratifications-{ref_key}@{build_key}.tar.gz",
+        config.final_root_dir
+        / "genome-stratifications-{ref_final_key}@{build_key}.tar.gz",
     params:
         parent=lambda _, input: Path(input.all_strats[0]).parent.parent,
         target=lambda _, input: Path(input.all_strats[0]).parent.name,
@@ -312,6 +306,7 @@ rule generate_tarballs:
         """
 
 
+# TODO expand rule is wrong
 rule checksum_everything:
     input:
         rules.copy_READMEs.output,
@@ -319,7 +314,7 @@ rule checksum_everything:
         rules.summarize_happy.output,
         rules.all_comparisons.input,
         [
-            expand(rules.generate_tarballs.output, ref_key=rk, build_key=bk)
+            expand(rules.generate_tarballs.output, ref_final_key=rk, build_key=bk)
             for rk, r in config.stratifications.items()
             for bk in r.builds
         ],
