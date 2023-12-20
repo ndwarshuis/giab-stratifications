@@ -41,10 +41,24 @@ from common.functional import (
 from common.io import is_gzip, is_bgzip
 import common.bed as bed
 
+
 W = TypeVar("W")
 X = TypeVar("X")
 Y = TypeVar("Y")
 Z = TypeVar("Z")
+
+
+# class Foo(Generic[X]):
+#     pass
+
+
+# class Bar(Generic[X]):
+#     pass
+
+
+# FooBar = Foo[X] | Bar[X]
+
+# A = TypeVar("A", Foo[int], Bar[int])
 
 
 Percent = Annotated[int, Field(ge=0, le=100)]
@@ -78,14 +92,14 @@ AnyRefKey = HapRefKey | Dip1RefKey | Dip2RefKey
 @dataclass(frozen=True)
 class RefKeyFull(Generic[RefKeyT]):
     key: RefKeyT
-    hap: "Haplotype" | None
+    hap: "Haplotype | None"
 
     @property
     def strip(self) -> RefKey_:
         return RefKey_(self.key)
 
     @property
-    def as_tuple(self) -> tuple[str, "Haplotype" | None]:
+    def as_tuple(self) -> "tuple[str, Haplotype | None]":
         return (str(self.key), self.hap)
 
     @property
@@ -188,21 +202,11 @@ class Haplotype(Enum):
 
 
 class _Src:
-    # def to_refkey_tuples(self, rk: RefKeyT) -> list[tuple[RefKeyT, Haplotype | None]]:
-    #     return NotImplemented
-
     def to_refkeys(self, rk: RefKeyT) -> list[RefKeyFull[RefKeyT]]:
-        # return [RefKeyFull(r, h) for r, h in self.to_refkey_tuples(rk)]
         return NotImplemented
-
-    # def to_reffinalkeys(self, rk: RefKeyT) -> list[RefFinalKey[RefKeyT]]:
-    #     return [RefFinalKey(r, h) for r, h in self.to_refkey_tuples(rk)]
 
     def to_str_refkeys(self, rk: RefKeyT) -> list[str]:
         return [k.name for k in self.to_refkeys(rk)]
-
-    # def to_str_reffinalkeys(self, rk: RefKeyT) -> list[str]:
-    #     return [k.name for k in self.to_reffinalkeys(rk)]
 
 
 # TODO this is silly, I don't want to be required to put "hap: blablab"
@@ -244,8 +248,8 @@ def parse_final_refkey(s: str) -> tuple[str, Haplotype | None]:
 
 
 # dummy Identity type to make higher-order types more consistent
-HapOnly = Union[Haploid_[X]]
-HapOrDip = Union[Haploid_[X], Diploid_[X]]
+# HapOnly = Union[Haploid_[X]]
+HapOrDip = Haploid_[X] | Diploid_[X]
 
 
 @unique
@@ -494,8 +498,8 @@ class DipChrSource2(BaseModel, Generic[X]):
     #     return [(rk, h) for h in Haplotype]
 
 
-DipChrSource = Union[DipChrSource1[X], DipChrSource2[X]]
-AnyChrSource = Union[HapChrSource[X], DipChrSource[X]]
+DipChrSource = DipChrSource1[X] | DipChrSource2[X]
+# AnyChrSource = Union[HapChrSource[X], DipChrSource[X]]
 
 
 class HashedSrc_(BaseModel):
@@ -548,7 +552,7 @@ RefSrc = RefFileSrc | RefHttpSrc
 
 # TODO this is for more than just "bed files" (right now it basically means "a
 # file that is either not zipped or gzipped but not bgzipped")
-BedSrc = Union[BedFileSrc, BedHttpSrc]
+BedSrc = BedFileSrc | BedHttpSrc
 
 AnySrcT = TypeVar("AnySrcT", Haploid_[BedSrc], Diploid_[BedSrc])
 
@@ -1196,7 +1200,6 @@ AnyStratInputs = HaploidStratInputs | DiploidStratInputs
 
 StratInputT = TypeVar("StratInputT", HaploidStratInputs, DiploidStratInputs)
 
-
 RefSourceT = TypeVar(
     "RefSourceT",
     HapChrSource[RefSrc],
@@ -1205,11 +1208,118 @@ RefSourceT = TypeVar(
 )
 
 
+@dataclass(frozen=True)
+class RefData_(
+    Generic[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT]
+):
+    refkey: RefKeyT
+    ref: RefSourceT
+    strat_inputs: StratInputs_[AnyBedT, AnySrcT]
+    builds: dict[BuildKeyT, Build_[AnyBedT, AnyBedT_, IncludeT]]
+
+    @property
+    def ref_refkeys(self) -> list[RefKeyFull[RefKeyT]]:
+        return self.ref.src.to_refkeys(self.refkey)
+
+    @property
+    def ref_str_refkeys(self) -> list[str]:
+        return self.ref.src.to_str_refkeys(self.refkey)
+
+    @property
+    def mappability_patterns(self) -> list[str]:
+        return fmap_maybe_def(
+            [],
+            lambda m: m.unplaced_chr_patterns,
+            self.strat_inputs.mappability,
+        )
+
+    def to_bed_refsrckeys(
+        self,
+        f: Callable[[StratInputs_[AnyBedT, AnySrcT]], BedFile[AnyBedT] | None],
+    ) -> list[str]:
+        return fmap_maybe_def(
+            [],
+            lambda b: b.data.src.to_str_refkeys(self.refkey),
+            f(self.strat_inputs),
+        )
+
+    def to_build_data_unsafe(
+        self,
+        bk: BuildKeyT,
+    ) -> "BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT]":
+        bd = self.to_build_data(bk)
+        if bd is None:
+            raise DesignError(f"Could not create build data from key '{bk}'")
+        return bd
+
+    def to_build_data(
+        self,
+        bk: BuildKeyT,
+    ) -> "BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT] | None":
+        try:
+            return BuildData_(self, bk, self.builds[bk])
+        except KeyError:
+            return None
+
+    def get_refkeys_unsafe(self, f: StratInputToSrc) -> list[str]:
+        return not_none_unsafe(
+            f(self.strat_inputs),
+            lambda s: s.to_str_refkeys(self.refkey),
+        )
+
+
+class HapRefData(
+    RefData_[
+        HapRefKey_,
+        HapChrSource[RefSrc],
+        HapBedSrc,
+        HapBedSrc,
+        Haploid_[BedSrc],
+        HapBuildKey,
+        HapInclude,
+    ]
+):
+    pass
+
+
+class Dip1RefData(
+    RefData_[
+        Dip1RefKey_,
+        DipChrSource1[RefSrc],
+        DipBedSrc,
+        Dip1BedSrc,
+        Diploid_[BedSrc],
+        Dip1BuildKey,
+        DipInclude,
+    ]
+):
+    pass
+
+
+class Dip2RefData(
+    RefData_[
+        Dip2RefKey_,
+        DipChrSource2[RefSrc],
+        DipBedSrc,
+        Dip2BedSrc,
+        Diploid_[BedSrc],
+        Dip2BuildKey,
+        DipInclude,
+    ]
+):
+    pass
+
+
+AnyRefData = HapRefData | Dip1RefData | Dip2RefData
+
+
 @dataclass
 class BuildData_(
     Generic[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT]
 ):
-    refdata: "RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT]"
+    refdata: RefData_[
+        RefKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT
+    ]
     buildkey: BuildKeyT
     build: Build_[AnyBedT, AnyBedT_, IncludeT]
 
@@ -1329,116 +1439,6 @@ class BuildData_(
         xs = [(m.length, m.mismatches, m.indels) for m in ms]
         # TODO mypy doesn't like unzip here for some reason :(
         return ([x[0] for x in xs], [x[1] for x in xs], [x[2] for x in xs])
-
-
-@dataclass(frozen=True)
-class RefData_(
-    Generic[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT]
-):
-    refkey: RefKeyT
-    ref: RefSourceT
-    strat_inputs: StratInputs_[AnyBedT, AnySrcT]
-    builds: dict[BuildKeyT, Build_[AnyBedT, AnyBedT_, IncludeT]]
-
-    @property
-    def ref_refkeys(self) -> list[RefKeyFull[RefKeyT]]:
-        return self.ref.src.to_refkeys(self.refkey)
-
-    @property
-    def ref_str_refkeys(self) -> list[str]:
-        return self.ref.src.to_str_refkeys(self.refkey)
-
-    @property
-    def mappability_patterns(self) -> list[str]:
-        return fmap_maybe_def(
-            [],
-            lambda m: m.unplaced_chr_patterns,
-            self.strat_inputs.mappability,
-        )
-
-    def to_bed_refsrckeys(
-        self,
-        f: Callable[[StratInputs_[AnyBedT, AnySrcT]], BedFile[AnyBedT] | None],
-    ) -> list[str]:
-        return fmap_maybe_def(
-            [],
-            lambda b: b.data.src.to_str_refkeys(self.refkey),
-            f(self.strat_inputs),
-        )
-
-    def to_build_data_unsafe(
-        self,
-        bk: BuildKeyT,
-    ) -> BuildData_[
-        RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT
-    ]:
-        bd = self.to_build_data(bk)
-        if bd is None:
-            raise DesignError(f"Could not create build data from key '{bk}'")
-        return bd
-
-    def to_build_data(
-        self,
-        bk: BuildKeyT,
-    ) -> (
-        BuildData_[RefKeyT, BuildKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, IncludeT]
-        | None
-    ):
-        try:
-            return BuildData_(self, bk, self.builds[bk])
-        except KeyError:
-            return None
-
-    def get_refkeys_unsafe(self, f: StratInputToSrc) -> list[str]:
-        return not_none_unsafe(
-            f(self.strat_inputs),
-            lambda s: s.to_str_refkeys(self.refkey),
-        )
-
-
-class HapRefData(
-    RefData_[
-        HapRefKey_,
-        HapChrSource[RefSrc],
-        HapBedSrc,
-        HapBedSrc,
-        Haploid_[BedSrc],
-        HapBuildKey,
-        HapInclude,
-    ]
-):
-    pass
-
-
-class Dip1RefData(
-    RefData_[
-        Dip1RefKey_,
-        DipChrSource1[RefSrc],
-        DipBedSrc,
-        Dip1BedSrc,
-        Diploid_[BedSrc],
-        Dip1BuildKey,
-        DipInclude,
-    ]
-):
-    pass
-
-
-class Dip2RefData(
-    RefData_[
-        Dip2RefKey_,
-        DipChrSource2[RefSrc],
-        DipBedSrc,
-        Dip2BedSrc,
-        Diploid_[BedSrc],
-        Dip2BuildKey,
-        DipInclude,
-    ]
-):
-    pass
-
-
-AnyRefData = HapRefData | Dip1RefData | Dip2RefData
 
 
 def with_ref_data(
@@ -2116,6 +2116,7 @@ class GiabStrats(BaseModel):
     paths: Paths = Paths()
     tools: Tools = Tools()
     haploid_stratifications: HaploidStratDict = HaploidStratDict()
+    # haploid_stratifications: dict[HapRefKey_, HapStrat] = {}
     diploid1_stratifications: Diploid1StratDict = Diploid1StratDict()
     diploid2_stratifications: Diploid2StratDict = Diploid2StratDict()
     comparison_strats: dict[CompareKey, HttpUrl] = {}
@@ -2147,28 +2148,29 @@ class GiabStrats(BaseModel):
         "segdups",
     ]
 
-    @validator("stratifications", each_item=True)
-    def builds_have_valid_existing(
-        cls,
-        v: HapStrat,
-        values: dict[str, Any],
-    ) -> HapStrat:
-        try:
-            levels = cast(list[OtherLevelKey], values["other_levels"])
-            bad = [
-                f"level='{lk}'; build='{bk}'"
-                for bk, b in v.builds.items()
-                for lk in b.other_strats
-                if lk not in levels
-            ]
-            if len(bad) > 0:
-                assert (
-                    False
-                ), f"builds referencing invalid strat categories: {', '.join(bad)}"
-        except KeyError:
-            pass
-        return v
+    # @validator("stratifications", each_item=True)
+    # def builds_have_valid_existing(
+    #     cls,
+    #     v: HapStrat,
+    #     values: dict[str, Any],
+    # ) -> HapStrat:
+    #     try:
+    #         levels = cast(list[OtherLevelKey], values["other_levels"])
+    #         bad = [
+    #             f"level='{lk}'; build='{bk}'"
+    #             for bk, b in v.builds.items()
+    #             for lk in b.other_strats
+    #             if lk not in levels
+    #         ]
+    #         if len(bad) > 0:
+    #             assert (
+    #                 False
+    #             ), f"builds referencing invalid strat categories: {', '.join(bad)}"
+    #     except KeyError:
+    #         pass
+    #     return v
 
+    # TODO extend this to the other types
     @validator("haploid_stratifications", each_item=True)
     def builds_have_valid_old_version(
         cls,

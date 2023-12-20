@@ -16,7 +16,7 @@
 #
 # The top level defines each of the stratfications, in this case named 'GRCh38',
 # 'GRCh37', etc.
-stratifications:
+haploid_stratifications:
   GRCh38:
     # The fasta for this stratification's reference.
     ref:
@@ -28,19 +28,20 @@ stratifications:
         #
         # filepath: path/to/local/file
         # url: https://url/to/file
-        url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/references/GRCh38/GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta.gz
+        hap:
+          url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/references/GRCh38/GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta.gz
 
-        # MD5 checksum of the file. This is optional, and if not given the
-        # checksum could be anything. Recommended to be used after one has
-        # committed to using a particular set of inputs, and in particular if
-        # one suspects that the sources of said inputs might not be good
-        # stewards (eg, they change files without warning).
-        #
-        # NOTE: the md5 will be calculated against the plain text content of the
-        # file rather than the gzipped version (gzip records lots of
-        # location-specific data in the file header which will throw off the
-        # checksum)
-        md5: a6da8681616c05eb542f1d91606a7b2f
+          # MD5 checksum of the file. This is optional, and if not given the
+          # checksum could be anything. Recommended to be used after one has
+          # committed to using a particular set of inputs, and in particular if
+          # one suspects that the sources of said inputs might not be good
+          # stewards (eg, they change files without warning).
+          #
+          # NOTE: the md5 will be calculated against the plain text content of the
+          # file rather than the gzipped version (gzip records lots of
+          # location-specific data in the file header which will throw off the
+          # checksum)
+          md5: a6da8681616c05eb542f1d91606a7b2f
 
       # The pattern of each chromosome. This must match the fasta exactly or
       # weird things will happen. The final stratification beds will also have
@@ -68,11 +69,12 @@ stratifications:
           #
           # filepath: path/to/local/file
           # url: https://url/to/file
-          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
+          hap:
+            url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
   
-          # Analogous for that in 'ref' except the checksum is calculated after
-          # gzipping the file if it is not already compressed
-          md5: 4880b2f4c3f08766003855818f0db02d
+            # Analogous for that in 'ref' except the checksum is calculated after
+            # gzipping the file if it is not already compressed
+            md5: 4880b2f4c3f08766003855818f0db02d
   
         # Params for the bed file
         params:

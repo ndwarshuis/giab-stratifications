@@ -3,77 +3,94 @@
 # the following is a typical large-scale config (in this case which should
 # closely match a subset of the v3.1 strats for GRCh38)
 
-stratifications:
+haploid_stratifications:
   GRCh38-full:
     ref:
       src:
-        url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/references/GRCh38/GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta.gz
-        md5: a6da8681616c05eb542f1d91606a7b2f
-    gap:
-      src: 
-        url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
-        md5: 4880b2f4c3f08766003855818f0db02d
-      params:
-        bed_cols: {chr: 1, start: 2, end: 3}
-
-    low_complexity:
-      rmsk:
-        src:
-          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
-          md5: e8afed8cbcfef00b6cc47059c6fb6fa2
-        params:
-          bed_cols: {chr: 5, start: 6, end: 7}
-        class_col: 11
-
-      satellites: null
-
-      simreps:
-        src: 
-          url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
-          md5: b0e801344ba654a5146a2ba3e9973462
+        hap:
+          url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/references/GRCh38/GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta.gz
+          md5: a6da8681616c05eb542f1d91606a7b2f
+    strat_inputs:
+      gap:
+        data:
+          src: 
+            hap:
+              url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/gap.txt.gz
+              md5: 4880b2f4c3f08766003855818f0db02d
         params:
           bed_cols: {chr: 1, start: 2, end: 3}
 
-    xy:
-      features: 
-        x_bed:
-          src: 
-            url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed
-            md5: 94acda1d4358d30753422799152f4310
-          level_col: 3
-        y_bed:
-          src: 
-            url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
-            md5: 770682734c41f5f7c1655adf1f986cb6
-          level_col: 3
-        xtr: true
-        ampliconic: true
-      x_par:
-        start: [0, 2781479]
-        end: [155701383, 156030895]
-      y_par:
-        start: [10001, 2781479]
-        end: [56887902, 57217415]
+      low_complexity:
+        rmsk:
+          data:
+            src:
+                hap:
+                url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
+                md5: e8afed8cbcfef00b6cc47059c6fb6fa2
+          params:
+            bed_cols: {chr: 5, start: 6, end: 7}
+          class_col: 11
 
-    segdups:
-      superdups:
-        src:
-          url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/genomicSuperDups.txt.gz
-          md5: 502e2b4dd6bf0cbd8dbdd9eb373aaa8e
-        params:
-          bed_cols: {chr: 1, start: 2, end: 3}
+        satellites: null
 
-    functional:
-      ftbl_src:
-        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_feature_table.txt.gz
-        md5: e8c6e0bd7a29aee17bc067d0782da065
-      gff_src:
-        url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gff.gz
-        md5: 6b657881c2c8d2d099a1c1749299538e
+        simreps:
+          data:
+            src: 
+              hap:
+                url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
+                md5: b0e801344ba654a5146a2ba3e9973462
+          params:
+            bed_cols: {chr: 1, start: 2, end: 3}
 
-    mappability:
-      unplaced_chr_patterns: ["^chrM$", "^chr[^_]+_[^_]+$"]
+      xy:
+        features: 
+          x_bed:
+            data:
+              src: 
+                hap:
+                  url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrX_genomic_features_GRCh38.bed
+                  md5: 94acda1d4358d30753422799152f4310
+            level_col: 3
+          y_bed:
+            data:
+              src: 
+                hap:
+                  url: https://raw.githubusercontent.com/SexChrLab/SexChrCoordinates/4ad1faf2b822db6fb89498a750d0b5336703fde3/GRCh38/chrY_genomic_features_GRCh38.bed
+                  md5: 770682734c41f5f7c1655adf1f986cb6
+            level_col: 3
+          xtr: true
+          ampliconic: true
+        x_par:
+          start: [0, 2781479]
+          end: [155701383, 156030895]
+        y_par:
+          start: [10001, 2781479]
+          end: [56887902, 57217415]
+
+      segdups:
+        superdups:
+          data:
+            src:
+              hap:
+                url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/genomicSuperDups.txt.gz
+                md5: 502e2b4dd6bf0cbd8dbdd9eb373aaa8e
+          params:
+            bed_cols: {chr: 1, start: 2, end: 3}
+
+      functional:
+        ftbl_src:
+          hap:
+            url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_feature_table.txt.gz
+            md5: e8c6e0bd7a29aee17bc067d0782da065
+        gff_src:
+          hap:
+            url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.gff.gz
+            md5: 6b657881c2c8d2d099a1c1749299538e
+
+      mappability:
+        unplaced_chr_patterns: ["^chrM$", "^chr[^_]+_[^_]+$"]
 
     builds:
       test-autosome:
         chr_filter: []
+        include: {}
