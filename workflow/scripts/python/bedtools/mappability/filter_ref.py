@@ -40,7 +40,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             c
             for c in idx[0].tolist()
             if c in main_chrs
-            or any(re.match(p, c) is not None for p in bd.mappability_patterns)
+            or any(re.match(p, c) is not None for p in bd.refdata.mappability_patterns)
         ]
         with open(Path(smk.output[0]), "w") as f:
             # ASSUME sort order doesn't matter and ref is bgzip'd or unzip'd

@@ -99,7 +99,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     def write_vdj_maybe1(
         switch: bool,
-        rfk: cfg.RefFinalKey[cfg.RefKeyT],
+        rfk: cfg.RefKeyFull[cfg.RefKeyT],
         df: pd.DataFrame,
     ) -> list[Path]:
         if switch:
@@ -111,7 +111,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     def write_vdj_maybe2(
         switch: bool,
-        rfks: tuple[cfg.RefFinalKey[cfg.RefKeyT], cfg.RefFinalKey[cfg.RefKeyT]],
+        rfks: tuple[cfg.RefKeyFull[cfg.RefKeyT], cfg.RefKeyFull[cfg.RefKeyT]],
         df: tuple[pd.DataFrame, pd.DataFrame],
     ) -> list[Path]:
         if switch:
@@ -125,7 +125,9 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             return []
 
     def hap(bd: cfg.HapBuildData) -> tuple[list[Path], list[Path]]:
-        c = cfg.sub_output_path(cds_pattern, bd.refdata.nohap_final)
+        rd = bd.refdata
+        rk = rd.ref.src.key(rd.refkey)
+        c = cfg.sub_output_path(cds_pattern, rk)
 
         def go(f: Path, g: Path) -> pd.DataFrame:
             im = read_ftbl(f, bd.chr_indices, cfg.Haplotype.HAP1)
@@ -139,11 +141,13 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             lambda x: go(*x),
         )
 
-        v = write_vdj_maybe1(bd.build.include.vdj, bd.refdata.nohap_final, gff)
+        v = write_vdj_maybe1(bd.build.include.vdj, rk, gff)
         return [c], v
 
     def dip1(bd: cfg.Dip1BuildData) -> tuple[list[Path], list[Path]]:
         fm = bd.final_mapper
+        rd = bd.refdata
+        rk = rd.ref.src.key(rd.refkey)
 
         im = match12_unsafe(
             ftbl_inputs,
@@ -164,10 +168,10 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             ),
         )
 
-        c = cfg.sub_output_path(cds_pattern, bd.refdata.nohap_final)
+        c = cfg.sub_output_path(cds_pattern, rk)
         write_gff(c, cds_mask, gff)
 
-        v = write_vdj_maybe1(bd.build.include.vdj, bd.refdata.nohap_final, gff)
+        v = write_vdj_maybe1(bd.build.include.vdj, rk, gff)
         return [c], v
 
     def dip2(bd: cfg.Dip2BuildData) -> tuple[list[Path], list[Path]]:
@@ -197,14 +201,15 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             ),
         )
 
-        rfks = bd.refdata.haps_final
+        rd = bd.refdata
+        rks = rd.ref.src.keys(rd.refkey)
 
-        cs = both(lambda r: cfg.sub_output_path(cds_pattern, r), rfks)
+        cs = both(lambda r: cfg.sub_output_path(cds_pattern, r), rks)
 
         write_gff(cs[0], cds_mask, gffs[0])
         write_gff(cs[1], cds_mask, gffs[1])
 
-        vs = write_vdj_maybe2(bd.build.include.vdj, rfks, gffs)
+        vs = write_vdj_maybe2(bd.build.include.vdj, rks, gffs)
         return [*cs], vs
 
     cs, vs = sconf.with_build_data(ws["ref_key"], ws["build_key"], hap, dip1, dip2)

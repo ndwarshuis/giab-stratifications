@@ -1940,7 +1940,7 @@ Diploid2StratDict = StratDict_[
 ]
 
 
-def sub_output_path(pat: str, rk: RefFinalKey[RefKeyT]) -> Path:
+def sub_output_path(pat: str, rk: RefKeyFull[RefKeyT]) -> Path:
     if "{" in pat or "}" in pat:
         raise DesignError(f"not all wildcards replaced in pattern {pat}")
     return Path(pat.replace("%s", rk.name))
