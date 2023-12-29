@@ -2,7 +2,6 @@ from more_itertools import unzip, flatten
 from collections import namedtuple
 from common.config import (
     CoreLevel,
-    parse_refkey,
     si_to_rmsk,
     si_to_trf,
     si_to_satellites,

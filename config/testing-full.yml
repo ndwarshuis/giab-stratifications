@@ -24,7 +24,7 @@ haploid_stratifications:
         rmsk:
           data:
             src:
-                hap:
+              hap:
                 url: https://hgdownload.cse.ucsc.edu/goldenPath/hg38/database/rmsk.txt.gz
                 md5: e8afed8cbcfef00b6cc47059c6fb6fa2
           params:

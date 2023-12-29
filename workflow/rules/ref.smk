@@ -51,7 +51,7 @@ rule get_genome:
     conda:
         "../envs/bedtools.yml"
     log:
-        ref.inter.build.src / "get_genome.log",
+        ref.inter.build.data / "get_genome.log",
     script:
         "../scripts/python/bedtools/ref/get_genome.py"
 

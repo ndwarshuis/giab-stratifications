@@ -10,7 +10,7 @@ use rule download_ref as download_ftbl with:
         src=lambda w: config.refkey_to_functional_refsrckeys(si_to_ftbl, w.ref_src_key),
     localrule: True
     log:
-        ref_master_log_dir / "ftbl.log",
+        func.src.log / "ftbl.log",
 
 
 use rule download_ref as download_gff with:
@@ -20,7 +20,7 @@ use rule download_ref as download_gff with:
         src=lambda w: config.refkey_to_functional_refsrckeys(si_to_gff, w.ref_src_key),
     localrule: True
     log:
-        ref_master_log_dir / "gff.log",
+        func.src.log / "gff.log",
 
 
 checkpoint filter_cds:

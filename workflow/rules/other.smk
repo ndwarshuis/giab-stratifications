@@ -39,12 +39,12 @@ rule filter_sort_other:
             ),
         ),
     output:
-        self.intermediate_build_hapless_dir
+        config.intermediate_build_hapless_dir
         / "{other_level_key}"
         / "{other_strat_key}.json",
     params:
         output_pattern=lambda w: expand(
-            self.intermediate_build_dir
+            config.intermediate_build_dir
             / "{other_level_key}"
             / "{other_strat_key}.bed.gz",
             ref_final_key="%s",

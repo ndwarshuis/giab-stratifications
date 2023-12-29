@@ -92,7 +92,7 @@ rule unit_test_strats:
 # TODO this is totally incorrect
 rks, bks = map(
     list,
-    unzip([(rk, bk) for rk, r in config.stratifications.items() for bk in r.builds]),
+    unzip([(rk, bk) for rk, bk in config.all_build_keys]),
 )
 
 
@@ -124,7 +124,9 @@ rule compare_strats:
         ),
         old=lambda w: expand(
             rules.download_comparison_strat_tarball.output,
-            compare_key=config.buildkey_to_comparekey(w.ref_final_key, w.build_key),
+            compare_key=config.to_build_data(
+                w.ref_final_key, w.build_key
+            ).build.compare_key,
         )[0],
         # use this to target a specific rule to satisfy the snakemake scheduler,
         # the thing I actually need here is the parent directory
@@ -144,9 +146,8 @@ rule all_comparisons:
     input:
         [
             expand(rules.compare_strats.output, ref_final_key=rk, build_key=bk)[0]
-            for rk, r in config.stratifications.items()
-            for bk in r.builds
-            if config.buildkey_to_comparekey(rk, bk) is not None
+            for rk, bk in config.all_build_keys
+            if config.to_build_data(rk, bk).build.compare_key is not None
         ],
     localrule: True
 
@@ -264,7 +265,7 @@ rule summarize_happy:
                 build_key=bk,
             )
             for rk, bk in zip(rks, bks)
-            if config.want_benchmark(rk, bk)
+            if config.to_build_data(rk, bk).want_benchmark
         ],
     output:
         validation_dir / "benchmark_summary.html",
@@ -315,8 +316,7 @@ rule checksum_everything:
         rules.all_comparisons.input,
         [
             expand(rules.generate_tarballs.output, ref_final_key=rk, build_key=bk)
-            for rk, r in config.stratifications.items()
-            for bk in r.builds
+            for rk, bk in config.all_build_keys
         ],
     output:
         config.final_root_dir / "genome-stratifications-md5s.txt",

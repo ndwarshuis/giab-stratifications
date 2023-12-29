@@ -84,9 +84,9 @@ rule gem_index:
         base=lambda wildcards, output: splitext(output[0])[0],
     threads: 8
     log:
-        map_log_dir / "index.log",
+        mlty.inter.postsort.log / "index.log",
     benchmark:
-        map_bench_dir / "index.txt"
+        mlty.inter.postsort.bench / "index.txt"
     shell:
         """
         PATH={config.tools_bin_dir}:$PATH
@@ -108,9 +108,9 @@ rule gem_mappability:
         base=lambda wildcards, output: splitext(output[0])[0],
     threads: 8
     log:
-        map_log_dir / "mappability_l{l}_m{m}_e{e}.log",
+        mlty.inter.postsort.data / "mappability_l{l}_m{m}_e{e}.log",
     benchmark:
-        map_bench_dir / "mappability_l{l}_m{m}_e{e}.txt"
+        mlty.inter.postsort.bench / "mappability_l{l}_m{m}_e{e}.txt"
     wildcard_constraints:
         **gem_wc_constraints,
     shell:
@@ -135,9 +135,9 @@ rule gem_to_wig:
     params:
         base=lambda wildcards, output: splitext(output[0])[0],
     log:
-        map_log_dir / "gem2wig_l{l}_m{m}_e{e}.log",
+        mlty.inter.postsort.log / "gem2wig_l{l}_m{m}_e{e}.log",
     benchmark:
-        map_bench_dir / "gem2wig_l{l}_m{m}_e{e}.txt"
+        mlty.inter.postsort.bench / "gem2wig_l{l}_m{m}_e{e}.txt"
     wildcard_constraints:
         **gem_wc_constraints,
     shell:
@@ -213,7 +213,7 @@ rule invert_merged_nonunique:
     input:
         lambda w: nonunique_inputs(w.ref_final_key, w.build_key)["all_lowmap"],
     output:
-        mtly.final("notinlowmappabilityall"),
+        mlty.final("notinlowmappabilityall"),
     conda:
         "../envs/bedtools.yml"
     params:
