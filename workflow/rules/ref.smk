@@ -1,3 +1,5 @@
+from common.config import si_to_gaps
+
 ref = config.ref_dirs
 
 
@@ -16,7 +18,7 @@ rule download_ref:
     output:
         ref.src.reference.data / "ref.fna.gz",
     params:
-        src=lambda w: config.refkey_to_ref_src(w.ref_src_key),
+        src=lambda w: config.refsrckey_to_ref_src(w.ref_src_key),
     log:
         ref.src.reference.log / "download_ref.log",
     conda:
@@ -84,20 +86,19 @@ use rule download_ref as download_gaps with:
 
 
 def gapless_input(wildcards):
-    # TODO this function won't work (or it will but I'll need to catch an
-    # exception, less obvious :/)
-    if config.refkey_to_gap(wildcards.ref_key):
+    si = config.to_ref_data(wildcards.ref_final_key).strat_inputs
+    if si.gap is not None:
         gaps = {
             "gaps": expand(
                 rules.download_gaps.output,
-                ref_src_key=sconf.refkey_to_bed_refsrckeys(
+                ref_src_key=config.refkey_to_bed_refsrckeys(
                     si_to_gaps,
                     # TODO strip this to just the ref key
                     wildcards.ref_final_key,
                 ),
             )
         }
-        if config.refkey_to_y_PAR(wildcards.ref_key) is None:
+        if si.xy.y_par is None:
             return gaps
         else:
             return {

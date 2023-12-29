@@ -11,7 +11,7 @@ from pathlib import Path
 from pydantic import BaseModel as BaseModel_
 from pydantic.generics import GenericModel as GenericModel_
 from pydantic import validator, HttpUrl, FilePath, NonNegativeInt, Field
-from dataclasses import dataclass, astuple
+from dataclasses import dataclass
 from enum import Enum, unique
 from typing import (
     TypeAlias,
@@ -1243,6 +1243,18 @@ class RefData_(
             lambda s: s.to_str_refkeys(self.refkey),
         )
 
+    @property
+    def has_low_complexity_rmsk(self) -> bool:
+        return self.strat_inputs.low_complexity.rmsk is not None
+
+    @property
+    def has_low_complexity_simreps(self) -> bool:
+        return self.strat_inputs.low_complexity.simreps is not None
+
+    @property
+    def has_low_complexity_censat(self) -> bool:
+        return self.strat_inputs.low_complexity.satellites is not None
+
 
 class HapRefData(
     RefData_[
@@ -1860,7 +1872,8 @@ def all_bed_refsrckeys(
     return [
         k
         for b in all_build_data(xs)
-        for k in not_none_unsafe(f(b), lambda src: src.to_str_refkeys(b.refdata.refkey))
+        if (src := f(b)) is not None
+        for k in src.to_str_refkeys(b.refdata.refkey)
     ]
 
 
@@ -2358,8 +2371,9 @@ class GiabStrats(BaseModel):
 
     # general accessors
 
-    def reffinalkey_to_ref_src(self, rfk: str) -> RefSrc | None:
-        rk, hap = parse_final_refkey(rfk)
+    def refsrckey_to_ref_src(self, rsk: str) -> RefSrc | None:
+        # TODO misleading name
+        rk, hap = parse_final_refkey(rsk)
         src = self.to_ref_data(rk).ref.src
         return from_hap_or_dip(src, hap)
 
@@ -2559,13 +2573,13 @@ class GiabStrats(BaseModel):
     # def all_refdata(self) -> list[AnyRefData]:
     #     # TODO lame....
     #     return (
-    #         [HapRefData(*astuple(x)) for x in self.haploid_stratifications.all_ref_data]
+    #         [HapRefData(**asdict(x)) for x in self.haploid_stratifications.all_ref_data]
     #         + [
-    #             Dip1RefData(*astuple(x))
+    #             Dip1RefData(**asdict(x))
     #             for x in self.diploid1_stratifications.all_ref_data
     #         ]
     #         + [
-    #             Dip2RefData(*astuple(x))
+    #             Dip2RefData(**asdict(x))
     #             for x in self.diploid2_stratifications.all_ref_data
     #         ]
     #     )
@@ -2593,15 +2607,24 @@ class GiabStrats(BaseModel):
         k = self.parse_refkey(rk)
         if isinstance(k, HapRefKey_):
             return HapRefData(
-                *astuple(to_ref_data_unsafe(self.haploid_stratifications, k))
+                (rd := to_ref_data_unsafe(self.haploid_stratifications, k)).refkey,
+                rd.ref,
+                rd.strat_inputs,
+                rd.builds,
             )
         elif isinstance(k, Dip1RefKey_):
             return Dip1RefData(
-                *astuple(to_ref_data_unsafe(self.diploid1_stratifications, k))
+                (rd0 := to_ref_data_unsafe(self.diploid1_stratifications, k)).refkey,
+                rd0.ref,
+                rd0.strat_inputs,
+                rd0.builds,
             )
         elif isinstance(k, Dip2RefKey_):
             return Dip2RefData(
-                *astuple(to_ref_data_unsafe(self.diploid2_stratifications, k))
+                (rd1 := to_ref_data_unsafe(self.diploid2_stratifications, k)).refkey,
+                rd1.ref,
+                rd1.strat_inputs,
+                rd1.builds,
             )
         else:
             assert_never(k)
@@ -2616,16 +2639,23 @@ class GiabStrats(BaseModel):
         return with_ref_data(self.to_ref_data(rk), hap_f, dip1_f, dip2_f)
 
     def to_build_data(self, rk: str, bk: str) -> AnyBuildData:
+        # TODO gross...
         return with_ref_data(
             self.to_ref_data(rk),
             lambda rd: HapBuildData(
-                *astuple(rd.to_build_data_unsafe(HapBuildKey(bk))),
+                (bd := rd.to_build_data_unsafe(HapBuildKey(bk))).refdata,
+                bd.buildkey,
+                bd.build,
             ),
-            lambda rd: HapBuildData(
-                *astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk))),
+            lambda rd: Dip1BuildData(
+                (bd0 := rd.to_build_data_unsafe(Dip1BuildKey(bk))).refdata,
+                bd0.buildkey,
+                bd0.build,
             ),
-            lambda rd: HapBuildData(
-                *astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk))),
+            lambda rd: Dip2BuildData(
+                (bd0 := rd.to_build_data_unsafe(Dip2BuildKey(bk))).refdata,
+                bd0.buildkey,
+                bd0.build,
             ),
         )
 
@@ -2736,27 +2766,48 @@ class GiabStrats(BaseModel):
         dip_2to1_f: Callable[[Dip1BuildData, Dip2BedFile], Z],
         dip_2to2_f: Callable[[Dip2BuildData, Dip2BedFile], Z],
     ) -> Z:
+        # TODO gross...
         return self.with_ref_data_and_bed(
             rk,
             lambda bd: get_bed_f(bd.strat_inputs),
             lambda rd, bf: hap_f(
-                HapBuildData(*astuple(rd.to_build_data_unsafe(HapBuildKey(bk)))),
+                HapBuildData(
+                    (bd := rd.to_build_data_unsafe(HapBuildKey(bk))).refdata,
+                    bd.buildkey,
+                    bd.build,
+                ),
                 bf,
             ),
             lambda rd, bf: dip_1to1_f(
-                Dip1BuildData(*astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk)))),
+                Dip1BuildData(
+                    (bd := rd.to_build_data_unsafe(Dip1BuildKey(bk))).refdata,
+                    bd.buildkey,
+                    bd.build,
+                ),
                 bf,
             ),
             lambda rd, bf: dip_1to2_f(
-                Dip2BuildData(*astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk)))),
+                Dip2BuildData(
+                    (bd := rd.to_build_data_unsafe(Dip2BuildKey(bk))).refdata,
+                    bd.buildkey,
+                    bd.build,
+                ),
                 bf,
             ),
             lambda rd, bf: dip_2to1_f(
-                Dip1BuildData(*astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk)))),
+                Dip1BuildData(
+                    (bd := rd.to_build_data_unsafe(Dip1BuildKey(bk))).refdata,
+                    bd.buildkey,
+                    bd.build,
+                ),
                 bf,
             ),
             lambda rd, bf: dip_2to2_f(
-                Dip2BuildData(*astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk)))),
+                Dip2BuildData(
+                    (bd := rd.to_build_data_unsafe(Dip2BuildKey(bk))).refdata,
+                    bd.buildkey,
+                    bd.build,
+                ),
                 bf,
             ),
         )
@@ -2777,25 +2828,45 @@ class GiabStrats(BaseModel):
             rfk,
             lambda rd: get_bed_f(rd.to_build_data_unsafe(bk)),
             lambda rd, bf: hap_f(
-                HapBuildData(*astuple(rd.to_build_data_unsafe(HapBuildKey(bk)))),
+                HapBuildData(
+                    (bd := rd.to_build_data_unsafe(HapBuildKey(bk))).refdata,
+                    bd.buildkey,
+                    bd.build,
+                ),
                 bf,
             ),
             lambda rd, bf: dip_1to1_f(
-                Dip1BuildData(*astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk)))),
+                Dip1BuildData(
+                    (bd := rd.to_build_data_unsafe(Dip1BuildKey(bk))).refdata,
+                    bd.buildkey,
+                    bd.build,
+                ),
                 bf,
             ),
             lambda hap, rd, bf: dip_1to2_f(
                 hap,
-                Dip2BuildData(*astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk)))),
+                Dip2BuildData(
+                    (bd := rd.to_build_data_unsafe(Dip2BuildKey(bk))).refdata,
+                    bd.buildkey,
+                    bd.build,
+                ),
                 bf,
             ),
             lambda rd, bf: dip_2to1_f(
-                Dip1BuildData(*astuple(rd.to_build_data_unsafe(Dip1BuildKey(bk)))),
+                Dip1BuildData(
+                    (bd := rd.to_build_data_unsafe(Dip1BuildKey(bk))).refdata,
+                    bd.buildkey,
+                    bd.build,
+                ),
                 bf,
             ),
             lambda hap, rd, bf: dip_2to2_f(
                 hap,
-                Dip2BuildData(*astuple(rd.to_build_data_unsafe(Dip2BuildKey(bk)))),
+                Dip2BuildData(
+                    (bd := rd.to_build_data_unsafe(Dip2BuildKey(bk))).refdata,
+                    bd.buildkey,
+                    bd.build,
+                ),
                 bf,
             ),
         )

@@ -8,9 +8,9 @@ gc = config.to_bed_dirs(CoreLevel.GC)
 
 def seqtk_args(wildcards):
     _frac = int(wildcards["frac"])
-    rk = wildcards.ref_key
+    rk = wildcards.ref_final_key
     bk = wildcards.build_key
-    gps = config.buildkey_to_include(rk, bk).gc
+    gps = config.to_build_data(rk, bk).build.include.gc
 
     if _frac in gps.low_fractions:
         switch, frac = ("w", 100 - _frac)
@@ -65,7 +65,7 @@ def range_inputs(wildcards):
 
     rk = wildcards.ref_final_key
     bk = wildcards.build_key
-    gps = config.buildkey_to_include(rk, bk).gc
+    gps = config.to_build_data(rk, bk).build.include.gc
     lowest, lower = gps.low_bounds
     highest, higher = gps.high_bounds
 

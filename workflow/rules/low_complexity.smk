@@ -726,10 +726,11 @@ use rule invert_satellites as invert_HPs_and_TRs with:
 #     localrule: True
 
 
-def all_low_complexity(ref_key, _):
-    rmsk = config.has_low_complexity_rmsk(ref_key)
-    trf = config.has_low_complexity_simreps(ref_key)
-    censat = config.has_low_complexity_censat(ref_key)
+def all_low_complexity(ref_final_key, _):
+    rd = config.to_ref_data(ref_final_key)
+    rmsk = rd.has_low_complexity_rmsk
+    trf = rd.has_low_complexity_simreps
+    censat = rd.has_low_complexity_censat
     has_sats = rmsk or censat
 
     # include uniform repeats no matter what
