@@ -5,6 +5,7 @@ from common.config import (
     si_to_rmsk,
     si_to_trf,
     si_to_satellites,
+    parse_final_refkey,
 )
 from functools import partial
 
@@ -727,7 +728,9 @@ use rule invert_satellites as invert_HPs_and_TRs with:
 
 
 def all_low_complexity(ref_final_key, _):
-    rd = config.to_ref_data(ref_final_key)
+    # TODO hmmmm...sketchy
+    rk, _ = parse_final_refkey(ref_final_key)
+    rd = config.to_ref_data(rk)
     rmsk = rd.has_low_complexity_rmsk
     trf = rd.has_low_complexity_simreps
     censat = rd.has_low_complexity_censat

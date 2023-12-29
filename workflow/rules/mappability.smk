@@ -64,7 +64,7 @@ rule unpack_gem:
 
 rule filter_mappability_ref:
     input:
-        fa=rules.download_ref.output[0],
+        fa=lambda w: expand_final_to_src(rules.download_ref.output[0], w),
         idx=rules.index_ref.output[0],
     output:
         mlty.inter.postsort.data / "ref.fa",
@@ -191,7 +191,7 @@ checkpoint merge_nonunique:
         mlty.inter.postsort.data / "nonunique_output.json",
     params:
         path_pattern=lambda w: expand(
-            mtly.final("{{}}"),
+            mlty.final("{{}}"),
             ref_final_key=w.ref_final_key,
             build_key=w.build_key,
         )[0],

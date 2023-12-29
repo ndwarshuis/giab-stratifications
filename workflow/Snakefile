@@ -11,8 +11,9 @@ from common.config import GiabStrats
 config = GiabStrats.parse_obj(config)
 
 
-def expand_final_to_src(paths, wildcards):
-    return expand(paths, ref_src_key=wildcards.ref_final_key)
+def expand_final_to_src(paths, wildcards, bla=None):
+    # print((wildcards.ref_final_key, bla))
+    return expand(paths, allow_missing=True, ref_src_key=wildcards.ref_final_key)
 
 
 def read_checkpoint(rulename, wildcards):
@@ -57,7 +58,8 @@ wildcard_constraints:
     build_key="[A-Za-z0-9-]+",
     # separate ref key for downloading (which may or may not follow the
     # cardinality of the target reference)
-    ref_src_key="[A-Za-z0-9-]+",
+    ref_src_key="[A-Za-z0-9-]+(\.hap(1|2))?",
+    ref_final_key="[A-Za-z0-9-]+(\.hap(1|2))?",
     # this appears way too often, so define constraint here
     sex_chr="[XY]",
 
@@ -89,9 +91,22 @@ rule all_resources:
         expand(rules.download_superdups.output, ref_src_key=config.all_refkey_segdups),
         expand(rules.download_ftbl.output, ref_src_key=config.all_refkey_ftbl),
         expand(rules.download_gff.output, ref_src_key=config.all_refkey_gff),
-        expand(rules.download_bench_vcf.output, ref_src_key=config.all_refkey_bench_vcf),
-        expand(rules.download_bench_bed.output, ref_src_key=config.all_refkey_bench_bed),
-        expand(rules.download_query_vcf.output, ref_src_key=config.all_refkey_query_vcf),
+        # TODO not DRY
+        expand(
+            rules.download_bench_vcf.output,
+            ref_src_key=(t := unzip(config.all_buildkey_bench_vcf))[0],
+            build_key=t[1],
+        ),
+        expand(
+            rules.download_bench_bed.output,
+            ref_src_key=(t := unzip(config.all_buildkey_bench_bed))[0],
+            build_key=t[1],
+        ),
+        expand(
+            rules.download_query_vcf.output,
+            ref_src_key=(t := unzip(config.all_buildkey_query_vcf))[0],
+            build_key=t[1],
+        ),
 
 
 rule all:

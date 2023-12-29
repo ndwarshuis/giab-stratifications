@@ -1,7 +1,7 @@
 from os.path import dirname, basename
 from more_itertools import unique_everseen, unzip
 from os import scandir
-from common.config import CoreLevel
+from common.config import CoreLevel, parse_final_refkey
 
 post_inter_dir = config.intermediate_build_dir / "postprocess"
 post_log_dir = config.log_build_dir / "postprocess"
@@ -9,7 +9,11 @@ validation_dir = config.final_root_dir / "validation"
 
 
 def expand_strat_targets_inner(ref_final_key, build_key):
-    bd = config.to_build_data(ref_final_key, build_key)
+    # TODO this is crude
+    # NOTE we need to do this because despite the final key potentially having
+    # one or two haps, the configuration applies to both haps simultaneously
+    rk, _ = parse_final_refkey(ref_final_key)
+    bd = config.to_build_data(rk, build_key)
     function_targets = [
         (all_low_complexity, bd.want_low_complexity),
         (gc_inputs_flat, bd.want_gc),
@@ -89,13 +93,6 @@ rule unit_test_strats:
         "../scripts/python/bedtools/postprocess/run_unit_tests.py"
 
 
-# TODO this is totally incorrect
-rks, bks = map(
-    list,
-    unzip([(rk, bk) for rk, bk in config.all_build_keys]),
-)
-
-
 rule download_comparison_strat_tarball:
     output:
         directory(config.resources_dir / "comparisons" / "{compare_key}"),
@@ -114,41 +111,44 @@ rule download_comparison_strat_tarball:
         """
 
 
-rule compare_strats:
-    input:
-        _test=expand(
-            rules.unit_test_strats.output,
-            zip,
-            ref_final_key=rks,
-            build_key=bks,
-        ),
-        old=lambda w: expand(
-            rules.download_comparison_strat_tarball.output,
-            compare_key=config.to_build_data(
-                w.ref_final_key, w.build_key
-            ).build.compare_key,
-        )[0],
-        # use this to target a specific rule to satisfy the snakemake scheduler,
-        # the thing I actually need here is the parent directory
-        new_list=rules.generate_tsv_list.output[0],
-    output:
-        validation_dir / "{ref_final_key}@{build_key}" / "diagnostics.tsv",
-    log:
-        post_log_dir / "comparison.log",
-    conda:
-        "../envs/bedtools.yml"
-    threads: 8
-    script:
-        "../scripts/python/bedtools/postprocess/diff_previous_strats.py"
+# TODO this needs to be fixed, need to use both ref_key and ref_final_key; or
+# figure out how to split comparison between haplotypes
+# rule compare_strats:
+#     input:
+#         _test=expand(
+#             rules.unit_test_strats.output,
+#             zip,
+#             ref_final_key=rks,
+#             build_key=bks,
+#         ),
+#         old=lambda w: expand(
+#             rules.download_comparison_strat_tarball.output,
+#             compare_key=config.to_build_data(
+#                 w.ref_final_key, w.build_key
+#             ).build.compare_key,
+#         )[0],
+#         # use this to target a specific rule to satisfy the snakemake scheduler,
+#         # the thing I actually need here is the parent directory
+#         new_list=rules.generate_tsv_list.output[0],
+#     output:
+#         validation_dir / "{ref_final_key}@{build_key}" / "diagnostics.tsv",
+#     log:
+#         post_log_dir / "comparison.log",
+#     conda:
+#         "../envs/bedtools.yml"
+#     threads: 8
+#     script:
+#         "../scripts/python/bedtools/postprocess/diff_previous_strats.py"
 
 
 rule all_comparisons:
     input:
-        [
-            expand(rules.compare_strats.output, ref_final_key=rk, build_key=bk)[0]
-            for rk, bk in config.all_build_keys
-            if config.to_build_data(rk, bk).build.compare_key is not None
-        ],
+        [],
+    # [
+    #     expand(rules.compare_strats.output, ref_final_key=rk, build_key=bk)[0]
+    #     for rk, bk in config.all_build_keys
+    #     if config.to_build_data(rk, bk).build.compare_key is not None
+    # ],
     localrule: True
 
 
@@ -162,7 +162,7 @@ rule write_chr_name_mapper:
     localrule: True
     run:
         with open(output[0], "w") as f:
-            for ref_final_key, build_key in zip(rks, bks):
+            for ref_final_key, build_key in zip(*config.all_full_build_keys):
                 for i in config.buildkey_to_chr_indices(ref_final_key, build_key):
                     pattern = config.refkey_to_final_chr_pattern(ref_final_key)
                     line = [
@@ -177,24 +177,26 @@ rule validate_strats:
     input:
         # this first input isn't actually used, but ensures the unit tests pass
         # before running the rmd script
-        _test=expand(
-            rules.unit_test_strats.output,
-            zip,
-            ref_final_key=rks,
-            build_key=bks,
-        ),
-        strats=expand(
-            rules.list_all_strats.output,
-            zip,
-            ref_final_key=rks,
-            build_key=bks,
-        ),
-        nonN=expand(
-            rules.get_gapless.output.auto,
-            zip,
-            ref_final_key=rks,
-            build_key=bks,
-        ),
+        **{
+            "_test": expand(
+                rules.unit_test_strats.output,
+                zip,
+                ref_final_key=(t := config.all_full_build_keys)[0],
+                build_key=t[1],
+            ),
+            "strats": expand(
+                rules.list_all_strats.output,
+                zip,
+                ref_final_key=t[0],
+                build_key=t[1],
+            ),
+            "nonN": expand(
+                rules.get_gapless.output.auto,
+                zip,
+                ref_final_key=t[0],
+                build_key=t[1],
+            ),
+        },
         chr_mapper=rules.write_chr_name_mapper.output,
     output:
         validation_dir / "coverage_plots.html",
@@ -234,14 +236,14 @@ rule run_happy:
         _test=expand(
             rules.unit_test_strats.output,
             zip,
-            ref_final_key=rks,
-            build_key=bks,
+            ref_final_key=(t := config.all_full_build_keys)[0],
+            build_key=t[1],
         ),
         refi=rules.index_unzipped_ref.output,
         ref=rules.unzip_ref.output,
-        bench_vcf=rules.download_bench_vcf.output,
+        bench_vcf=lambda w: expand_final_to_src(rules.download_bench_vcf.output, w),
         bench_bed=rules.filter_sort_bench_bed.output,
-        query_vcf=rules.download_query_vcf.output,
+        query_vcf=lambda w: expand_final_to_src(rules.download_query_vcf.output, w),
         strats=rules.generate_tsv_list.output,
     output:
         post_inter_dir / "happy" / "happy.extended.csv",
@@ -264,7 +266,7 @@ rule summarize_happy:
                 ref_final_key=rk,
                 build_key=bk,
             )
-            for rk, bk in zip(rks, bks)
+            for rk, bk in zip(*config.all_build_keys)
             if config.to_build_data(rk, bk).want_benchmark
         ],
     output:
@@ -316,7 +318,7 @@ rule checksum_everything:
         rules.all_comparisons.input,
         [
             expand(rules.generate_tarballs.output, ref_final_key=rk, build_key=bk)
-            for rk, bk in config.all_build_keys
+            for rk, bk in zip(*config.all_full_build_keys)
         ],
     output:
         config.final_root_dir / "genome-stratifications-md5s.txt",

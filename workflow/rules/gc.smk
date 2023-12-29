@@ -8,7 +8,7 @@ gc = config.to_bed_dirs(CoreLevel.GC)
 
 def seqtk_args(wildcards):
     _frac = int(wildcards["frac"])
-    rk = wildcards.ref_final_key
+    rk, _ = parse_final_refkey(wildcards.ref_final_key)
     bk = wildcards.build_key
     gps = config.to_build_data(rk, bk).build.include.gc
 
@@ -63,7 +63,8 @@ def range_inputs(wildcards):
     def expand_final(frac):
         return _expand(rules.find_gc_content_final.output, frac)
 
-    rk = wildcards.ref_final_key
+    # TODO hmmmm...sketchy
+    rk, _ = parse_final_refkey(wildcards.ref_final_key)
     bk = wildcards.build_key
     gps = config.to_build_data(rk, bk).build.include.gc
     lowest, lower = gps.low_bounds
@@ -105,5 +106,6 @@ def gc_inputs(ref_final_key, build_key):
 
 
 def gc_inputs_flat(ref_final_key, build_key):
+    print(ref_final_key)
     res = gc_inputs(ref_final_key, build_key)
     return [*res["gc_ranges"], res["widest_extreme"], *res["other_extremes"]]

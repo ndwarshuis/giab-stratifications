@@ -40,6 +40,7 @@ from common.functional import (
 )
 from common.io import is_gzip, is_bgzip
 import common.bed as bed
+from more_itertools import unzip
 
 
 W = TypeVar("W")
@@ -92,7 +93,7 @@ class RefKeyFull(Generic[RefKeyT]):
     @property
     def name(self) -> str:
         k, h = self.as_tuple
-        return f"{k}.{h}" if h is not None else k
+        return f"{k}.{h.name}" if h is not None else k
 
 
 class RefFinalKey(RefKeyFull[RefKeyT]):
@@ -1254,6 +1255,18 @@ class RefData_(
         return self.strat_inputs.low_complexity.satellites is not None
 
 
+class RefDataToBed(Protocol):
+    A = TypeVar(
+        "A", HapChrSource[BedSrc], DipChrSource1[BedSrc] | DipChrSource2[BedSrc]
+    )
+
+    def __call__(
+        self,
+        __x: RefData_[RefKeyT, RefSourceT, A, AnyBedT_, AnySrcT, BuildKeyT, IncludeT],
+    ) -> BedFile[A] | None:
+        pass
+
+
 class HapRefData(
     RefData_[
         HapRefKey_,
@@ -1860,6 +1873,21 @@ def all_build_data(
     return [r.to_build_data_unsafe(b) for r in all_ref_data(xs) for b in r.builds]
 
 
+def all_bed_build_and_refsrckeys(
+    xs: dict[
+        RefKeyT,
+        Stratification[RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT],
+    ],
+    f: BuildDataToSrc,
+) -> list[tuple[str, str]]:
+    return [
+        (rk, str(b.buildkey))
+        for b in all_build_data(xs)
+        if (src := f(b)) is not None
+        for rk in src.to_str_refkeys(b.refdata.refkey)
+    ]
+
+
 def all_bed_refsrckeys(
     xs: dict[
         RefKeyT,
@@ -1867,25 +1895,7 @@ def all_bed_refsrckeys(
     ],
     f: BuildDataToSrc,
 ) -> list[str]:
-    return [
-        k
-        for b in all_build_data(xs)
-        if (src := f(b)) is not None
-        for k in src.to_str_refkeys(b.refdata.refkey)
-    ]
-
-
-# def all_functional_refsrckeys(self, f: BuildDataToSrc) -> list[str]:
-#     return [
-#         k
-#         for b in self.all_build_data
-#         for k in not_none_unsafe(
-#             f(b),
-#             lambda s: with_dip_src_x(
-#                 s, lambda _: b.refdata.nohap_src, lambda _: b.refdata.haps_src
-#             ),
-#         )
-#     ]
+    return [rk for rk, _ in all_bed_build_and_refsrckeys(xs, f)]
 
 
 def all_build_keys(
@@ -1895,6 +1905,19 @@ def all_build_keys(
     ],
 ) -> list[tuple[RefKeyT, BuildKeyT]]:
     return [(r.refdata.refkey, r.buildkey) for r in all_build_data(xs)]
+
+
+def all_ref_build_keys(
+    xs: dict[
+        RefKeyT,
+        Stratification[RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKeyT, IncludeT],
+    ],
+) -> list[tuple[str, str]]:
+    return [
+        (rk, str(r.buildkey))
+        for r in all_build_data(xs)
+        for rk in r.refdata.ref.src.to_str_refkeys(r.refdata.refkey)
+    ]
 
 
 HapStrat = Stratification[
@@ -2560,12 +2583,22 @@ class GiabStrats(BaseModel):
         return all_build_keys(self.diploid2_stratifications)
 
     @property
-    def all_build_keys(self) -> list[tuple[str, str]]:
-        return (
+    def all_build_keys(self) -> tuple[list[str], list[str]]:
+        rs, bs = unzip(
             [(str(x), str(y)) for x, y in self._all_haploid_builds]
             + [(str(x), str(y)) for x, y in self._all_diploid1_builds]
             + [(str(x), str(y)) for x, y in self._all_diploid2_builds]
         )
+        return (list(rs), list(bs))
+
+    @property
+    def all_full_build_keys(self) -> tuple[list[str], list[str]]:
+        rs, bs = unzip(
+            all_ref_build_keys(self.haploid_stratifications)
+            + all_ref_build_keys(self.diploid1_stratifications)
+            + all_ref_build_keys(self.diploid2_stratifications)
+        )
+        return (list(rs), list(bs))
 
     # @property
     # def all_refdata(self) -> list[AnyRefData]:
@@ -2987,12 +3020,15 @@ class GiabStrats(BaseModel):
             _dip_2to2_f,
         )
 
-    def _all_bed_refsrckeys(self, f: BuildDataToSrc) -> list[str]:
+    def _all_bed_build_and_refsrckeys(self, f: BuildDataToSrc) -> list[tuple[str, str]]:
         return (
-            all_bed_refsrckeys(self.haploid_stratifications, f)
-            + all_bed_refsrckeys(self.diploid1_stratifications, f)
-            + all_bed_refsrckeys(self.diploid2_stratifications, f)
+            all_bed_build_and_refsrckeys(self.haploid_stratifications, f)
+            + all_bed_build_and_refsrckeys(self.diploid1_stratifications, f)
+            + all_bed_build_and_refsrckeys(self.diploid2_stratifications, f)
         )
+
+    def _all_bed_refsrckeys(self, f: BuildDataToSrc) -> list[str]:
+        return [rk for rk, _ in self._all_bed_build_and_refsrckeys(f)]
 
     @property
     def all_refkey_gap(self) -> list[str]:
@@ -3025,20 +3061,20 @@ class GiabStrats(BaseModel):
         )
 
     @property
-    def all_refkey_bench_bed(self) -> list[str]:
-        return self._all_bed_refsrckeys(
+    def all_buildkey_bench_bed(self) -> list[tuple[str, str]]:
+        return self._all_bed_build_and_refsrckeys(
             lambda bd: fmap_maybe(lambda x: x.data.src, bd_to_bench_bed(bd))
         )
 
     @property
-    def all_refkey_bench_vcf(self) -> list[str]:
-        return self._all_bed_refsrckeys(
+    def all_buildkey_bench_vcf(self) -> list[tuple[str, str]]:
+        return self._all_bed_build_and_refsrckeys(
             lambda bd: fmap_maybe(lambda x: x.data.src, bd_to_bench_vcf(bd))
         )
 
     @property
-    def all_refkey_query_vcf(self) -> list[str]:
-        return self._all_bed_refsrckeys(
+    def all_buildkey_query_vcf(self) -> list[tuple[str, str]]:
+        return self._all_bed_build_and_refsrckeys(
             lambda bd: fmap_maybe(lambda x: x.data.src, bd_to_query_vcf(bd))
         )
 

@@ -1,4 +1,4 @@
-from common.config import si_to_gaps
+from common.config import si_to_gaps, bd_to_bench_bed
 
 ref = config.ref_dirs
 
@@ -30,7 +30,7 @@ rule download_ref:
 
 rule index_ref:
     input:
-        lambda w: expand_final_to_src(rules.download_ref.output, w),
+        lambda w: expand_final_to_src(rules.download_ref.output, w, bla=1),
     output:
         ref.inter.prebuild.data / "ref.fna.fai",
     conda:
@@ -60,7 +60,7 @@ rule get_genome:
 
 rule filter_sort_ref:
     input:
-        fa=lambda w: expand_final_to_src(rules.download_ref.output, w),
+        fa=lambda w: expand_final_to_src(rules.download_ref.output, w, bla=2),
         genome=rules.get_genome.output,
     output:
         ref.inter.build.data / "ref_filtered.fa",
@@ -86,16 +86,13 @@ use rule download_ref as download_gaps with:
 
 
 def gapless_input(wildcards):
-    si = config.to_ref_data(wildcards.ref_final_key).strat_inputs
+    rk, _ = parse_final_refkey(wildcards.ref_final_key)
+    si = config.to_ref_data(rk).strat_inputs
     if si.gap is not None:
         gaps = {
             "gaps": expand(
                 rules.download_gaps.output,
-                ref_src_key=config.refkey_to_bed_refsrckeys(
-                    si_to_gaps,
-                    # TODO strip this to just the ref key
-                    wildcards.ref_final_key,
-                ),
+                ref_src_key=config.refkey_to_bed_refsrckeys(si_to_gaps, rk),
             )
         }
         if si.xy.y_par is None:
@@ -156,7 +153,7 @@ use rule download_ref as download_bench_bed with:
 
 use rule download_ref as download_query_vcf with:
     output:
-        ref.src.benchmark.data / "{key}_query.vcf.gz",
+        ref.src.benchmark.data / "query.vcf.gz",
     params:
         src=lambda w: config.buildkey_to_vcf_src(
             bd_to_query_vcf,
@@ -165,12 +162,12 @@ use rule download_ref as download_query_vcf with:
         ),
     localrule: True
     log:
-        ref.src.benchmark.log / "{key}_download_query_vcf.log",
+        ref.src.benchmark.log / "download_query_vcf.log",
 
 
 rule filter_sort_bench_bed:
     input:
-        rules.download_bench_bed.output,
+        lambda w: expand_final_to_src(rules.download_bench_bed.output, w),
     output:
         ref.inter.build.data / "bench_filtered.bed.gz",
     log:
