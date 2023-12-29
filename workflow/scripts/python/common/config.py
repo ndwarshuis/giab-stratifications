@@ -14,7 +14,6 @@ from pydantic import validator, HttpUrl, FilePath, NonNegativeInt, Field
 from dataclasses import dataclass
 from enum import Enum, unique
 from typing import (
-    TypeAlias,
     NewType,
     Any,
     Callable,
@@ -24,7 +23,6 @@ from typing import (
     cast,
     Annotated,
     Generic,
-    Union,
     TypeGuard,
     Protocol,
 )
@@ -2640,24 +2638,28 @@ class GiabStrats(BaseModel):
 
     def to_build_data(self, rk: str, bk: str) -> AnyBuildData:
         # TODO gross...
-        return with_ref_data(
-            self.to_ref_data(rk),
-            lambda rd: HapBuildData(
+        def hap(rd: HapRefData) -> AnyBuildData:
+            return HapBuildData(
                 (bd := rd.to_build_data_unsafe(HapBuildKey(bk))).refdata,
                 bd.buildkey,
                 bd.build,
-            ),
-            lambda rd: Dip1BuildData(
-                (bd0 := rd.to_build_data_unsafe(Dip1BuildKey(bk))).refdata,
-                bd0.buildkey,
-                bd0.build,
-            ),
-            lambda rd: Dip2BuildData(
-                (bd0 := rd.to_build_data_unsafe(Dip2BuildKey(bk))).refdata,
-                bd0.buildkey,
-                bd0.build,
-            ),
-        )
+            )
+
+        def dip1(rd: Dip1RefData) -> AnyBuildData:
+            return Dip1BuildData(
+                (bd := rd.to_build_data_unsafe(Dip1BuildKey(bk))).refdata,
+                bd.buildkey,
+                bd.build,
+            )
+
+        def dip2(rd: Dip2RefData) -> AnyBuildData:
+            return Dip2BuildData(
+                (bd := rd.to_build_data_unsafe(Dip2BuildKey(bk))).refdata,
+                bd.buildkey,
+                bd.build,
+            )
+
+        return with_ref_data(self.to_ref_data(rk), hap, dip1, dip2)
 
     def with_build_data(
         self,
