@@ -111,44 +111,40 @@ rule download_comparison_strat_tarball:
         """
 
 
-# TODO this needs to be fixed, need to use both ref_key and ref_final_key; or
-# figure out how to split comparison between haplotypes
-# rule compare_strats:
-#     input:
-#         _test=expand(
-#             rules.unit_test_strats.output,
-#             zip,
-#             ref_final_key=rks,
-#             build_key=bks,
-#         ),
-#         old=lambda w: expand(
-#             rules.download_comparison_strat_tarball.output,
-#             compare_key=config.to_build_data(
-#                 w.ref_final_key, w.build_key
-#             ).build.compare_key,
-#         )[0],
-#         # use this to target a specific rule to satisfy the snakemake scheduler,
-#         # the thing I actually need here is the parent directory
-#         new_list=rules.generate_tsv_list.output[0],
-#     output:
-#         validation_dir / "{ref_final_key}@{build_key}" / "diagnostics.tsv",
-#     log:
-#         post_log_dir / "comparison.log",
-#     conda:
-#         "../envs/bedtools.yml"
-#     threads: 8
-#     script:
-#         "../scripts/python/bedtools/postprocess/diff_previous_strats.py"
+rule compare_strats:
+    input:
+        # ensure tests are run before this rule
+        _test=rules.unit_test_strats.output,
+        # NOTE: in the case id dip2 configurations, each comparison key will
+        # correspond to one half of the diploid dataset (each tarball is one
+        # haplotype)
+        old=lambda w: expand(
+            rules.download_comparison_strat_tarball.output,
+            compare_key=config.to_build_data(
+                w.ref_final_key, w.build_key
+            ).build.compare_key,
+        )[0],
+        # use this to target a specific rule to satisfy the snakemake scheduler,
+        # the thing I actually need here is the parent directory
+        new_list=rules.generate_tsv_list.output[0],
+    output:
+        validation_dir / "{ref_final_key}@{build_key}" / "diagnostics.tsv",
+    log:
+        post_log_dir / "comparison.log",
+    conda:
+        "../envs/bedtools.yml"
+    threads: 8
+    script:
+        "../scripts/python/bedtools/postprocess/diff_previous_strats.py"
 
 
 rule all_comparisons:
     input:
-        [],
-    # [
-    #     expand(rules.compare_strats.output, ref_final_key=rk, build_key=bk)[0]
-    #     for rk, bk in config.all_build_keys
-    #     if config.to_build_data(rk, bk).build.compare_key is not None
-    # ],
+        [
+            expand(rules.compare_strats.output, ref_final_key=rk, build_key=bk)[0]
+            for rk, bk in zip(*config.all_build_keys)
+            if config.to_build_data(rk, bk).build.compare_key is not None
+        ],
     localrule: True
 
 
