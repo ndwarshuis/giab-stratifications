@@ -1,4 +1,4 @@
-from common.config import si_to_gaps, bd_to_bench_bed
+from common.config import si_to_gaps, bd_to_bench_bed, bd_to_bench_vcf, bd_to_query_vcf
 
 ref = config.ref_dirs
 

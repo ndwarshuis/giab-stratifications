@@ -1456,19 +1456,28 @@ def with_ref_data(
         assert_never(rd)
 
 
-def ref_data_to_src(
-    rd: AnyRefData, hap: Haplotype | None, f: StratInputToSrc
-) -> BedSrc:
-    src = with_ref_data(
-        rd,
-        lambda rd: f(rd.strat_inputs),
-        lambda rd: f(rd.strat_inputs),
-        lambda rd: f(rd.strat_inputs),
-    )
+class RefDataToSrc(Protocol):
+    A = TypeVar("A", Haploid_[BedSrc], Diploid_[BedSrc])
+
+    def __call__(
+        self,
+        __x: RefData_[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, A, BuildKeyT, IncludeT],
+    ) -> A | None:
+        pass
+
+
+def ref_data_to_src_(rd: AnyRefData, hap: Haplotype | None, f: RefDataToSrc) -> BedSrc:
+    src = with_ref_data(rd, lambda rd: f(rd), lambda rd: f(rd), lambda rd: f(rd))
     # TODO mypy doens't like me using my 'maybe' functional functions
     if src is None:
         raise DesignError()
     return from_hap_or_dip(src, hap)
+
+
+def ref_data_to_src(
+    rd: AnyRefData, hap: Haplotype | None, f: StratInputToSrc
+) -> BedSrc:
+    return ref_data_to_src_(rd, hap, lambda rd: f(rd.strat_inputs))
 
 
 class BuildDataToBed(Protocol):
@@ -2430,7 +2439,14 @@ class GiabStrats(BaseModel):
         return self.refkey_to_bed_refsrckeys(lambda rd: f(rd.to_build_data(bk)), rk)
 
     def buildkey_to_bed_src(self, f: BuildDataToBed, rsk: str, bk: str) -> BedSrc:
-        return self.refsrckey_to_bed_src(lambda rd: f(rd.to_build_data(bk)), rsk)
+        # return self.refsrckey_to_bed_src(lambda rd: f(rd.to_build_data(bk)), rsk)
+        rk, hap = parse_final_refkey(rsk)
+        rd = self.to_ref_data(rk)
+        return ref_data_to_src_(
+            rd,
+            hap,
+            lambda rd: fmap_maybe(lambda x: x.data.src, f(rd.to_build_data(bk))),
+        )
 
     def buildkey_to_vcf_src(self, f: BuildDataToVCF, rsk: str, bk: str) -> BedSrc:
         rk, hap = parse_final_refkey(rsk)
