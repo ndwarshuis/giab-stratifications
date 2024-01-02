@@ -64,7 +64,7 @@ rule unpack_gem:
 
 rule filter_mappability_ref:
     input:
-        fa=lambda w: expand_final_to_src(rules.download_ref.output[0], w),
+        fa=lambda w: expand_final_to_src(rules.download_ref.output[0], w)[0],
         idx=rules.index_ref.output[0],
     output:
         mlty.inter.postsort.data / "ref.fa",

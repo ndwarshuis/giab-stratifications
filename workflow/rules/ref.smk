@@ -141,8 +141,8 @@ use rule download_ref as download_bench_bed with:
     output:
         ref.src.benchmark.data / "bench.bed.gz",
     params:
-        src=lambda w: config.buildkey_to_vcf_src(
-            bd_to_bench_vcf,
+        src=lambda w: config.buildkey_to_bed_src(
+            bd_to_bench_bed,
             w.ref_src_key,
             w.build_key,
         ),
@@ -176,9 +176,9 @@ checkpoint filter_sort_bench_bed:
     conda:
         "../envs/bedtools.yml"
     params:
-        bed_output=lambda w: expand(
+        output_pattern=lambda w: expand(
             ref.inter.filtersort.subbed / "bench_filtered.bed.gz",
             build_key=w.build_key,
-        ),
+        )[0],
     script:
         "../scripts/python/bedtools/ref/filter_sort_bench_bed.py"

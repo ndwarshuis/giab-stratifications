@@ -392,7 +392,7 @@ checkpoint filter_sort_trf:
     output:
         lc.inter.filtersort.data / "trf.json",
     params:
-        bed_output=lambda w: expand(
+        output_pattern=lambda w: expand(
             lc.inter.postsort.subbed / "trf.bed.gz",
             build_key=w.build_key,
         ),
@@ -437,7 +437,7 @@ checkpoint filter_sort_rmsk:
     output:
         lc.inter.postsort.data / "rmsk.txt.gz",
     params:
-        bed_output=lambda w: expand(
+        output_pattern=lambda w: expand(
             lc.inter.postsort.subbed / "trf.bed.gz",
             build_key=w.build_key,
         ),
@@ -497,10 +497,10 @@ rule filter_sort_censat:
     output:
         lc.inter.filtersort.data / "censat.json",
     params:
-        bed_output=lambda w: expand(
+        output_pattern=lambda w: expand(
             lc.inter.postsort.subbed / "censat.bed.gz",
             build_key=w.build_key,
-        ),
+        )[0],
     conda:
         "../envs/bedtools.yml"
     script:

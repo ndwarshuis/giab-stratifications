@@ -2742,7 +2742,7 @@ class GiabStrats(BaseModel):
     def with_ref_data_and_bed(
         self,
         rk: str,
-        get_bed_f: StratInputToBed,
+        get_bed_f: RefDataToBed,
         hap_f: Callable[[HapRefData, HapBedFile], X],
         dip_1to1_f: Callable[[Dip1RefData, Dip1BedFile], X],
         dip_1to2_f: Callable[[Dip2RefData, Dip1BedFile], X],
@@ -2751,16 +2751,14 @@ class GiabStrats(BaseModel):
     ) -> X:
         return self.with_ref_data(
             rk,
-            lambda rd: not_none_unsafe(
-                get_bed_f(rd.strat_inputs), lambda bd: hap_f(rd, bd)
-            ),
+            lambda rd: not_none_unsafe(get_bed_f(rd), lambda bd: hap_f(rd, bd)),
             lambda rd: with_dip_bedfile(
-                not_none_unsafe(get_bed_f(rd.strat_inputs), lambda bd: bd),
+                not_none_unsafe(get_bed_f(rd), lambda bd: bd),
                 lambda bf: dip_1to1_f(rd, bf),
                 lambda bf: dip_2to1_f(rd, bf),
             ),
             lambda rd: with_dip_bedfile(
-                not_none_unsafe(get_bed_f(rd.strat_inputs), lambda bd: bd),
+                not_none_unsafe(get_bed_f(rd), lambda bd: bd),
                 lambda bf: dip_1to2_f(rd, bf),
                 lambda bf: dip_2to2_f(rd, bf),
             ),
@@ -2769,7 +2767,7 @@ class GiabStrats(BaseModel):
     def with_ref_data_and_bed_hap(
         self,
         rfk: str,
-        get_bed_f: StratInputToBed,
+        get_bed_f: RefDataToBed,
         hap_f: Callable[[HapRefData, HapBedFile], Z],
         dip_1to1_f: Callable[[Dip1RefData, Dip1BedFile], Z],
         dip_1to2_f: Callable[[Haplotype, Dip2RefData, Dip1BedFile], Z],
@@ -2800,7 +2798,7 @@ class GiabStrats(BaseModel):
         rk, hap = parse_final_refkey(rsk)
         return self.with_ref_data_and_bed(
             rsk,
-            get_bed_f,
+            lambda rd: get_bed_f(rd.strat_inputs),
             lambda rd, bd: none_unsafe(hap, hap_f(rd, bd)),
             lambda rd, bd: none_unsafe(hap, dip_1to1_f(rd, bd)),
             lambda rd, bd: none_unsafe(hap, dip_1to2_f(rd, bd)),
@@ -2822,7 +2820,7 @@ class GiabStrats(BaseModel):
         # TODO gross...
         return self.with_ref_data_and_bed(
             rk,
-            lambda bd: get_bed_f(bd.strat_inputs),
+            lambda rd: get_bed_f(rd.to_build_data_unsafe(bk)),
             lambda rd, bf: hap_f(
                 HapBuildData(
                     (bd := rd.to_build_data_unsafe(HapBuildKey(bk))).refdata,
@@ -2876,7 +2874,6 @@ class GiabStrats(BaseModel):
         dip_2to1_f: Callable[[Dip1BuildData, Dip2BedFile], Z],
         dip_2to2_f: Callable[[Haplotype, Dip2BuildData, Dip2BedFile], Z],
     ) -> Z:
-        # rk, hap = parse_final_refkey(rfk)
         return self.with_ref_data_and_bed_hap(
             rfk,
             lambda rd: get_bed_f(rd.to_build_data_unsafe(bk)),
@@ -3022,7 +3019,7 @@ class GiabStrats(BaseModel):
 
         def write_output(ps: list[Path]) -> None:
             with open(output, "w") as f:
-                json.dump(ps, f)
+                json.dump([str(p) for p in ps], f)
 
         self.with_build_data_and_bed_io(
             rk,
@@ -3119,14 +3116,19 @@ def filter_sort_bed_main(
     """
     sconf: GiabStrats = smk.config
     ws: dict[str, str] = smk.wildcards
-    ps: dict[str, str] = smk.params
-    ins: list[Path] = smk.input
-    output_pattern: str = ps["output_pattern"]
+
+    if not isinstance((ins := smk.input), list) and not all(
+        isinstance(x, str) for x in ins
+    ):
+        raise DesignError(f"Inputs must be a list of strings, got {ins}")
+
+    if not isinstance(output_pattern := smk.params["output_pattern"], str):
+        raise DesignError(f"Output pattern must be a string, got {output_pattern}")
 
     sconf.with_build_data_and_bed_io_(
-        ws["ref_final_key"],
+        ws["ref_key"],
         ws["build_key"],
-        ins,
+        [Path(i) for i in ins],
         smk.output[0],
         output_pattern,
         f,

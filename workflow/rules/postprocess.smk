@@ -159,12 +159,20 @@ rule write_chr_name_mapper:
     run:
         with open(output[0], "w") as f:
             for ref_final_key, build_key in zip(*config.all_full_build_keys):
-                for i in config.to_build_data(ref_final_key, build_key).chr_indices:
-                    pattern = config.refkey_to_final_chr_pattern(ref_final_key)
+                # TODO this smells funny
+                (bd, pat) = config.with_build_data_final(
+                    ref_final_key,
+                    build_key,
+                    lambda bd: (bd, bd.refdata.ref.chr_pattern),
+                    lambda bd: (bd, bd.refdata.ref.chr_pattern),
+                    lambda hap, bd: (bd, bd.refdata.ref.chr_pattern.from_either(hap)),
+                )
+                for i in bd.chr_indices:
+                    # chr number, ref_final_key@build_key, chr name
                     line = [
                         str(i.value),
                         f"{ref_final_key}@{build_key}",
-                        i.chr_name_full(pattern),
+                        i.chr_name_full(pat),
                     ]
                     f.write("\t".join(line) + "\n")
 
