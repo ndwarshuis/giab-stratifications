@@ -435,23 +435,23 @@ checkpoint filter_sort_rmsk:
     input:
         lambda w: bed_src_inputs(rules.download_trf.output, si_to_rmsk, w),
     output:
-        lc.inter.postsort.data / "rmsk.txt.gz",
+        lc.inter.filtersort.data / "rmsk.txt.gz",
     params:
         output_pattern=lambda w: expand(
-            lc.inter.postsort.subbed / "trf.bed.gz",
+            lc.inter.filtersort.subbed / "trf.bed.gz",
             build_key=w.build_key,
-        ),
+        )[0],
     conda:
         "../envs/bedtools.yml"
     benchmark:
-        lc.inter.postsort.bench / "filter_sort_rmsk.txt"
+        lc.inter.filtersort.bench / "filter_sort_rmsk.txt"
     script:
         "../scripts/python/bedtools/low_complexity/filter_sort_rmsk.py"
 
 
 rule merge_rmsk_class:
     input:
-        partial(read_checkpoint, "filter_sort_rmsk"),
+        lambda w: read_checkpoint("filter_sort_rmsk", w),
     output:
         lc.inter.postsort.data / "rmsk_class_{rmsk_class}.bed.gz",
     conda:
@@ -512,7 +512,9 @@ rule filter_sort_censat:
 rule merge_satellites_intermediate:
     input:
         lambda w: read_checkpoint("filter_sort_censat", w)
-        if config.has_low_complexity_censat(w.ref_key)
+        if config.to_build_data(
+            parse_final_refkey(w.ref_final_key)[0], w.build_key
+        ).refdata.has_low_complexity_censat
         else all_rmsk_classes["Satellite"],
     output:
         lc.inter.postsort.data / "merged_satellites.bed.gz",

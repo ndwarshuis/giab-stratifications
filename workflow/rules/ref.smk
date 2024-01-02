@@ -30,7 +30,7 @@ rule download_ref:
 
 rule index_ref:
     input:
-        lambda w: expand_final_to_src(rules.download_ref.output, w, bla=1),
+        lambda w: expand_final_to_src(rules.download_ref.output, w),
     output:
         ref.inter.prebuild.data / "ref.fna.fai",
     conda:
@@ -60,7 +60,7 @@ rule get_genome:
 
 rule filter_sort_ref:
     input:
-        fa=lambda w: expand_final_to_src(rules.download_ref.output, w, bla=2),
+        fa=lambda w: expand_final_to_src(rules.download_ref.output, w),
         genome=rules.get_genome.output,
     output:
         ref.inter.build.data / "ref_filtered.fa",

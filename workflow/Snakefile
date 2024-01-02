@@ -11,15 +11,18 @@ from common.config import GiabStrats
 config = GiabStrats.parse_obj(config)
 
 
-def expand_final_to_src(paths, wildcards, bla=None):
-    # print((wildcards.ref_final_key, bla))
+def expand_final_to_src(paths, wildcards):
     return expand(paths, allow_missing=True, ref_src_key=wildcards.ref_final_key)
 
 
-def read_checkpoint(rulename, wildcards):
+def read_checkpoint(rulename, wildcards, other=[]):
     r = getattr(checkpoints, rulename)
     rk, _ = parse_final_refkey(wildcards.ref_final_key)
-    c = r.get(ref_key=rk, build_key=wildcards.build_key)
+    c = r.get(
+        ref_key=rk,
+        build_key=wildcards.build_key,
+        **{k: wildcards[k] for k in other},
+    )
     with c.output[0].open() as f:
         return json.load(f)
 
@@ -35,7 +38,7 @@ def read_named_checkpoint(rulename, name, wildcards):
 
 def bed_src_inputs(pathlist, f, wildcards):
     rk = wildcards.ref_key
-    rsks = config.refkey_to_bed_refsrckey(f, rk)
+    rsks = config.refkey_to_bed_refsrckeys(f, rk)
     return expand(pathlist, ref_src_key=rsks)
 
 

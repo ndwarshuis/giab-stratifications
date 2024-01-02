@@ -1,4 +1,5 @@
 from more_itertools import unzip
+from common.config import parse_final_refkey
 
 # make sure the wildcards here can match everything except the "built-in" other-
 # difficult beds (listed here)
@@ -28,7 +29,7 @@ use rule download_ref as download_other with:
     localrule: True
 
 
-rule filter_sort_other:
+checkpoint filter_sort_other:
     input:
         lambda w: expand(
             rules.download_other.output,
@@ -40,18 +41,19 @@ rule filter_sort_other:
         ),
     output:
         config.intermediate_build_hapless_dir
+        / "other"
         / "{other_level_key}"
         / "{other_strat_key}.json",
     params:
+        # TODO this is sloppy
         output_pattern=lambda w: expand(
             config.intermediate_build_dir
-            / "{other_level_key}"
-            / "{other_strat_key}.bed.gz",
+            / "other"
+            / w.other_level_key
+            / f"{w.other_strat_key}.bed.gz",
             ref_final_key="%s",
             build_key=w.build_key,
-            other_level_key=w.other_level_key,
-            other_strat_key=w.other_strat_key,
-        ),
+        )[0],
     conda:
         "../envs/bedtools.yml"
     wildcard_constraints:
@@ -62,7 +64,11 @@ rule filter_sort_other:
 
 rule remove_gaps_other:
     input:
-        bed=lambda w: read_checkpoint("filter_sort_other", w),
+        bed=lambda w: read_checkpoint(
+            "filter_sort_other",
+            w,
+            ["other_level_key", "other_strat_key"],
+        ),
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:
@@ -77,7 +83,9 @@ rule remove_gaps_other:
 
 
 def all_other(ref_final_key, build_key):
-    other = config.buildkey_to_build(ref_final_key, build_key).other_strats
+    rk, _ = parse_final_refkey(ref_final_key)
+    bd = config.to_build_data(rk, build_key)
+    other = bd.build.other_strats
     return [
         expand(
             rules.remove_gaps_other.output,

@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any, NamedTuple, Callable
 import subprocess as sp
 import common.config as cfg
+from common.functional import DesignError
 import json
 
 # use subprocess here because I don't see an easy way to stream a bedtools
@@ -109,9 +110,15 @@ def write_intersected_range_beds(
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
-    bd = sconf.to_build_data(smk.wildcards.ref_key, smk.wildcards.build_key)
+    ws: dict[str, str] = smk.wildcards
+    rfk = ws["ref_final_key"]
+    # TODO ...
+    rk, _ = cfg.parse_final_refkey(rfk)
+    bk = ws["build_key"]
+    bd = sconf.to_build_data(rk, bk)
     gps = bd.build.include.gc
-    assert gps is not None, "this should not happen"
+    if gps is None:
+        raise DesignError
     # ASSUME both of these input lists are sorted by GC fraction
     low = [GCInput(p, f, r) for p, (f, r) in zip(smk.input.low, gps.low)]
     high = [GCInput(p, f, r) for p, (f, r) in zip(smk.input.high, gps.high)]

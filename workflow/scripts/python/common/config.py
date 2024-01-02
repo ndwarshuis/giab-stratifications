@@ -2001,8 +2001,9 @@ class DataLogBenchDirs(NamedTuple):
 
 class FilterSortDirs(NamedTuple):
     data: Path
+    bench: Path
+    log: Path
     subbed: Path
-    # TODO add log and bench dirs here if needed
 
 
 class BedInterDirs(NamedTuple):
@@ -2348,6 +2349,8 @@ class GiabStrats(BaseModel):
                     subbed=prepare_output_path(
                         self.intermediate_build_hapless_dir / "ref"
                     ),
+                    log=self.log_build_hapless_dir / "ref",
+                    bench=self.bench_build_hapless_dir / "ref",
                 ),
                 build=DataLogBenchDirs(
                     data=self.intermediate_root_dir / "{ref_final_key}@{build_key}",
@@ -2367,6 +2370,8 @@ class GiabStrats(BaseModel):
             inter=BedInterDirs(
                 filtersort=FilterSortDirs(
                     data=self.intermediate_build_hapless_dir / v,
+                    log=self.log_build_hapless_dir / v,
+                    bench=self.bench_build_hapless_dir / v,
                     subbed=prepare_output_path(self.intermediate_build_hapless_dir / v),
                 ),
                 postsort=DataLogBenchDirs(

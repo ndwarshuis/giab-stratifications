@@ -1,4 +1,4 @@
-from common.config import CoreLevel
+from common.config import CoreLevel, parse_final_refkey
 
 xy = config.to_bed_dirs(CoreLevel.XY)
 
@@ -106,40 +106,41 @@ rule filter_autosomes:
 
 
 # helper functions for build targets
-def all_xy_features(ref_key, build_key):
+def all_xy_features(ref_final_key, build_key):
+    rk, _ = parse_final_refkey(ref_final_key)
+    bd = config.to_build_data(rk, build_key)
     targets = [
-        (rules.filter_XTR_features.output[0], config.want_xy_XTR),
-        (rules.filter_ampliconic_features.output[0], config.want_xy_ampliconic),
+        (rules.filter_XTR_features.output[0], bd.want_xy_XTR),
+        (rules.filter_ampliconic_features.output[0], bd.want_xy_ampliconic),
     ]
-    cns = config.wanted_xy_chr_names(ref_key, build_key)
     return [
         t
-        for p, f in targets
-        if f(ref_key)
+        for p, test in targets
+        if test
         for t in expand(
             p,
             allow_missing=True,
-            sex_chr=cns,
-            ref_key=ref_key,
+            sex_chr=bd.wanted_xy_chr_names,
+            ref_final_key=ref_final_key,
             build_key=build_key,
         )
     ]
 
 
-def all_xy_PAR(ref_key, build_key):
-    wanted_chrs = [
-        c
-        for (c, fun) in [("X", config.want_x_PAR), ("Y", config.want_y_PAR)]
-        if fun(ref_key, build_key)
-    ]
+def all_xy_PAR(ref_final_key, build_key):
+    rk, _ = parse_final_refkey(ref_final_key)
+    bd = config.to_build_data(rk, build_key)
+    wanted_chrs = [c for (c, t) in [("X", bd.want_x_PAR), ("Y", bd.want_y_PAR)] if t]
     return expand(
         rules.invert_PAR.output + rules.write_PAR_final.output,
         allow_missing=True,
         sex_chr=wanted_chrs,
-        ref_key=ref_key,
+        ref_final_key=ref_final_key,
         build_key=build_key,
     )
 
 
-def all_xy_sex(ref_key, build_key):
-    return all_xy_PAR(ref_key, build_key) + all_xy_features(ref_key, build_key)
+def all_xy_sex(ref_final_key, build_key):
+    return all_xy_PAR(ref_final_key, build_key) + all_xy_features(
+        ref_final_key, build_key
+    )
