@@ -75,6 +75,8 @@ rule remove_gaps_other:
         config.build_final_strat_path("{other_level_key}", "{other_strat_key}"),
     conda:
         "../envs/bedtools.yml"
+    wildcard_constraints:
+        **other_constraints,
     shell:
         """
         intersectBed -a {input.bed} -b {input.gapless} -sorted -g {input.genome} | \
