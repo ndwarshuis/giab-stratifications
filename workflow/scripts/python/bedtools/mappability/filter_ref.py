@@ -31,7 +31,6 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             cfg.AnyBedT,
             cfg.AnyBedT_,
             cfg.AnySrcT,
-            cfg.IncludeT,
         ],
         pat: cfg.ChrPattern,
     ) -> None:

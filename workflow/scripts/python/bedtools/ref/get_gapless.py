@@ -32,7 +32,6 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             cfg.AnyBedT,
             cfg.AnyBedT_,
             cfg.AnySrcT,
-            cfg.IncludeT,
         ]
     ) -> cfg.BedFile[cfg.AnyBedT] | None:
         return x.refdata.strat_inputs.gap
