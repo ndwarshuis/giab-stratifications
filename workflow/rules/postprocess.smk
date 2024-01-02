@@ -159,7 +159,7 @@ rule write_chr_name_mapper:
     run:
         with open(output[0], "w") as f:
             for ref_final_key, build_key in zip(*config.all_full_build_keys):
-                for i in config.buildkey_to_chr_indices(ref_final_key, build_key):
+                for i in config.to_build_data(ref_final_key, build_key).chr_indices:
                     pattern = config.refkey_to_final_chr_pattern(ref_final_key)
                     line = [
                         str(i.value),
@@ -238,7 +238,7 @@ rule run_happy:
         refi=rules.index_unzipped_ref.output,
         ref=rules.unzip_ref.output,
         bench_vcf=lambda w: expand_final_to_src(rules.download_bench_vcf.output, w),
-        bench_bed=rules.filter_sort_bench_bed.output,
+        bench_bed=lambda w: read_checkpoint("filter_sort_bench_bed", w),
         query_vcf=lambda w: expand_final_to_src(rules.download_query_vcf.output, w),
         strats=rules.generate_tsv_list.output,
     output:

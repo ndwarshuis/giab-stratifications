@@ -165,14 +165,20 @@ use rule download_ref as download_query_vcf with:
         ref.src.benchmark.log / "download_query_vcf.log",
 
 
-rule filter_sort_bench_bed:
+checkpoint filter_sort_bench_bed:
     input:
-        lambda w: expand_final_to_src(rules.download_bench_bed.output, w),
+        lambda w: bed_src_bd_inputs(rules.download_bench_bed.output, bd_to_bench_bed, w),
+        # lambda w: expand_final_to_src(rules.download_bench_bed.output, w),
     output:
-        ref.inter.build.data / "bench_filtered.bed.gz",
-    log:
-        ref.inter.build.log / "bench_filtered.bed.gz",
+        ref.inter.filtersort.data / "bench_filtered.json",
+    # log:
+    #     ref.inter.build.log / "bench_filtered.bed.gz",
     conda:
         "../envs/bedtools.yml"
+    params:
+        bed_output=lambda w: expand(
+            ref.inter.filtersort.subbed / "bench_filtered.bed.gz",
+            build_key=w.build_key,
+        ),
     script:
         "../scripts/python/bedtools/ref/filter_sort_bench_bed.py"

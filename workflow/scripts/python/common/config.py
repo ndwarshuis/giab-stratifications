@@ -4,16 +4,19 @@ Conventions:
   code is incorrect. This is in contrast with other errors which may happen due
   to network issues, invalid inputs, etc.
 """
+import sys
 import json
 import pandas as pd
 import re
 from pathlib import Path
 from pydantic import BaseModel as BaseModel_
 from pydantic.generics import GenericModel as GenericModel_
+from pydantic.generics import GenericModelT
 from pydantic import validator, HttpUrl, FilePath, NonNegativeInt, Field
 from dataclasses import dataclass
 from enum import Enum, unique
 from typing import (
+    Union,
     NewType,
     Any,
     Callable,
@@ -122,23 +125,8 @@ class Dip2BuildKey(str):
     pass
 
 
-class BuildPair_(NamedTuple, Generic[X, Y]):
-    ref: X
-    build: Y
-
-
 BuildKey = HapBuildKey | Dip1BuildKey | Dip2BuildKey
 RefKey = HapRefKey | Dip1RefKey | Dip2RefKey
-HaploidBuildPair = BuildPair_[HapRefKey, HapBuildKey]
-Diploid1BuildPair = BuildPair_[Dip1RefKey, Dip1BuildKey]
-Diploid2BuildPair = BuildPair_[Dip2RefKey, Dip2BuildKey]
-BuildPair = HaploidBuildPair | Diploid1BuildPair | Diploid2BuildPair
-BuildPairT = TypeVar(
-    "BuildPairT",
-    HaploidBuildPair,
-    Diploid1BuildPair,
-    Diploid2BuildPair,
-)
 
 
 BuildKeyT = TypeVar("BuildKeyT", HapBuildKey, Dip1BuildKey, Dip2BuildKey)
@@ -163,6 +151,20 @@ class GenericModel(GenericModel_):
     class Config:
         frozen = True
         extra = "forbid"
+
+    # dirty hack to get pickling to work for generic model types; see
+    # https://github.com/pydantic/pydantic/issues/1667
+    #
+    # it seems this was fixed, but there might be some issue with getting
+    # snakemake to recognize to get its paths correct
+    def __class_getitem__(
+        cls: Type[GenericModelT], params: Union[Type[Any], tuple[Type[Any], ...]]
+    ) -> Type[Any]:
+        created_class = super().__class_getitem__(params)
+        setattr(
+            sys.modules[created_class.__module__], created_class.__name__, created_class
+        )
+        return created_class
 
 
 class Haplotype(Enum):
@@ -246,6 +248,15 @@ def parse_final_refkey(s: str) -> tuple[str, Haplotype | None]:
 HapOrDip = Haploid_[X] | Diploid_[X]
 
 
+def choose_xy_unsafe(c: "ChrIndex", x_res: X, y_res: X) -> X:
+    if c is ChrIndex.CHRX:
+        return x_res
+    elif c is ChrIndex.CHRY:
+        return y_res
+    else:
+        raise DesignError(f"I am not an X or Y, I am a {c}")
+
+
 @unique
 class ChrIndex(Enum):
     """Represents a valid chromosome index.
@@ -307,17 +318,9 @@ class ChrIndex(Enum):
     def to_internal_index(self, hap: Haplotype) -> bed.InternalChrIndex:
         return bed.InternalChrIndex(hap.value * 24 + self.value - 1)
 
-    def choose_xy_unsafe(self, x_res: X, y_res: X) -> X:
-        if self.value is self.CHRX:
-            return x_res
-        elif self.value is self.CHRY:
-            return y_res
-        else:
-            raise DesignError(f"I am not an X or Y, I am a {self}")
-
     @property
     def xy_to_hap_unsafe(self) -> Haplotype:
-        return self.choose_xy_unsafe(Haplotype.HAP2, Haplotype.HAP1)
+        return choose_xy_unsafe(self, Haplotype.HAP2, Haplotype.HAP1)
 
 
 class ChrPattern:
@@ -1151,7 +1154,7 @@ class StratInputs_(GenericModel, Generic[AnyBedT, AnySrcT]):
 
     def xy_feature_bed_unsafe(self, i: ChrIndex) -> XYFile:
         f = self.xy_features_unsafe
-        return i.choose_xy_unsafe(f.x_bed, f.y_bed)
+        return choose_xy_unsafe(i, f.x_bed, f.y_bed)
 
 
 class StratInputToBed(Protocol):
@@ -1238,6 +1241,12 @@ class RefData_(Generic[RefKeyT, RefSourceT, AnyBedT, AnyBedT_, AnySrcT, BuildKey
             return BuildData_(self, bk, self.builds[bk])
         except KeyError:
             return None
+
+    def get_refkeys_unsafe_(self, f: "RefDataToSrc") -> list[str]:
+        return not_none_unsafe(
+            f(self),
+            lambda s: s.to_str_refkeys(self.refkey),
+        )
 
     def get_refkeys_unsafe(self, f: StratInputToSrc) -> list[str]:
         return not_none_unsafe(
@@ -1976,7 +1985,7 @@ def sub_output_path(pat: str, rk: RefKeyFull[RefKeyT]) -> Path:
 
 
 def prepare_output_path(path: Path) -> Path:
-    return Path(str(path).replace("{ref_final_key}", "%s"))
+    return Path(str(path).replace("{ref_key}", "%s"))
 
 
 class DataLogDirs(NamedTuple):
@@ -1996,19 +2005,20 @@ class FilterSortDirs(NamedTuple):
     # TODO add log and bench dirs here if needed
 
 
-class InterDirs(NamedTuple):
+class BedInterDirs(NamedTuple):
     filtersort: FilterSortDirs
     postsort: DataLogBenchDirs
 
 
 class BedDirs(NamedTuple):
     src: DataLogDirs
-    inter: InterDirs
+    inter: BedInterDirs
     final: Callable[[str], Path]
 
 
 class RefInterDirs(NamedTuple):
     prebuild: DataLogBenchDirs
+    filtersort: FilterSortDirs
     build: DataLogBenchDirs
 
 
@@ -2333,6 +2343,12 @@ class GiabStrats(BaseModel):
                     log=self.log_results_dir / "{ref_final_key}",
                     bench=self.bench_root_dir / "{ref_final_key}",
                 ),
+                filtersort=FilterSortDirs(
+                    data=self.intermediate_build_hapless_dir / "ref",
+                    subbed=prepare_output_path(
+                        self.intermediate_build_hapless_dir / "ref"
+                    ),
+                ),
                 build=DataLogBenchDirs(
                     data=self.intermediate_root_dir / "{ref_final_key}@{build_key}",
                     log=self.log_results_dir / "{ref_final_key}@{build_key}",
@@ -2348,7 +2364,7 @@ class GiabStrats(BaseModel):
                 self.ref_src_dir / v,
                 self.log_src_dir / v,
             ),
-            inter=InterDirs(
+            inter=BedInterDirs(
                 filtersort=FilterSortDirs(
                     data=self.intermediate_build_hapless_dir / v,
                     subbed=prepare_output_path(self.intermediate_build_hapless_dir / v),
@@ -2419,7 +2435,10 @@ class GiabStrats(BaseModel):
         self, f: BuildDataToBed, rk: str, bk: str
     ) -> list[str]:
         # TODO this "update" function is not DRY
-        return self.refkey_to_bed_refsrckeys(lambda rd: f(rd.to_build_data(bk)), rk)
+        # return self.refkey_to_bed_refsrckeys(lambda rd: f(rd.to_build_data(bk)), rk)
+        return self.to_ref_data(rk).get_refkeys_unsafe_(
+            lambda rd: fmap_maybe(lambda x: x.data.src, f(rd.to_build_data(bk)))
+        )
 
     def buildkey_to_bed_src(self, f: BuildDataToBed, rsk: str, bk: str) -> BedSrc:
         # return self.refsrckey_to_bed_src(lambda rd: f(rd.to_build_data(bk)), rsk)

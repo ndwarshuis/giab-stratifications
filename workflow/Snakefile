@@ -18,10 +18,8 @@ def expand_final_to_src(paths, wildcards, bla=None):
 
 def read_checkpoint(rulename, wildcards):
     r = getattr(checkpoints, rulename)
-    c = r.get(
-        ref_key=strip_refkey(wildcards.ref_final_key),
-        build_key=wildcards.build_key,
-    )
+    rk, _ = parse_final_refkey(wildcards.ref_final_key)
+    c = r.get(ref_key=rk, build_key=wildcards.build_key)
     with c.output[0].open() as f:
         return json.load(f)
 
@@ -29,18 +27,23 @@ def read_checkpoint(rulename, wildcards):
 def read_named_checkpoint(rulename, name, wildcards):
     # TODO not DRY
     r = getattr(checkpoints, rulename)
-    c = r.get(
-        ref_key=strip_refkey(wildcards.ref_final_key),
-        build_key=wildcards.build_key,
-    )
+    rk, _ = parse_final_refkey(wildcards.ref_final_key)
+    c = r.get(ref_key=rk, build_key=wildcards.build_key)
     with c.output[name][0].open() as f:
         return json.load(f)
 
 
 def bed_src_inputs(pathlist, f, wildcards):
     rk = wildcards.ref_key
-    rsks = config.refkey_to_bed_refsrckey(f, wildcards.ref_key)
+    rsks = config.refkey_to_bed_refsrckey(f, rk)
     return expand(pathlist, ref_src_key=rsks)
+
+
+def bed_src_bd_inputs(pathlist, f, wildcards):
+    rk = wildcards.ref_key
+    bk = wildcards.build_key
+    rsks = config.buildkey_to_bed_refsrckeys(f, rk, bk)
+    return expand(pathlist, allow_missing=True, ref_src_key=rsks, build_key=bk)
 
 
 def to_bed_src(f, wildcards):
