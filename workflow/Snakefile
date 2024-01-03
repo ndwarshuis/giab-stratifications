@@ -32,7 +32,8 @@ def read_named_checkpoint(rulename, name, wildcards):
     r = getattr(checkpoints, rulename)
     rk, _ = parse_final_refkey(wildcards.ref_final_key)
     c = r.get(ref_key=rk, build_key=wildcards.build_key)
-    with c.output[name][0].open() as f:
+    # TODO isn't there supposed to be a [0] after [name]?
+    with c.output[name].open() as f:
         return json.load(f)
 
 
