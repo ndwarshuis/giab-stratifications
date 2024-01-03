@@ -395,7 +395,7 @@ checkpoint filter_sort_trf:
         output_pattern=lambda w: expand(
             lc.inter.filtersort.subbed / "trf.bed.gz",
             build_key=w.build_key,
-        ),
+        )[0],
     conda:
         "../envs/bedtools.yml"
     script:
@@ -433,7 +433,7 @@ use rule download_ref as download_rmsk with:
 
 checkpoint filter_sort_rmsk:
     input:
-        lambda w: bed_src_inputs(rules.download_trf.output, si_to_rmsk, w),
+        lambda w: bed_src_inputs(rules.download_rmsk.output, si_to_rmsk, w),
     output:
         lc.inter.filtersort.data / "rmsk.txt.gz",
     params:

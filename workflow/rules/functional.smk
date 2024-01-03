@@ -44,11 +44,11 @@ checkpoint filter_cds:
         cds_output=lambda w: expand(
             func.inter.filtersort.subbed / "cds.bed.gz",
             build_key=w.build_key,
-        ),
+        )[0],
         vdj_output=lambda w: expand(
             func.inter.filtersort.subbed / "vdj.bed.gz",
             build_key=w.build_key,
-        ),
+        )[0],
     conda:
         "../envs/bedtools.yml"
     script:

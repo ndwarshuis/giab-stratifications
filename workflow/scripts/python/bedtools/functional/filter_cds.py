@@ -4,7 +4,7 @@ import json
 from typing import Any, Callable, TypeVar
 import common.config as cfg
 from common.functional import DesignError, match1_unsafe, match12_unsafe, both
-from common.bed import filter_sort_bed, read_bed, InitMapper, split_bed, write_bed
+from common.bed import filter_sort_bed, InitMapper, split_bed, write_bed
 
 X = TypeVar("X")
 
@@ -23,9 +23,9 @@ FTBLMapper = InitMapper
 VDJ_PAT = "^ID=gene-(IGH|IGK|IGL|TRA|TRB|TRG);"
 
 
-def _read_df(i: Path) -> pd.DataFrame:
-    df = read_bed(i, {0: str, 1: int, 2: int}, 0, "\t", more=[3, 4])
-    return df[df[3].str.contains("RefSeq") & (df[4] == "CDS")][[0, 1, 2]].copy()
+# def _read_df(i: Path) -> pd.DataFrame:
+#     df = read_bed(i, {0: str, 1: int, 2: int}, 0, "\t", more=[3, 4])
+#     return df[df[3].str.contains("RefSeq") & (df[4] == "CDS")][[0, 1, 2]].copy()
 
 
 def read_gff(i: Path) -> pd.DataFrame:
@@ -40,7 +40,16 @@ def read_gff(i: Path) -> pd.DataFrame:
     #
     # NOTE that source and type are used for creating the CDS bed, and
     # attributes are used for creating the VDJ bed (hence why all are included)
-    return read_bed(i, {0: str, 3: int, 4: int}, 0, "\t", more=[1, 2, 8])
+    columns = {0: str, 3: int, 4: int, 1: str, 2: str, 8: str}
+    df = pd.read_table(
+        i,
+        header=None,
+        comment="#",
+        dtype={k: v for k, v in columns.items()},
+        usecols=list(columns),
+    )[list(columns)]
+    df.columns = pd.Index(range(len(df.columns)))
+    return df
 
 
 def write_gff(
@@ -84,9 +93,9 @@ def iamnotlivingimasleep(_: Any) -> Any:
     raise DesignError("NOT IMPLEMENTED")
 
 
-def write_outputs(p: Path, xs: list[X]) -> None:
+def write_outputs(p: Path, xs: list[Path]) -> None:
     with open(p, "w") as f:
-        json.dump(xs, f)
+        json.dump([str(x) for x in xs], f)
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:

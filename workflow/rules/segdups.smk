@@ -17,10 +17,10 @@ checkpoint filter_sort_superdups:
     input:
         lambda w: bed_src_inputs(rules.download_superdups.output, si_to_superdups, w),
     output:
-        segdup.inter.filtersort.data / "filter_sorted.bed.gz",
+        segdup.inter.filtersort.data / "filter_sorted.json",
     params:
         output_pattern=lambda w: expand(
-            segdup.inter.filtersort.subbed,
+            segdup.inter.filtersort.subbed / "filter_sorted.bed.gz",
             build_key=w.build_key,
         )[0],
     conda:
