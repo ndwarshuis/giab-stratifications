@@ -569,9 +569,9 @@ diploid2_stratifications:
     ref:
       src:
         hap1:
-          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.mat_Y_EBV_MT.fasta
+          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.mat.fasta
         hap2:
-          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.pat_X_EBV_MT.fasta
+          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.pat.fasta
       chr_pattern:
         hap1:
           template: 'chr%i_MATERNAL'
