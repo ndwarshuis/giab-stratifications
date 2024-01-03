@@ -177,6 +177,7 @@ rule write_chr_name_mapper:
                     f.write("\t".join(line) + "\n")
 
 
+# TODO this should say "coverage plots" or something
 rule validate_strats:
     input:
         # this first input isn't actually used, but ensures the unit tests pass

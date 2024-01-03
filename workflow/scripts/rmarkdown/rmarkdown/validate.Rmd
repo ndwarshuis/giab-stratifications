@@ -33,7 +33,7 @@ read_bed <- function(path) {
 
 read_nonN <- function(path) {
   read_bed(path) %>%
-    mutate(build_key = path %>% dirname() %>% dirname() %>% basename()) %>%
+    mutate(build_key = path %>% dirname() %>% basename()) %>%
     left_join(chr_mapper, by = c("chrom", "build_key")) %>%
     select(-chrom)
 }
