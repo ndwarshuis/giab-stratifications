@@ -1,4 +1,6 @@
-from typing import TypeVar, Callable, Type
+from typing import TypeVar, Callable, Iterator
+from more_itertools import unzip
+
 
 X = TypeVar("X")
 Y = TypeVar("Y")
@@ -120,3 +122,8 @@ def match12_unsafe(
             raise DesignError(
                 msg if msg is not None else f"Two inputs expected, got {len(xs)}"
             )
+
+
+# version of unzip that won't return an empty tuple when given an empty list
+def unzip2(xs: list[tuple[X, Y]]) -> tuple[list[X], list[Y]]:
+    return ([x[0] for x in xs], [x[1] for x in xs])

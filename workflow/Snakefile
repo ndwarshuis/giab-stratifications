@@ -1,12 +1,12 @@
 from pathlib import Path
 from snakemake.utils import min_version
 
-min_version("7.20")
-
-
 # required to get snakemake to properly depickle a pydantic model
 sys.path.extend(["./workflow/scripts/python"])
 from common.config import GiabStrats
+from common.functional import unzip2
+
+min_version("7.20")
 
 config = GiabStrats.parse_obj(config)
 
@@ -101,17 +101,17 @@ rule all_resources:
         # TODO not DRY
         expand(
             rules.download_bench_vcf.output,
-            ref_src_key=(t := unzip(config.all_buildkey_bench_vcf))[0],
+            ref_src_key=(t := unzip2(config.all_buildkey_bench_vcf))[0],
             build_key=t[1],
         ),
         expand(
             rules.download_bench_bed.output,
-            ref_src_key=(t := unzip(config.all_buildkey_bench_bed))[0],
+            ref_src_key=(t := unzip2(config.all_buildkey_bench_bed))[0],
             build_key=t[1],
         ),
         expand(
             rules.download_query_vcf.output,
-            ref_src_key=(t := unzip(config.all_buildkey_query_vcf))[0],
+            ref_src_key=(t := unzip2(config.all_buildkey_query_vcf))[0],
             build_key=t[1],
         ),
 
