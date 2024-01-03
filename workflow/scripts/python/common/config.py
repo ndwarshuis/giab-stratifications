@@ -725,7 +725,6 @@ class BedFile(GenericModel, Generic[X]):
 
     def _read(self, path: Path, more: list[int] = []) -> pd.DataFrame:
         p = self.params
-        print(self.data)
         return bed.read_bed(path, p.bed_cols.columns, p.skip_lines, p.sep, more)
 
     # def read_filter_sort_bed(

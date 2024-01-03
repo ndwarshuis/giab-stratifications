@@ -128,7 +128,7 @@ use rule download_ref as download_bench_vcf with:
         ref.src.benchmark.data / "bench.vcf.gz",
     params:
         src=lambda w: config.buildkey_to_bed_src(
-            bd_to_bench_bed,
+            bd_to_bench_vcf,
             w.ref_src_key,
             w.build_key,
         ),

@@ -542,11 +542,11 @@ haploid_stratifications:
         ftbl_src:
           hap:
             url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_feature_table.txt.gz
-            md5: a7192b354d455e9164f6c41393e7967a
+            md5: 1453f2dc1ee28bac690aa999d1242e61
         gff_src:
           hap:
             url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_genomic.gff.gz
-            md5: 970d3ed5947b37eae52e6c347aae0f59
+            md5: ef95051dbf2005a6269dd21399fe08db
       mappability:
         unplaced_chr_patterns: ["^chrM$"]
     builds:
@@ -569,9 +569,9 @@ diploid2_stratifications:
     ref:
       src:
         hap1:
-          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.mat.fasta
+          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.1.mat.fasta.gz
         hap2:
-          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.pat.fasta
+          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.1.pat.fasta.gz
       chr_pattern:
         hap1:
           template: 'chr%i_MATERNAL'

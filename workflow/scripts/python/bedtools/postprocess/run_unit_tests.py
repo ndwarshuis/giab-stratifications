@@ -161,7 +161,7 @@ def strat_files(path: str) -> list[Path]:
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, str] = smk.wildcards
     fm = sconf.with_build_data_final(
-        ws["ref_key"],
+        ws["ref_final_key"],
         ws["build_key"],
         lambda bd: bd.ref_chr_conversion.final_mapper,
         lambda bd: bd.ref_chr_conversion.final_mapper,

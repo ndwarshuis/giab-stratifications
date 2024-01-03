@@ -237,12 +237,7 @@ rule index_unzipped_ref:
 
 rule run_happy:
     input:
-        _test=expand(
-            rules.unit_test_strats.output,
-            zip,
-            ref_final_key=(t := config.all_full_build_keys)[0],
-            build_key=t[1],
-        ),
+        _test=rules.unit_test_strats.output,
         refi=rules.index_unzipped_ref.output,
         ref=rules.unzip_ref.output,
         bench_vcf=lambda w: expand_final_to_src(rules.download_bench_vcf.output, w),
