@@ -57,7 +57,7 @@ def write_gff(
     mask_fun: Callable[[pd.DataFrame], "pd.Series[bool]"],
     df: pd.DataFrame,
 ) -> None:
-    write_bed(o, df[mask_fun(df)])
+    write_bed(o, df[mask_fun(df)][[0, 1, 2]])
 
 
 def cds_mask(df: pd.DataFrame) -> "pd.Series[bool]":
@@ -67,7 +67,7 @@ def cds_mask(df: pd.DataFrame) -> "pd.Series[bool]":
 
 
 def vdj_mask(df: pd.DataFrame) -> "pd.Series[bool]":
-    return df[3].str.match(VDJ_PAT)
+    return df[5].str.match(VDJ_PAT)
 
 
 def read_ftbl(path: Path, cis: set[cfg.ChrIndex], hap: cfg.Haplotype) -> FTBLMapper:

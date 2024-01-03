@@ -258,7 +258,7 @@ haploid_stratifications:
 
           # The other stratification to which this should be compared. Must
           # match a key in "comparisons" (see below) in toplevel config
-          other: GRCh38_v31
+          other: GRCh38_v33
 
           # List of string pairs to transform file names, with the first member
           # of each pair matching (regexp) the path of the generated strat and
@@ -271,30 +271,7 @@ haploid_stratifications:
 
           # Similar to "replacements" in purpose, but uses a fixed map of file
           # paths to denote which strats to compare.
-          path_mapper:
-            LowComplexity/GRCh38_AllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz: LowComplexity/GRCh38_AllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
-            LowComplexity/GRCh38_AllTandemRepeats_ge10000bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt10000bp_slop5.bed.gz
-            LowComplexity/GRCh38_AllTandemRepeats_ge100bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt100bp_slop5.bed.gz
-            LowComplexity/GRCh38_AllTandemRepeats.bed.gz: LowComplexity/GRCh38_allTandemRepeats.bed.gz
-            LowComplexity/GRCh38_notinAllHomopolymers_ge7bp_imperfectge11bp_slop5.bed.gz: LowComplexity/GRCh38_notinAllHomopolymers_gt6bp_imperfectgt10bp_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_diTR_10to49_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_diTR_11to50_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_diTR_50to199_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_diTR_51to200_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_diTR_ge200_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_diTR_gt200_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_homopolymer_ge12_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_homopolymer_gt11_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_homopolymer_ge21_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_homopolymer_gt20_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_imperfecthomopolge11_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_imperfecthomopolgt10_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_imperfecthomopolge21_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_imperfecthomopolgt20_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_quadTR_19to49_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_quadTR_20to50_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_quadTR_50to199_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_quadTR_51to200_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_quadTR_ge200_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_quadTR_gt200_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_triTR_14to49_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_triTR_15to50_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_triTR_50to199_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_triTR_51to200_slop5.bed.gz
-            LowComplexity/GRCh38_SimpleRepeat_triTR_ge200_slop5.bed.gz: LowComplexity/GRCh38_SimpleRepeat_triTR_gt200_slop5.bed.gz
-            LowComplexity/GRCh38_AllTandemRepeats_le50bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_lt51bp_slop5.bed.gz
-            LowComplexity/GRCh38_AllTandemRepeats_ge101bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt100bp_slop5.bed.gz
-            LowComplexity/GRCh38_AllTandemRepeats_ge10001bp_slop5.bed.gz: LowComplexity/GRCh38_AllTandemRepeats_gt10000bp_slop5.bed.gz
-            Functional/GRCh38_notinrefseq_cds.bed.gz: FunctionalRegions/GRCh38_notinrefseq_cds.bed.gz
-            Functional/GRCh38_refseq_cds.bed.gz: FunctionalRegions/GRCh38_refseq_cds.bed.gz
+          path_mapper: {}
 
           # Patterns in other stratification to ignore in comparison
           #
@@ -602,7 +579,7 @@ diploid2_stratifications:
           hets: false
 
 comparison_strats:
-  GRCh38_v31: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/v3.1-genome-stratifications-GRCh38.tar.gz
+  GRCh38_v33: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.3/genome-stratifications-GRCh38@all.tar.gz
 
 # Stratifications to include in each benchmark. This is a global options to
 # keep benchmarks comparable across builds.

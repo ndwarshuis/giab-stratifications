@@ -438,7 +438,7 @@ checkpoint filter_sort_rmsk:
         lc.inter.filtersort.data / "rmsk.txt.gz",
     params:
         output_pattern=lambda w: expand(
-            lc.inter.filtersort.subbed / "trf.bed.gz",
+            lc.inter.filtersort.subbed / "rmsk.bed.gz",
             build_key=w.build_key,
         )[0],
     conda:
@@ -491,7 +491,7 @@ use rule download_ref as download_censat with:
     localrule: True
 
 
-rule filter_sort_censat:
+checkpoint filter_sort_censat:
     input:
         lambda w: bed_src_inputs(rules.download_censat.output, si_to_satellites, w),
     output:
