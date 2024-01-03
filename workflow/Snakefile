@@ -98,20 +98,12 @@ rule all_resources:
         expand(rules.download_superdups.output, ref_src_key=config.all_refkey_segdups),
         expand(rules.download_ftbl.output, ref_src_key=config.all_refkey_ftbl),
         expand(rules.download_gff.output, ref_src_key=config.all_refkey_gff),
-        # TODO not DRY
+        # TODO this function is misleading
         expand(
-            rules.download_bench_vcf.output,
+            rules.download_bench_vcf.output
+            + rules.download_bench_bed.output
+            + rules.download_query_vcf.output,
             ref_src_key=(t := unzip2(config.all_buildkey_bench_vcf))[0],
-            build_key=t[1],
-        ),
-        expand(
-            rules.download_bench_bed.output,
-            ref_src_key=(t := unzip2(config.all_buildkey_bench_bed))[0],
-            build_key=t[1],
-        ),
-        expand(
-            rules.download_query_vcf.output,
-            ref_src_key=(t := unzip2(config.all_buildkey_query_vcf))[0],
             build_key=t[1],
         ),
 
