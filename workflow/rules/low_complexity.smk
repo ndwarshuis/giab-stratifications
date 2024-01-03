@@ -393,7 +393,7 @@ checkpoint filter_sort_trf:
         lc.inter.filtersort.data / "trf.json",
     params:
         output_pattern=lambda w: expand(
-            lc.inter.postsort.subbed / "trf.bed.gz",
+            lc.inter.filtersort.subbed / "trf.bed.gz",
             build_key=w.build_key,
         ),
     conda:
@@ -498,7 +498,7 @@ rule filter_sort_censat:
         lc.inter.filtersort.data / "censat.json",
     params:
         output_pattern=lambda w: expand(
-            lc.inter.postsort.subbed / "censat.bed.gz",
+            lc.inter.filtersort.subbed / "censat.bed.gz",
             build_key=w.build_key,
         )[0],
     conda:

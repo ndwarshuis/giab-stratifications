@@ -1,4 +1,4 @@
-from common.config import CoreLevel
+from common.config import CoreLevel, si_to_superdups
 
 segdup = config.to_bed_dirs(CoreLevel.SEGDUPS)
 
@@ -13,16 +13,16 @@ use rule download_ref as download_superdups with:
     localrule: True
 
 
-rule filter_sort_superdups:
+checkpoint filter_sort_superdups:
     input:
-        rules.download_superdups.output,
+        lambda w: bed_src_inputs(rules.download_superdups.output, si_to_superdups, w),
     output:
         segdup.inter.filtersort.data / "filter_sorted.bed.gz",
     params:
-        output_bed=lambda w: expand(
+        output_pattern=lambda w: expand(
             segdup.inter.filtersort.subbed,
             build_key=w.build_key,
-        ),
+        )[0],
     conda:
         "../envs/bedtools.yml"
     script:

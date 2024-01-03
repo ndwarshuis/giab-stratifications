@@ -1,5 +1,5 @@
 from more_itertools import unzip
-from common.config import parse_final_refkey
+from common.config import parse_final_refkey, bd_to_other
 
 # make sure the wildcards here can match everything except the "built-in" other-
 # difficult beds (listed here)
@@ -13,11 +13,15 @@ other_constraints = {
 
 use rule download_ref as download_other with:
     output:
-        config.intermediate_build_dir
+        config.ref_src_dir
+        / "{build_key}"
         / "other"
         / "{other_level_key}_{other_strat_key}.bed.gz",
     log:
-        config.log_build_dir / "existing" / "{other_level_key}_{other_strat_key}.log",
+        config.ref_src_dir
+        / "{build_key}"
+        / "other"
+        / "{other_level_key}_{other_strat_key}.log",
     params:
         src=lambda w: config.buildkey_to_bed_src(
             lambda bd: bd_to_other(w.other_level_key, w.other_strat_key, bd),
@@ -33,6 +37,7 @@ checkpoint filter_sort_other:
     input:
         lambda w: expand(
             rules.download_other.output,
+            allow_missing=True,
             ref_src_key=config.buildkey_to_bed_refsrckeys(
                 lambda bd: bd_to_other(w.other_level_key, w.other_strat_key, bd),
                 w.ref_key,

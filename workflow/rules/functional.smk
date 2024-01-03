@@ -1,4 +1,4 @@
-from common.config import CoreLevel
+from common.config import CoreLevel, si_to_ftbl, si_to_gff
 
 func = config.to_bed_dirs(CoreLevel.FUNCTIONAL)
 
@@ -7,7 +7,7 @@ use rule download_ref as download_ftbl with:
     output:
         func.src.data / "ftbl.txt.gz",
     params:
-        src=lambda w: config.refkey_to_functional_refsrckeys(si_to_ftbl, w.ref_src_key),
+        src=lambda w: config.refsrckey_to_functional_src(si_to_ftbl, w.ref_src_key),
     localrule: True
     log:
         func.src.log / "ftbl.log",
@@ -17,7 +17,7 @@ use rule download_ref as download_gff with:
     output:
         func.src.data / "gff.txt.gz",
     params:
-        src=lambda w: config.refkey_to_functional_refsrckeys(si_to_gff, w.ref_src_key),
+        src=lambda w: config.refsrckey_to_functional_src(si_to_gff, w.ref_src_key),
     localrule: True
     log:
         func.src.log / "gff.log",
@@ -29,7 +29,7 @@ checkpoint filter_cds:
             lambda w: {
                 k: expand(
                     p,
-                    ref_src_key=config.refkey_to_functional_refsrckey(f, w.ref_key),
+                    ref_src_key=config.refkey_to_functional_refsrckeys(f, w.ref_key),
                 )
                 for k, f, p in zip(
                     ["ftbl", "gff"],
@@ -39,14 +39,14 @@ checkpoint filter_cds:
             }
         ),
     output:
-        {k: func.inter.filtersort.data / f"{k}.json" for k in ["cds", "vdj"]},
+        **{k: func.inter.filtersort.data / f"{k}.json" for k in ["cds", "vdj"]},
     params:
         cds_output=lambda w: expand(
-            func.inter.postsort.subbed / "cds.bed.gz",
+            func.inter.filtersort.subbed / "cds.bed.gz",
             build_key=w.build_key,
         ),
         vdj_output=lambda w: expand(
-            func.inter.postsort.subbed / "vdj.bed.gz",
+            func.inter.filtersort.subbed / "vdj.bed.gz",
             build_key=w.build_key,
         ),
     conda:

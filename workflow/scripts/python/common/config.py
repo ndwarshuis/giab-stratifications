@@ -2424,13 +2424,16 @@ class GiabStrats(BaseModel):
             rd, hap, lambda rd: fmap_maybe(lambda x: x.data.src, f(rd))
         )
 
-    def refkey_to_x_features_src(self, f: StratInputToBed, rk: str) -> BedSrc:
+    def refsrckey_to_x_features_src(self, rsk: str) -> BedSrc:
+        # TODO this is confusing
+        rk, _ = parse_final_refkey(rsk)
         return not_none_unsafe(
             self.to_ref_data(rk).strat_inputs.xy.features,
             lambda x: x.x_bed.data.src.hap,
         )
 
-    def refkey_to_y_features_src(self, f: StratInputToBed, rk: str) -> BedSrc:
+    def refsrckey_to_y_features_src(self, rsk: str) -> BedSrc:
+        rk, _ = parse_final_refkey(rsk)
         return not_none_unsafe(
             self.to_ref_data(rk).strat_inputs.xy.features,
             lambda x: x.y_bed.data.src.hap,

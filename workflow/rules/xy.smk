@@ -11,10 +11,10 @@ use rule download_ref as download_genome_features_bed with:
         xy.src.log / "genome_features_{sex_chr}.log",
     params:
         src=lambda w: (
-            config.refkey_to_y_features_src
+            config.refsrckey_to_y_features_src
             if w.sex_chr == "Y"
-            else config.refkey_to_x_features_src
-        )(w.ref_key),
+            else config.refsrckey_to_x_features_src
+        )(w.ref_src_key),
     localrule: True
 
 
@@ -36,7 +36,9 @@ rule write_PAR_final:
 
 rule filter_XTR_features:
     input:
-        bed=rules.download_genome_features_bed.output[0],
+        bed=lambda w: expand_final_to_src(
+            rules.download_genome_features_bed.output, w
+        )[0],
         gapless=rules.get_gapless.output.parY,
         genome=rules.get_genome.output,
     output:
@@ -50,10 +52,6 @@ rule filter_XTR_features:
 
 
 use rule filter_XTR_features as filter_ampliconic_features with:
-    input:
-        bed=rules.download_genome_features_bed.output[0],
-        gapless=rules.get_gapless.output.parY,
-        genome=rules.get_genome.output,
     output:
         xy.final("chr{sex_chr}_ampliconic"),
     params:
