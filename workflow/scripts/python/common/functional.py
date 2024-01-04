@@ -1,5 +1,4 @@
-from typing import TypeVar, Callable, Iterator
-from more_itertools import unzip
+from typing import TypeVar, Callable
 
 
 X = TypeVar("X")
@@ -124,6 +123,10 @@ def match12_unsafe(
             )
 
 
-# version of unzip that won't return an empty tuple when given an empty list
+# versions of unzip that won't return an empty tuple when given an empty list
 def unzip2(xs: list[tuple[X, Y]]) -> tuple[list[X], list[Y]]:
     return ([x[0] for x in xs], [x[1] for x in xs])
+
+
+def unzip3(xs: list[tuple[X, Y, Z]]) -> tuple[list[X], list[Y], list[Z]]:
+    return ([x[0] for x in xs], [x[1] for x in xs], [x[2] for x in xs])
