@@ -56,28 +56,25 @@ Z = TypeVar("Z")
 Percent = Annotated[int, Field(ge=0, le=100)]
 
 
-class RefKey_(str):
+class RefKey(str):
     pass
 
 
-class HapRefKey_(RefKey_):
+class HapRefKey(RefKey):
     pass
 
 
-class Dip1RefKey_(RefKey_):
+class Dip1RefKey(RefKey):
     pass
 
 
-class Dip2RefKey_(RefKey_):
+class Dip2RefKey(RefKey):
     pass
 
 
-RefKeyT = TypeVar("RefKeyT", HapRefKey_, Dip1RefKey_, Dip2RefKey_)
+RefKeyT = TypeVar("RefKeyT", HapRefKey, Dip1RefKey, Dip2RefKey)
 
 
-HapRefKey = HapRefKey_
-Dip1RefKey = Dip1RefKey_
-Dip2RefKey = Dip2RefKey_
 AnyRefKey = HapRefKey | Dip1RefKey | Dip2RefKey
 
 
@@ -87,8 +84,8 @@ class RefKeyFull(Generic[RefKeyT]):
     hap: "Haplotype | None"
 
     @property
-    def strip(self) -> RefKey_:
-        return RefKey_(self.key)
+    def strip(self) -> RefKey:
+        return RefKey(self.key)
 
     @property
     def as_tuple(self) -> "tuple[str, Haplotype | None]":
@@ -127,7 +124,6 @@ class Dip2BuildKey(str):
 
 
 BuildKey = HapBuildKey | Dip1BuildKey | Dip2BuildKey
-RefKey = HapRefKey | Dip1RefKey | Dip2RefKey
 
 
 BuildKeyT = TypeVar("BuildKeyT", HapBuildKey, Dip1BuildKey, Dip2BuildKey)
@@ -1205,44 +1201,32 @@ class RefDataToBed(Protocol):
         pass
 
 
-class HapRefData(
-    RefData_[
-        HapRefKey_,
-        HapChrSource[RefSrc],
-        HapBedSrc,
-        HapBedSrc,
-        Haploid_[BedSrc],
-        HapBuildKey,
-    ]
-):
-    pass
+HapRefData = RefData_[
+    HapRefKey,
+    HapChrSource[RefSrc],
+    HapBedSrc,
+    HapBedSrc,
+    Haploid_[BedSrc],
+    HapBuildKey,
+]
 
+Dip1RefData = RefData_[
+    Dip1RefKey,
+    DipChrSource1[RefSrc],
+    DipBedSrc,
+    Dip1BedSrc,
+    Diploid_[BedSrc],
+    Dip1BuildKey,
+]
 
-class Dip1RefData(
-    RefData_[
-        Dip1RefKey_,
-        DipChrSource1[RefSrc],
-        DipBedSrc,
-        Dip1BedSrc,
-        Diploid_[BedSrc],
-        Dip1BuildKey,
-    ]
-):
-    pass
-
-
-class Dip2RefData(
-    RefData_[
-        Dip2RefKey_,
-        DipChrSource2[RefSrc],
-        DipBedSrc,
-        Dip2BedSrc,
-        Diploid_[BedSrc],
-        Dip2BuildKey,
-    ]
-):
-    pass
-
+Dip2RefData = RefData_[
+    Dip2RefKey,
+    DipChrSource2[RefSrc],
+    DipBedSrc,
+    Dip2BedSrc,
+    Diploid_[BedSrc],
+    Dip2BuildKey,
+]
 
 AnyRefData = HapRefData | Dip1RefData | Dip2RefData
 
@@ -1440,7 +1424,7 @@ Xcov = TypeVar("Xcov", covariant=True)
 
 
 class OutputPattern(Protocol, Generic[Xcov]):
-    A = TypeVar("A", HapRefKey_, Dip1RefKey_, Dip2RefKey_)
+    A = TypeVar("A", HapRefKey, Dip1RefKey, Dip2RefKey)
 
     def __call__(self, __x: RefKeyFull[A]) -> Xcov:
         pass
@@ -1459,7 +1443,7 @@ class Stratification(
 @dataclass
 class HapBuildData(
     BuildData_[
-        HapRefKey_,
+        HapRefKey,
         HapBuildKey,
         HapChrSource[RefSrc],
         HapBedSrc,
@@ -1506,7 +1490,7 @@ class HapBuildData(
 @dataclass
 class Dip1BuildData(
     BuildData_[
-        Dip1RefKey_,
+        Dip1RefKey,
         Dip1BuildKey,
         DipChrSource1[RefSrc],
         DipBedSrc,
@@ -1606,7 +1590,7 @@ class Dip1BuildData(
 @dataclass
 class Dip2BuildData(
     BuildData_[
-        Dip2RefKey_,
+        Dip2RefKey,
         Dip2BuildKey,
         DipChrSource2[RefSrc],
         DipBedSrc,
@@ -2043,9 +2027,9 @@ class GiabStrats(BaseModel):
     # haploid_stratifications: HaploidStratDict = HaploidStratDict()
     # diploid1_stratifications: Diploid1StratDict = Diploid1StratDict()
     # diploid2_stratifications: Diploid2StratDict = Diploid2StratDict()
-    haploid_stratifications: dict[HapRefKey_, HapStrat] = {}
-    diploid1_stratifications: dict[Dip1RefKey_, Dip1Strat] = {}
-    diploid2_stratifications: dict[Dip2RefKey_, Dip2Strat] = {}
+    haploid_stratifications: dict[HapRefKey, HapStrat] = {}
+    diploid1_stratifications: dict[Dip1RefKey, Dip1Strat] = {}
+    diploid2_stratifications: dict[Dip2RefKey, Dip2Strat] = {}
     comparison_strats: dict[CompareKey, HttpUrl] = {}
     benchmark_subsets: list[str] = [
         "AllAutosomes",
@@ -2398,42 +2382,15 @@ class GiabStrats(BaseModel):
             + all_ref_refsrckeys(self.diploid2_stratifications)
         )
 
-    # TODO this seems too messy
-    def parse_refkey(self, rk: str) -> AnyRefKey:
-        if HapRefKey_(rk) in self.haploid_stratifications:
-            return HapRefKey_(rk)
-        elif Dip1RefKey_(rk) in self.diploid1_stratifications:
-            return Dip1RefKey_(rk)
-        elif Dip2RefKey_(rk) in self.diploid2_stratifications:
-            return Dip2RefKey_(rk)
+    def to_ref_data(self, rk: str) -> AnyRefData:
+        if HapRefKey(rk) in self.haploid_stratifications:
+            return to_ref_data_unsafe(self.haploid_stratifications, HapRefKey(rk))
+        elif Dip1RefKey(rk) in self.diploid1_stratifications:
+            return to_ref_data_unsafe(self.diploid1_stratifications, Dip1RefKey(rk))
+        elif Dip2RefKey(rk) in self.diploid2_stratifications:
+            return to_ref_data_unsafe(self.diploid2_stratifications, Dip2RefKey(rk))
         else:
             raise DesignError(f"invalid ref key: '{rk}'")
-
-    def to_ref_data(self, rk: str) -> AnyRefData:
-        k = self.parse_refkey(rk)
-        if isinstance(k, HapRefKey_):
-            return HapRefData(
-                (rd := to_ref_data_unsafe(self.haploid_stratifications, k)).refkey,
-                rd.ref,
-                rd.strat_inputs,
-                rd.builds,
-            )
-        elif isinstance(k, Dip1RefKey_):
-            return Dip1RefData(
-                (rd0 := to_ref_data_unsafe(self.diploid1_stratifications, k)).refkey,
-                rd0.ref,
-                rd0.strat_inputs,
-                rd0.builds,
-            )
-        elif isinstance(k, Dip2RefKey_):
-            return Dip2RefData(
-                (rd1 := to_ref_data_unsafe(self.diploid2_stratifications, k)).refkey,
-                rd1.ref,
-                rd1.strat_inputs,
-                rd1.builds,
-            )
-        else:
-            assert_never(k)
 
     def with_ref_data(
         self,
