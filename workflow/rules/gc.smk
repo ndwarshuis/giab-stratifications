@@ -1,25 +1,10 @@
 from functools import partial
 from common.config import CoreLevel
+from bedtools.gc.helpers import seqtk_args, range_bounds
 from more_itertools import unzip
 import json
 
 gc = config.to_bed_dirs(CoreLevel.GC)
-
-
-def seqtk_args(wildcards):
-    _frac = int(wildcards["frac"])
-    rk, _ = parse_final_refkey(wildcards.ref_final_key)
-    bk = wildcards.build_key
-    gps = config.to_build_data(rk, bk).build.include.gc
-
-    if _frac in gps.low_fractions:
-        switch, frac = ("w", 100 - _frac)
-    elif _frac in gps.high_fractions:
-        switch, frac = ("", _frac)
-    else:
-        assert False, "this should not happen"
-
-    return f"-{switch}f 0.{frac}"
 
 
 # TODO this can take a gzipped fa file
@@ -31,7 +16,7 @@ rule find_gc_content:
     output:
         gc.inter.postsort.data / "gc{frac}.bed.gz",
     params:
-        args=seqtk_args,
+        args=lambda w: seqtk_args(config, w["ref_final_key"], w["build_key"], w["frac"]),
     conda:
         "../envs/seqtk.yml"
     wildcard_constraints:
@@ -63,12 +48,11 @@ def range_inputs(wildcards):
     def expand_final(frac):
         return _expand(rules.find_gc_content_final.output, frac)
 
-    # TODO hmmmm...sketchy
-    rk, _ = parse_final_refkey(wildcards.ref_final_key)
-    bk = wildcards.build_key
-    gps = config.to_build_data(rk, bk).build.include.gc
-    lowest, lower = gps.low_bounds
-    highest, higher = gps.high_bounds
+    lowest, lower, higher, highest = range_bounds(
+        config,
+        wildcards["ref_final_key"],
+        wildcards["build_key"],
+    )
 
     return {
         "low": expand_final(lowest) + expand_inter(lower),
