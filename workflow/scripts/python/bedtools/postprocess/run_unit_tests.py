@@ -160,13 +160,10 @@ def strat_files(path: str) -> list[Path]:
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, str] = smk.wildcards
-    fm = sconf.with_build_data_final(
+    fm = sconf.buildkey_to_ref_mappers(
         cfg.wc_to_reffinalkey(ws),
         cfg.wc_to_buildkey(ws),
-        lambda bd: bd.ref_chr_conversion.final_mapper,
-        lambda bd: bd.ref_chr_conversion.final_mapper,
-        lambda hap, bd: hap.from_either(*bd.ref_chr_conversion).final_mapper,
-    )
+    )[1]
     reverse_map = {v: k for k, v in fm.items()}
 
     # check global stuff first (since this is faster)

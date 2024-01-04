@@ -140,8 +140,11 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
         def go(f: Path, g: Path) -> pd.DataFrame:
             im = read_ftbl(f, bd.chr_indices, cfg.Haplotype.HAP1)
+            fm = bd.refdata.ref.chr_pattern.final_mapper(
+                bd.chr_indices, cfg.Haplotype.HAP1
+            )
             gff = read_gff(g)
-            gff_ = filter_sort_bed(im, bd.final_mapper, gff)
+            gff_ = filter_sort_bed(im, fm, gff)
             write_gff(c, cds_mask, gff_)
             return gff_
 
@@ -154,7 +157,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         return [c], v
 
     def dip1(bd: cfg.Dip1BuildData) -> tuple[list[Path], list[Path]]:
-        fm = bd.final_mapper
+        fm = bd.refdata.ref.chr_pattern.final_mapper(bd.chr_indices)
         rd = bd.refdata
         rk = rd.ref.src.key(rd.refkey)
 
@@ -184,7 +187,9 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         return [c], v
 
     def dip2(bd: cfg.Dip2BuildData) -> tuple[list[Path], list[Path]]:
-        fm0, fm1 = bd.final_mapper
+        fm0, fm1 = bd.refdata.ref.chr_pattern.both(
+            lambda x, hap: x.final_mapper(bd.chr_indices, hap)
+        )
         im0, im1 = match12_unsafe(
             ftbl_inputs,
             iamnotlivingimasleep,

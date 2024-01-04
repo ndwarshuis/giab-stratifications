@@ -173,6 +173,9 @@ class Diploid_(GenericModel, Generic[X], _Src):
     def from_either(self, hap: Haplotype) -> X:
         return hap.from_either(self.hap1, self.hap2)
 
+    def both(self, f: Callable[[X, Haplotype], Y]) -> tuple[Y, Y]:
+        return (f(self.hap1, Haplotype.HAP1), f(self.hap2, Haplotype.HAP2))
+
     def key1(self, rk: RefKey) -> RefKeyFull:
         return RefKeyFull(rk, Haplotype.HAP1)
 
@@ -380,6 +383,14 @@ class HapChrSource(GenericModel, Generic[X]):
     src: Haploid_[X]
     chr_pattern: HapChrPattern = HapChrPattern()
 
+    def chr_conversion(
+        self, fromChr: HapChrPattern, cis: set[ChrIndex]
+    ) -> "HapToHapChrConversion":
+        return HapToHapChrConversion(fromChr, self.chr_pattern, cis)
+
+    def noop_conversion(self, cis: set[ChrIndex]) -> "HapToHapChrConversion":
+        return self.chr_conversion(self.chr_pattern, cis)
+
 
 class DipChrSource1(GenericModel, Generic[X]):
     """Specification for a combined diploid source file.
@@ -392,6 +403,23 @@ class DipChrSource1(GenericModel, Generic[X]):
 
     src: Haploid_[X]
     chr_pattern: DipChrPattern = DipChrPattern()
+
+    def hap_chr_conversion(
+        self,
+        fromChr: Diploid_[HapChrPattern],
+        cis: set[ChrIndex],
+    ) -> "HapToDipChrConversion":
+        return HapToDipChrConversion(fromChr, self.chr_pattern, cis)
+
+    def dip_chr_conversion(
+        self,
+        fromChr: DipChrPattern,
+        cis: set[ChrIndex],
+    ) -> "DipToDipChrConversion":
+        return DipToDipChrConversion(fromChr, self.chr_pattern, cis)
+
+    def noop_conversion(self, cis: set[ChrIndex]) -> "DipToDipChrConversion":
+        return self.dip_chr_conversion(self.chr_pattern, cis)
 
 
 class DipChrSource2(GenericModel, Generic[X]):
@@ -408,6 +436,29 @@ class DipChrSource2(GenericModel, Generic[X]):
         hap1=HapChrPattern(),
         hap2=HapChrPattern(),
     )
+
+    def hap_chr_conversion(
+        self,
+        fromChr: Diploid_[HapChrPattern],
+        cis: set[ChrIndex],
+    ) -> "tuple[HapToHapChrConversion, HapToHapChrConversion]":
+        toChr = self.chr_pattern
+        return (
+            HapToHapChrConversion(fromChr.hap1, toChr.hap1, cis),
+            HapToHapChrConversion(fromChr.hap2, toChr.hap2, cis),
+        )
+
+    def dip_chr_conversion(
+        self,
+        fromChr: DipChrPattern,
+        cis: set[ChrIndex],
+    ) -> "DipToHapChrConversion":
+        return DipToHapChrConversion(fromChr, self.chr_pattern, cis)
+
+    def noop_conversion(
+        self, cis: set[ChrIndex]
+    ) -> "tuple[HapToHapChrConversion, HapToHapChrConversion]":
+        return self.hap_chr_conversion(self.chr_pattern, cis)
 
 
 class HashedSrc_(BaseModel):
@@ -1364,9 +1415,6 @@ class BuildDataToSrc(Protocol):
         pass
 
 
-Xcov = TypeVar("Xcov", covariant=True)
-
-
 class Stratification(GenericModel, Generic[RefSourceT, AnyBedT, AnyBedT_, AnySrcT]):
     """Configuration for stratifications for a given reference."""
 
@@ -1379,27 +1427,9 @@ class Stratification(GenericModel, Generic[RefSourceT, AnyBedT, AnyBedT_, AnySrc
 class HapBuildData(
     BuildData_[HapChrSource[RefSrc], HapBedSrc, HapBedSrc, Haploid_[BedSrc]]
 ):
-    @property
-    def final_mapper(self) -> bed.FinalMapper:
-        return self.refdata.ref.chr_pattern.final_mapper(
-            self.chr_indices, Haplotype.HAP1
-        )
-
-    @property
-    def ref_chr_conversion(self) -> HapToHapChrConversion:
-        p = self.refdata.ref.chr_pattern
-        return HapToHapChrConversion(p, p, self.chr_indices)
-
-    def chr_conversion(self, fromChr: HapChrPattern) -> HapToHapChrConversion:
-        return HapToHapChrConversion(
-            fromChr,
-            self.refdata.ref.chr_pattern,
-            self.chr_indices,
-        )
-
     def read_filter_sort_hap_bed(self, bf: HapBedFile, ipath: Path) -> pd.DataFrame:
         """Read a haploid bed file, sort it, and write it in bgzip format."""
-        conv = self.chr_conversion(bf.data.chr_pattern)
+        conv = self.refdata.ref.chr_conversion(bf.data.chr_pattern, self.chr_indices)
         df = bf.read(ipath)
         return bed.filter_sort_bed(conv.init_mapper, conv.final_mapper, df)
 
@@ -1419,42 +1449,15 @@ class HapBuildData(
 class Dip1BuildData(
     BuildData_[DipChrSource1[RefSrc], DipBedSrc, Dip1BedSrc, Diploid_[BedSrc]]
 ):
-    @property
-    def final_mapper(self) -> bed.FinalMapper:
-        return self.refdata.ref.chr_pattern.final_mapper(self.chr_indices)
-
-    @property
-    def ref_chr_conversion(self) -> DipToDipChrConversion:
-        p = self.refdata.ref.chr_pattern
-        return DipToDipChrConversion(p, p, self.chr_indices)
-
-    def hap_chr_conversion(
-        self,
-        fromChr: Diploid_[HapChrPattern],
-    ) -> HapToDipChrConversion:
-        return HapToDipChrConversion(
-            fromChr,
-            self.refdata.ref.chr_pattern,
-            self.chr_indices,
-        )
-
-    def dip_chr_conversion(
-        self,
-        fromChr: DipChrPattern,
-    ) -> DipToDipChrConversion:
-        return DipToDipChrConversion(
-            fromChr,
-            self.refdata.ref.chr_pattern,
-            self.chr_indices,
-        )
-
     def read_filter_sort_dip1_bed(
         self,
         bf: Dip1BedFile,
         ipath: Path,
     ) -> pd.DataFrame:
         """Read a diploid bed file, sort it, and write it in bgzip format."""
-        conv = self.dip_chr_conversion(bf.data.chr_pattern)
+        conv = self.refdata.ref.dip_chr_conversion(
+            bf.data.chr_pattern, self.chr_indices
+        )
         df = bf.read(ipath)
         return bed.filter_sort_bed(conv.init_mapper, conv.final_mapper, df)
 
@@ -1482,7 +1485,9 @@ class Dip1BuildData(
             df = b.read(i)
             return bed.filter_sort_bed(imap, fmap, df)
 
-        conv = self.hap_chr_conversion(bf.data.chr_pattern)
+        conv = self.refdata.ref.hap_chr_conversion(
+            bf.data.chr_pattern, self.chr_indices
+        )
         imap1, imap2 = conv.init_mapper
         fmap = conv.final_mapper
 
@@ -1517,50 +1522,14 @@ class Dip2BuildData(
         Diploid_[BedSrc],
     ]
 ):
-    @property
-    def final_mapper(self) -> tuple[bed.FinalMapper, bed.FinalMapper]:
-        p = self.refdata.ref.chr_pattern
-        i = self.chr_indices
-        return (
-            p.hap1.final_mapper(i, Haplotype.HAP1),
-            p.hap2.final_mapper(i, Haplotype.HAP2),
-        )
-
-    @property
-    def ref_chr_conversion(self) -> tuple[HapToHapChrConversion, HapToHapChrConversion]:
-        def go(h: HapChrPattern) -> HapToHapChrConversion:
-            return HapToHapChrConversion(h, h, self.chr_indices)
-
-        p = self.refdata.ref.chr_pattern
-        return (go(p.hap1), go(p.hap2))
-
-    def hap_chr_conversion(
-        self,
-        fromChr: Diploid_[HapChrPattern],
-    ) -> tuple[HapToHapChrConversion, HapToHapChrConversion]:
-        toChr = self.refdata.ref.chr_pattern
-        cis = self.chr_indices
-        return (
-            HapToHapChrConversion(fromChr.hap1, toChr.hap1, cis),
-            HapToHapChrConversion(fromChr.hap2, toChr.hap2, cis),
-        )
-
-    def dip_chr_conversion(
-        self,
-        fromChr: DipChrPattern,
-    ) -> DipToHapChrConversion:
-        return DipToHapChrConversion(
-            fromChr,
-            self.refdata.ref.chr_pattern,
-            self.chr_indices,
-        )
-
     def read_filter_sort_dip1_bed(
         self,
         bf: Dip1BedFile,
         ipath: Path,
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
-        conv = self.dip_chr_conversion(bf.data.chr_pattern)
+        conv = self.refdata.ref.dip_chr_conversion(
+            bf.data.chr_pattern, self.chr_indices
+        )
         imap, splitter = conv.init_mapper
         fmap0, fmap1 = conv.final_mapper
 
@@ -1590,7 +1559,9 @@ class Dip2BuildData(
         ipath: Path,
         hap: Haplotype,
     ) -> pd.DataFrame:
-        conv = self.hap_chr_conversion(bf.data.chr_pattern)
+        conv = self.refdata.ref.hap_chr_conversion(
+            bf.data.chr_pattern, self.chr_indices
+        )
         df = bf.read(ipath)
         conv_ = hap.from_either(conv[0], conv[1])
         return bed.filter_sort_bed(conv_.init_mapper, conv_.final_mapper, df)
@@ -1616,11 +1587,11 @@ def with_build_data(
     dip1_f: Callable[[Dip1BuildData], X],
     dip2_f: Callable[[Dip2BuildData], X],
 ) -> X:
-    if isinstance(bd, HapBuildData):
+    if isinstance(bd.refdata.ref, HapChrSource):
         return hap_f(bd)
-    elif isinstance(bd, Dip1BuildData):
+    elif isinstance(bd.refdata.ref, DipChrSource1):
         return dip1_f(bd)
-    elif isinstance(bd, Dip2BuildData):
+    elif isinstance(bd.refdata.ref, DipChrSource2):
         return dip2_f(bd)
     else:
         assert_never(bd)
@@ -2186,6 +2157,30 @@ class GiabStrats(BaseModel):
         return self._scripts_dir(["rmarkdown", basename])
 
     # general accessors
+
+    def buildkey_to_ref_mappers(
+        self, rk: RefKeyFullS, bk: BuildKey
+    ) -> tuple[bed.InitMapper, bed.FinalMapper]:
+        return self.with_build_data_final(
+            rk,
+            bk,
+            lambda bd: (
+                (c := bd.refdata.ref.noop_conversion(bd.chr_indices)).init_mapper,
+                c.final_mapper,
+            ),
+            lambda bd: (
+                (c := bd.refdata.ref.noop_conversion(bd.chr_indices)).init_mapper,
+                c.final_mapper,
+            ),
+            lambda hap, bd: (
+                (
+                    c := hap.from_either(
+                        *bd.refdata.ref.noop_conversion(bd.chr_indices)
+                    )
+                ).init_mapper,
+                c.final_mapper,
+            ),
+        )
 
     def refsrckey_to_ref_src(self, rsk: RefKeyFullS) -> RefSrc | None:
         # TODO misleading name

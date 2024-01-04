@@ -17,17 +17,14 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     bd = sconf.to_build_data(rk, bk)
     comparison = bd.build.comparison
 
-    fm = sconf.with_build_data_final(
-        rkf,
-        bk,
-        lambda bd: bd.ref_chr_conversion.final_mapper,
-        lambda bd: bd.ref_chr_conversion.final_mapper,
-        lambda hap, bd: hap.from_either(*bd.ref_chr_conversion).final_mapper,
-    )
+    fm = sconf.buildkey_to_ref_mappers(
+        cfg.wc_to_reffinalkey(ws),
+        cfg.wc_to_buildkey(ws),
+    )[1]
     chr_names = list(fm.values())
 
     if comparison is None:
-        raise DesignError("comparison should not be none")
+        raise DesignError("comparison should not be None")
 
     outdir = Path(smk.output[0]).parent
 

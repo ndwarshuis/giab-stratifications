@@ -10,15 +10,9 @@ import json
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, str] = smk.wildcards
 
-    im, fm = sconf.with_build_data_final(
+    im, fm = sconf.buildkey_to_ref_mappers(
         cfg.wc_to_reffinalkey(ws),
         cfg.wc_to_buildkey(ws),
-        lambda bd: ((c := bd.ref_chr_conversion).init_mapper, c.final_mapper),
-        lambda bd: ((c := bd.ref_chr_conversion).init_mapper, c.final_mapper),
-        lambda hap, bd: (
-            (c := hap.from_either(*bd.ref_chr_conversion)).init_mapper,
-            c.final_mapper,
-        ),
     )
 
     inputs = smk.input["bed"]
