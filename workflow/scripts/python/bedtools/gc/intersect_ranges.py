@@ -111,10 +111,10 @@ def write_intersected_range_beds(
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, str] = smk.wildcards
-    rfk = cfg.RefKeyFullS(ws["ref_final_key"])
+    rfk = cfg.wc_to_reffinalkey(ws)
     # TODO ...
     rk, _ = cfg.parse_final_refkey(rfk)
-    bk = cfg.BuildKey(ws["build_key"])
+    bk = cfg.wc_to_buildkey(ws)
     bd = sconf.to_build_data(rk, bk)
     gps = bd.build.include.gc
     if gps is None:

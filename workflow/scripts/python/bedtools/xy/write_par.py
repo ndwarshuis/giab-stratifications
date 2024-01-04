@@ -5,12 +5,11 @@ from common.functional import not_none_unsafe, none_unsafe
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
-    i = cfg.ChrIndex.from_name(smk.wildcards["sex_chr"])
+    ws: dict[str, Any] = smk.wildcards
+    i = cfg.ChrIndex.from_name(cfg.wc_lookup(ws, "sex_chr"))
 
     # TODO this pattern is DRY?
-    rk, hap = cfg.parse_final_refkey(
-        smk.wildcards["ref_final_key"],
-    )
+    rk, hap = cfg.parse_final_refkey(cfg.wc_to_reffinalkey(ws))
     # NOTE tuple thing is to appease mypy...be nice to mypy...respect mypy
     cxy, pat = sconf.with_ref_data(
         rk,

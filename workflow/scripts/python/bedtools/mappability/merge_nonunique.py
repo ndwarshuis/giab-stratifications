@@ -11,8 +11,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, str] = smk.wildcards
 
     im, fm = sconf.with_build_data_final(
-        cfg.RefKeyFullS(ws["ref_final_key"]),
-        cfg.BuildKey(ws["build_key"]),
+        cfg.wc_to_reffinalkey(ws),
+        cfg.wc_to_buildkey(ws),
         lambda bd: ((c := bd.ref_chr_conversion).init_mapper, c.final_mapper),
         lambda bd: ((c := bd.ref_chr_conversion).init_mapper, c.final_mapper),
         lambda hap, bd: (

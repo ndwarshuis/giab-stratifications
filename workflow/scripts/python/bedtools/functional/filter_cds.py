@@ -222,8 +222,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         return [*cs], vs
 
     cs, vs = sconf.with_build_data(
-        cfg.RefKey(ws["ref_key"]),
-        cfg.BuildKey(ws["build_key"]),
+        cfg.wc_to_refkey(ws),
+        cfg.wc_to_buildkey(ws),
         hap,
         dip1,
         dip2,

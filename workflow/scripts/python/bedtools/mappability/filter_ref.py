@@ -41,8 +41,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             p.wait()
 
     sconf.with_build_data_final(
-        cfg.RefKeyFullS(ws["ref_final_key"]),
-        cfg.BuildKey(ws["build_key"]),
+        cfg.wc_to_reffinalkey(ws),
+        cfg.wc_to_buildkey(ws),
         lambda bd: run_samtools(bd, bd.refdata.ref.chr_pattern),
         lambda bd: run_samtools(bd, bd.refdata.ref.chr_pattern),
         lambda hap, bd: run_samtools(bd, bd.refdata.ref.chr_pattern.from_either(hap)),

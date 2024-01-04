@@ -2740,6 +2740,28 @@ class GiabStrats(BaseModel):
         return self._all_bed_refsrckeys(bd_to_gff)
 
 
+SmkWildcards = dict[str, Any]
+
+
+def wc_lookup(ws: SmkWildcards, k: str) -> Any:
+    try:
+        return ws[k]
+    except KeyError:
+        raise DesignError(f"Could not find {k} in wildcards")
+
+
+def wc_to_refkey(ws: SmkWildcards) -> RefKey:
+    return RefKey(wc_lookup(ws, "ref_key"))
+
+
+def wc_to_buildkey(ws: SmkWildcards) -> BuildKey:
+    return BuildKey(wc_lookup(ws, "build_key"))
+
+
+def wc_to_reffinalkey(ws: SmkWildcards) -> RefKeyFullS:
+    return RefKeyFullS(wc_lookup(ws, "ref_final_key"))
+
+
 def filter_sort_bed_main(
     f: BuildDataToBed,
     smk: Any,
@@ -2764,8 +2786,8 @@ def filter_sort_bed_main(
         raise DesignError(f"Output pattern must be a string, got {output_pattern}")
 
     sconf.with_build_data_and_bed_io_(
-        RefKey(ws["ref_key"]),
-        BuildKey(ws["build_key"]),
+        wc_to_refkey(ws),
+        wc_to_buildkey(ws),
         [Path(i) for i in ins],
         smk.output[0],
         output_pattern,
