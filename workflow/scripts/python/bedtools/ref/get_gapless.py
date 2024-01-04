@@ -25,14 +25,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, str] = smk.wildcards
 
     def go(
-        x: cfg.BuildData_[
-            cfg.RefKeyT,
-            cfg.BuildKeyT,
-            cfg.RefSourceT,
-            cfg.AnyBedT,
-            cfg.AnyBedT_,
-            cfg.AnySrcT,
-        ]
+        x: cfg.BuildData_[cfg.RefSourceT, cfg.AnyBedT, cfg.AnyBedT_, cfg.AnySrcT]
     ) -> cfg.BedFile[cfg.AnyBedT] | None:
         return x.refdata.strat_inputs.gap
 
@@ -49,8 +42,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         gap_inputs: list[Path] = inputs["gaps"]
 
         gaps_df = sconf.with_build_data_and_bed_hap(
-            ws["ref_final_key"],
-            ws["build_key"],
+            cfg.RefKeyFullS(ws["ref_final_key"]),
+            cfg.BuildKey(ws["build_key"]),
             go,
             lambda bd, bf: match1_unsafe(
                 gap_inputs, lambda i: bd.read_filter_sort_hap_bed(bf, i)

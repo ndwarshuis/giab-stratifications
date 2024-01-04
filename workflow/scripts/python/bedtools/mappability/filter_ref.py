@@ -24,14 +24,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     )
 
     def run_samtools(
-        bd: cfg.BuildData_[
-            cfg.RefKeyT,
-            cfg.BuildKeyT,
-            cfg.RefSourceT,
-            cfg.AnyBedT,
-            cfg.AnyBedT_,
-            cfg.AnySrcT,
-        ],
+        bd: cfg.BuildData_[cfg.RefSourceT, cfg.AnyBedT, cfg.AnyBedT_, cfg.AnySrcT],
         pat: cfg.ChrPattern,
     ) -> None:
         main_chrs = pat.to_names(bd.chr_indices)
@@ -48,8 +41,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             p.wait()
 
     sconf.with_build_data_final(
-        ws["ref_final_key"],
-        ws["build_key"],
+        cfg.RefKeyFullS(ws["ref_final_key"]),
+        cfg.BuildKey(ws["build_key"]),
         lambda bd: run_samtools(bd, bd.refdata.ref.chr_pattern),
         lambda bd: run_samtools(bd, bd.refdata.ref.chr_pattern),
         lambda hap, bd: run_samtools(bd, bd.refdata.ref.chr_pattern.from_either(hap)),

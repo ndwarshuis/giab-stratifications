@@ -18,7 +18,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     # TODO this pattern is DRY?
     rk, hap = cfg.parse_final_refkey(
-        smk.wildcards["ref_final_key"],
+        cfg.RefKeyFullS(smk.wildcards["ref_final_key"]),
     )
     rd = sconf.to_ref_data(rk)
     pat = cfg.with_ref_data(
@@ -29,7 +29,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         ),
         lambda rd: not_none_unsafe(hap, lambda h: rd.ref.chr_pattern.from_either(h)),
     )
-    bd = sconf.to_build_data(rk, ws["build_key"])
+    bd = sconf.to_build_data(rk, cfg.BuildKey(ws["build_key"]))
     bf = bd.refdata.strat_inputs.xy_feature_bed_unsafe(i)
     conv = cfg.HapToHapChrConversion(bf.data.chr_pattern, pat, bd.chr_indices)
     df = bf.read(bed_input)

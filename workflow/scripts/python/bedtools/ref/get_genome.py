@@ -9,8 +9,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     # TODO not DRY
     im, fm = sconf.with_build_data_final(
-        ws["ref_final_key"],
-        ws["build_key"],
+        cfg.RefKeyFullS(ws["ref_final_key"]),
+        cfg.BuildKey(ws["build_key"]),
         lambda bd: ((c := bd.ref_chr_conversion).init_mapper, c.final_mapper),
         lambda bd: ((c := bd.ref_chr_conversion).init_mapper, c.final_mapper),
         lambda hap, bd: (

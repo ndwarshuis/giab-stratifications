@@ -11,12 +11,15 @@ log = setup_logging(snakemake.log[0])  # type: ignore
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, str] = smk.wildcards
-    bd = sconf.to_build_data(ws["ref_final_key"], ws["build_key"])
+    rkf = cfg.RefKeyFullS(ws["ref_final_key"])
+    rk = cfg.parse_final_refkey(rkf)[0]
+    bk = cfg.BuildKey(rkf)
+    bd = sconf.to_build_data(rk, bk)
     comparison = bd.build.comparison
 
     fm = sconf.with_build_data_final(
-        ws["ref_final_key"],
-        ws["build_key"],
+        rkf,
+        bk,
         lambda bd: bd.ref_chr_conversion.final_mapper,
         lambda bd: bd.ref_chr_conversion.final_mapper,
         lambda hap, bd: hap.from_either(*bd.ref_chr_conversion).final_mapper,
@@ -35,7 +38,6 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         comparison.path_mapper,
         comparison.replacements,
         chr_names,
-        # [i.chr_name_full(pattern) for i in ixs],
         comparison.ignore_generated,
         comparison.ignore_other,
     )

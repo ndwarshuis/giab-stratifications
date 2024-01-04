@@ -108,7 +108,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     def write_vdj_maybe1(
         switch: bool,
-        rfk: cfg.RefKeyFull[cfg.RefKeyT],
+        rfk: cfg.RefKeyFull,
         df: pd.DataFrame,
     ) -> list[Path]:
         if switch:
@@ -120,7 +120,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     def write_vdj_maybe2(
         switch: bool,
-        rfks: tuple[cfg.RefKeyFull[cfg.RefKeyT], cfg.RefKeyFull[cfg.RefKeyT]],
+        rfks: tuple[cfg.RefKeyFull, cfg.RefKeyFull],
         df: tuple[pd.DataFrame, pd.DataFrame],
     ) -> list[Path]:
         if switch:
@@ -221,7 +221,13 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         vs = write_vdj_maybe2(bd.build.include.vdj, rks, gffs)
         return [*cs], vs
 
-    cs, vs = sconf.with_build_data(ws["ref_key"], ws["build_key"], hap, dip1, dip2)
+    cs, vs = sconf.with_build_data(
+        cfg.RefKey(ws["ref_key"]),
+        cfg.BuildKey(ws["build_key"]),
+        hap,
+        dip1,
+        dip2,
+    )
 
     write_outputs(smk.output["cds"], cs)
     write_outputs(smk.output["vdj"], vs)
