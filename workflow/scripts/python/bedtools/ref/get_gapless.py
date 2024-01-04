@@ -46,22 +46,23 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             cfg.wc_to_buildkey(ws),
             go,
             lambda bd, bf: match1_unsafe(
-                gap_inputs, lambda i: bd.read_filter_sort_hap_bed(bf, i)
+                gap_inputs, lambda i: cfg.read_filter_sort_hap_bed(bd, bf, i)
             ),
             lambda bd, bf: match1_unsafe(
-                gap_inputs, lambda i: bd.read_filter_sort_dip1_bed(bf, i)
+                gap_inputs, lambda i: cfg.read_filter_sort_dip1to1_bed(bd, bf, i)
             ),
             lambda hap, bd, bf: match1_unsafe(
                 gap_inputs,
-                lambda i: hap.from_either(*bd.read_filter_sort_dip1_bed(bf, i)),
+                lambda i: hap.from_either(*cfg.read_filter_sort_dip1to2_bed(bd, bf, i)),
             ),
             lambda bd, bf: match2_unsafe(
                 gap_inputs,
-                lambda i0, i1: bd.read_filter_sort_dip2_bed(bf, (i0, i1)),
+                lambda i0, i1: cfg.read_filter_sort_dip2to1_bed(bd, bf, (i0, i1)),
             ),
             lambda hap, bd, bf: match2_unsafe(
                 gap_inputs,
-                lambda i0, i1: bd.read_filter_sort_dip2_bed(
+                lambda i0, i1: cfg.read_filter_sort_dip2to2_bed(
+                    bd,
                     bf,
                     *hap.from_either((i0, cfg.Haplotype.HAP1), (i1, cfg.Haplotype.HAP2))
                 ),
