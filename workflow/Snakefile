@@ -54,19 +54,20 @@ def to_bed_src(f, wildcards):
     return config.refsrckey_to_bed_src(f, wildcards.ref_src_key)
 
 
-# TODO change the "ref_key" name to something else that actually reflects the
-# fact it may/may not have a haplotype tagged on the end of it and doesn't
-# correspond to the key in the config corresponding to each reference)
+_alphanumdash = "[A-Za-z0-9-]+"
+_alphanumdash_hap = "[A-Za-z0-9-]+(\.hap(1|2))?"
+
+
 wildcard_constraints:
     # permit alphanumerics and dashes only, underscores will be used for
     # separation in filepaths; this convention makes it impossible for
     # wildcards to be ambiguous
-    ref_key="[A-Za-z0-9-]+",
-    build_key="[A-Za-z0-9-]+",
+    ref_key=_alphanumdash,
+    build_key=_alphanumdash,
     # separate ref key for downloading (which may or may not follow the
     # cardinality of the target reference)
-    ref_src_key="[A-Za-z0-9-]+(\.hap(1|2))?",
-    ref_final_key="[A-Za-z0-9-]+(\.hap(1|2))?",
+    ref_src_key=_alphanumdash_hap,
+    ref_final_key=_alphanumdash_hap,
     # this appears way too often, so define constraint here
     sex_chr="[XY]",
 
@@ -98,12 +99,11 @@ rule all_resources:
         expand(rules.download_superdups.output, ref_src_key=config.all_refkey_segdups),
         expand(rules.download_ftbl.output, ref_src_key=config.all_refkey_ftbl),
         expand(rules.download_gff.output, ref_src_key=config.all_refkey_gff),
-        # TODO this function is misleading
         expand(
             rules.download_bench_vcf.output
             + rules.download_bench_bed.output
             + rules.download_query_vcf.output,
-            ref_src_key=(t := unzip2(config.all_buildkey_bench_vcf))[0],
+            ref_src_key=(t := unzip2(config.all_buildkey_bench))[0],
             build_key=t[1],
         ),
 
