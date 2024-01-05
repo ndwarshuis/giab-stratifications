@@ -40,7 +40,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             p = sp.Popen(["samtools", "faidx", smk.input["fa"], *chrs], stdout=f)
             p.wait()
 
-    sconf.with_build_data_final(
+    sconf.with_build_data_full(
         cfg.wc_to_reffinalkey(ws),
         cfg.wc_to_buildkey(ws),
         lambda bd: run_samtools(bd, bd.refdata.ref.chr_pattern),
