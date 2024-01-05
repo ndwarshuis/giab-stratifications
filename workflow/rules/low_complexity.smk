@@ -5,7 +5,7 @@ from common.config import (
     si_to_rmsk,
     si_to_trf,
     si_to_satellites,
-    parse_final_refkey,
+    strip_full_refkey,
 )
 from functools import partial
 
@@ -513,7 +513,7 @@ rule merge_satellites_intermediate:
     input:
         lambda w: read_checkpoint("filter_sort_censat", w)
         if config.to_build_data(
-            parse_final_refkey(w.ref_final_key)[0], w.build_key
+            strip_full_refkey(w.ref_final_key), w.build_key
         ).refdata.has_low_complexity_censat
         else all_rmsk_classes["Satellite"],
     output:
@@ -730,9 +730,7 @@ use rule invert_satellites as invert_HPs_and_TRs with:
 
 
 def all_low_complexity(ref_final_key, _):
-    # TODO hmmmm...sketchy
-    rk, _ = parse_final_refkey(ref_final_key)
-    rd = config.to_ref_data(rk)
+    rd = config.to_ref_data(strip_full_refkey(ref_final_key))
     rmsk = rd.has_low_complexity_rmsk
     trf = rd.has_low_complexity_simreps
     censat = rd.has_low_complexity_censat

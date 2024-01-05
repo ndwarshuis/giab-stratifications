@@ -13,8 +13,7 @@ def seqtk_args(
     except ValueError:
         raise DesignError(f"GC fraction is not an int; got {frac}")
 
-    rk, _ = cfg.parse_final_refkey(rfk)
-    gps = sconf.to_build_data(rk, bk).build.include.gc
+    gps = sconf.to_build_data(cfg.strip_full_refkey(rfk), bk).build.include.gc
 
     if gps is None:
         raise DesignError("GC include not available")
@@ -34,8 +33,7 @@ def seqtk_args(
 def range_bounds(
     sconf: cfg.GiabStrats, rfk: cfg.RefKeyFullS, bk: cfg.BuildKey
 ) -> tuple[int, list[int], list[int], int]:
-    rk, _ = cfg.parse_final_refkey(rfk)
-    gps = sconf.to_build_data(rk, bk).build.include.gc
+    gps = sconf.to_build_data(cfg.strip_full_refkey(rfk), bk).build.include.gc
 
     if gps is None:
         raise DesignError("GC include not available")

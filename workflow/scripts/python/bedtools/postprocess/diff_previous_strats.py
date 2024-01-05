@@ -12,9 +12,8 @@ log = setup_logging(snakemake.log[0])  # type: ignore
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, Any] = smk.wildcards
     rkf = cfg.wc_to_reffinalkey(ws)
-    rk = cfg.parse_final_refkey(rkf)[0]
     bk = cfg.wc_to_buildkey(ws)
-    bd = sconf.to_build_data(rk, bk)
+    bd = sconf.to_build_data(cfg.strip_full_refkey(rkf), bk)
     comparison = bd.build.comparison
 
     fm = sconf.buildkey_to_ref_mappers(

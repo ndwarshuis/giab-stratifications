@@ -1,9 +1,8 @@
-from common.config import CoreLevel, parse_final_refkey
+from common.config import CoreLevel, strip_full_refkey
 
 xy = config.to_bed_dirs(CoreLevel.XY)
 
 
-# TODO refkey or refsrckey?
 use rule download_ref as download_genome_features_bed with:
     output:
         xy.src.data / "genome_features_{sex_chr}.bed.gz",
@@ -105,8 +104,7 @@ rule filter_autosomes:
 
 # helper functions for build targets
 def all_xy_features(ref_final_key, build_key):
-    rk, _ = parse_final_refkey(ref_final_key)
-    bd = config.to_build_data(rk, build_key)
+    bd = config.to_build_data(strip_full_refkey(ref_final_key), build_key)
     targets = [
         (rules.filter_XTR_features.output[0], bd.want_xy_XTR),
         (rules.filter_ampliconic_features.output[0], bd.want_xy_ampliconic),
@@ -126,8 +124,7 @@ def all_xy_features(ref_final_key, build_key):
 
 
 def all_xy_PAR(ref_final_key, build_key):
-    rk, _ = parse_final_refkey(ref_final_key)
-    bd = config.to_build_data(rk, build_key)
+    bd = config.to_build_data(strip_full_refkey(ref_final_key), build_key)
     wanted_chrs = [c for (c, t) in [("X", bd.want_x_PAR), ("Y", bd.want_y_PAR)] if t]
     return expand(
         rules.invert_PAR.output + rules.write_PAR_final.output,

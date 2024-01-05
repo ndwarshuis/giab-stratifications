@@ -5,6 +5,7 @@ from snakemake.utils import min_version
 sys.path.extend(["./workflow/scripts/python"])
 from common.config import GiabStrats
 from common.functional import unzip2
+from common.config import strip_full_refkey
 
 min_version("7.20")
 
@@ -17,9 +18,8 @@ def expand_final_to_src(paths, wildcards):
 
 def read_checkpoint(rulename, wildcards, other=[]):
     r = getattr(checkpoints, rulename)
-    rk, _ = parse_final_refkey(wildcards.ref_final_key)
     c = r.get(
-        ref_key=rk,
+        ref_key=strip_full_refkey(wildcards.ref_final_key),
         build_key=wildcards.build_key,
         **{k: wildcards[k] for k in other},
     )
@@ -30,7 +30,7 @@ def read_checkpoint(rulename, wildcards, other=[]):
 def read_named_checkpoint(rulename, name, wildcards):
     # TODO not DRY
     r = getattr(checkpoints, rulename)
-    rk, _ = parse_final_refkey(wildcards.ref_final_key)
+    rk = strip_full_refkey(wildcards.ref_final_key)
     c = r.get(ref_key=rk, build_key=wildcards.build_key)
     # TODO isn't there supposed to be a [0] after [name]?
     with c.output[name].open() as f:

@@ -86,8 +86,7 @@ use rule download_ref as download_gaps with:
 
 
 def gapless_input(wildcards):
-    rk, _ = parse_final_refkey(wildcards.ref_final_key)
-    si = config.to_ref_data(rk).strat_inputs
+    si = config.to_ref_data(strip_full_refkey(wildcards.ref_final_key)).strat_inputs
     if si.gap is not None:
         gaps = {
             "gaps": expand(

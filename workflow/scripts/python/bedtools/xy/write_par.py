@@ -1,7 +1,6 @@
 from typing import Any
 from Bio import bgzf  # type: ignore
 import common.config as cfg
-from common.functional import not_none_unsafe, none_unsafe
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
@@ -9,23 +8,10 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     i = cfg.ChrIndex.from_name(cfg.wc_lookup(ws, "sex_chr"))
 
     # TODO this pattern is DRY?
-    rk, hap = cfg.parse_final_refkey(cfg.wc_to_reffinalkey(ws))
-    # NOTE tuple thing is to appease mypy...be nice to mypy...respect mypy
-    cxy, pat = sconf.with_ref_data(
-        rk,
-        lambda rd: (
-            rd.strat_inputs.xy,
-            none_unsafe(hap, rd.ref.chr_pattern),
-        ),
-        lambda rd: (
-            rd.strat_inputs.xy,
-            none_unsafe(hap, rd.ref.chr_pattern.to_hap_pattern(i.xy_to_hap_unsafe)),
-        ),
-        lambda rd: (
-            rd.strat_inputs.xy,
-            not_none_unsafe(hap, lambda h: rd.ref.chr_pattern.from_either(h)),
-        ),
-    )
+    rfk = cfg.wc_to_reffinalkey(ws)
+    rk, hap = cfg.parse_full_refkey(rfk)
+    pat = sconf.refkey_to_xy_ref_chr_pattern(rfk, i)
+    cxy = sconf.to_ref_data(rk).strat_inputs.xy
 
     par_fun = cfg.choose_xy_unsafe(i, cxy.fmt_x_par_unsafe, cxy.fmt_y_par_unsafe)
 

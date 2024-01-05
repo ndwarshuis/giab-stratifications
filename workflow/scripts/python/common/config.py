@@ -189,10 +189,14 @@ class Diploid_(GenericModel, Generic[X], _Src):
         return list(self.keys(rk))
 
 
-def parse_final_refkey(s: RefKeyFullS) -> tuple[RefKey, Haplotype | None]:
+def parse_full_refkey(s: RefKeyFullS) -> tuple[RefKey, Haplotype | None]:
     m = re.match("(.+)\\.(hap[12])", s)
     # ASSUME this will never fail due to the hap1/2 permitted match pattern
     return (RefKey(s), None) if m is None else (RefKey(m[1]), Haplotype.from_name(m[2]))
+
+
+def strip_full_refkey(s: RefKeyFullS) -> RefKey:
+    return parse_full_refkey(s)[0]
 
 
 def choose_xy_unsafe(c: "ChrIndex", x_res: X, y_res: X) -> X:
@@ -2050,9 +2054,15 @@ class GiabStrats(BaseModel):
             ),
         )
 
+    def buildkey_to_other_keys(
+        self, rk: RefKeyFullS, bk: BuildKey
+    ) -> list[tuple[OtherLevelKey, OtherStratKey]]:
+        bd = self.to_build_data(strip_full_refkey(rk), bk)
+        return [(lk, sk) for lk, s in bd.build.other_strats.items() for sk in s]
+
     def refsrckey_to_ref_src(self, rsk: RefKeyFullS) -> RefSrc | None:
         # TODO misleading name
-        rk, hap = parse_final_refkey(rsk)
+        rk, hap = parse_full_refkey(rsk)
         src = self.to_ref_data(rk).ref.src
         return from_hap_or_dip(src, hap)
 
@@ -2065,7 +2075,7 @@ class GiabStrats(BaseModel):
         )
 
     def refsrckey_to_bed_src(self, f: StratInputToBed, rsk: RefKeyFullS) -> BedSrc:
-        rk, hap = parse_final_refkey(rsk)
+        rk, hap = parse_full_refkey(rsk)
         rd = self.to_ref_data(rk)
         return ref_data_to_src(
             rd, hap, lambda rd: fmap_maybe(lambda x: x.data.src, f(rd))
@@ -2073,17 +2083,31 @@ class GiabStrats(BaseModel):
 
     def refsrckey_to_x_features_src(self, rsk: RefKeyFullS) -> BedSrc:
         # TODO this is confusing
-        rk, _ = parse_final_refkey(rsk)
         return not_none_unsafe(
-            self.to_ref_data(rk).strat_inputs.xy.features,
+            self.to_ref_data(strip_full_refkey(rsk)).strat_inputs.xy.features,
             lambda x: x.x_bed.data.src.hap,
         )
 
     def refsrckey_to_y_features_src(self, rsk: RefKeyFullS) -> BedSrc:
-        rk, _ = parse_final_refkey(rsk)
         return not_none_unsafe(
-            self.to_ref_data(rk).strat_inputs.xy.features,
+            self.to_ref_data(strip_full_refkey(rsk)).strat_inputs.xy.features,
             lambda x: x.y_bed.data.src.hap,
+        )
+
+    def refkey_to_xy_ref_chr_pattern(
+        self, rfk: RefKeyFullS, i: ChrIndex
+    ) -> HapChrPattern:
+        rk, hap = parse_full_refkey(rfk)
+        rd = self.to_ref_data(rk)
+        return with_ref_data(
+            rd,
+            lambda rd: none_unsafe(hap, rd.ref.chr_pattern),
+            lambda rd: none_unsafe(
+                hap, rd.ref.chr_pattern.to_hap_pattern(i.xy_to_hap_unsafe)
+            ),
+            lambda rd: not_none_unsafe(
+                hap, lambda h: rd.ref.chr_pattern.from_either(h)
+            ),
         )
 
     def buildkey_to_bed_refsrckeys(
@@ -2099,7 +2123,7 @@ class GiabStrats(BaseModel):
         self, f: BuildDataToBed, rsk: RefKeyFullS, bk: BuildKey
     ) -> BedSrc:
         # return self.refsrckey_to_bed_src(lambda rd: f(rd.to_build_data(bk)), rsk)
-        rk, hap = parse_final_refkey(rsk)
+        rk, hap = parse_full_refkey(rsk)
         rd = self.to_ref_data(rk)
         return ref_data_to_src_(
             rd,
@@ -2111,7 +2135,7 @@ class GiabStrats(BaseModel):
     def buildkey_to_vcf_src(
         self, f: BuildDataToVCF, rsk: RefKeyFullS, bk: BuildKey
     ) -> BedSrc:
-        rk, hap = parse_final_refkey(rsk)
+        rk, hap = parse_full_refkey(rsk)
         bd = self.to_build_data(rk, bk)
         return build_data_to_src(
             bd,
@@ -2127,7 +2151,7 @@ class GiabStrats(BaseModel):
     def refsrckey_to_functional_src(
         self, f: StratInputToSrc, rsk: RefKeyFullS
     ) -> BedSrc:
-        rk, hap = parse_final_refkey(rsk)
+        rk, hap = parse_full_refkey(rsk)
         rd = self.to_ref_data(rk)
         return ref_data_to_src(rd, hap, f)
 
@@ -2218,7 +2242,7 @@ class GiabStrats(BaseModel):
         dip1_f: Callable[[Dip1BuildData], X],
         dip2_f: Callable[[Haplotype, Dip2BuildData], X],
     ) -> X:
-        rk_, hap = parse_final_refkey(rfk)
+        rk_, hap = parse_full_refkey(rfk)
         return self.with_build_data(
             rk_,
             bk,
@@ -2262,7 +2286,7 @@ class GiabStrats(BaseModel):
         dip_2to1_f: Callable[[Dip1RefData, Dip2BedFile], Z],
         dip_2to2_f: Callable[[Haplotype, Dip2RefData, Dip2BedFile], Z],
     ) -> Z:
-        rk, hap = parse_final_refkey(rfk)
+        rk, hap = parse_full_refkey(rfk)
         return self.with_ref_data_and_bed(
             rk,
             get_bed_f,
@@ -2283,7 +2307,7 @@ class GiabStrats(BaseModel):
         dip_2to1_f: Callable[[Haplotype, Dip1RefData, Dip2BedFile], X],
         dip_2to2_f: Callable[[Haplotype, Dip2RefData, Dip2BedFile], X],
     ) -> X:
-        rk, hap = parse_final_refkey(rsk)
+        rk, hap = parse_full_refkey(rsk)
         return self.with_ref_data_and_bed(
             rk,
             lambda rd: get_bed_f(rd.strat_inputs),

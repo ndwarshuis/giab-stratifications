@@ -1,5 +1,5 @@
 from more_itertools import unzip
-from common.config import parse_final_refkey, bd_to_other
+from common.config import strip_full_refkey, bd_to_other
 
 # make sure the wildcards here can match everything except the "built-in" other-
 # difficult beds (listed here)
@@ -90,9 +90,6 @@ rule remove_gaps_other:
 
 
 def all_other(ref_final_key, build_key):
-    rk, _ = parse_final_refkey(ref_final_key)
-    bd = config.to_build_data(rk, build_key)
-    other = bd.build.other_strats
     return [
         expand(
             rules.remove_gaps_other.output,
@@ -101,6 +98,5 @@ def all_other(ref_final_key, build_key):
             other_level_key=lk,
             other_strat_key=sk,
         )[0]
-        for lk, s in other.items()
-        for sk in s
+        for lk, sk in config.buildkey_to_other_keys(ref_final_key, build_key)
     ]
