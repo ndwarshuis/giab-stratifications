@@ -2,6 +2,7 @@ from os.path import dirname, basename
 from more_itertools import unique_everseen, unzip
 from os import scandir
 from common.config import CoreLevel, strip_full_refkey
+from bedtools.postprocess.helpers import write_chr_mapper
 
 post_inter_dir = config.intermediate_build_dir / "postprocess"
 post_log_dir = config.log_build_dir / "postprocess"
@@ -156,26 +157,10 @@ rule write_chr_name_mapper:
         config.intermediate_root_dir / ".validation" / "chr_mapper.tsv",
     localrule: True
     run:
-        with open(output[0], "w") as f:
-            for ref_final_key, build_key in zip(*config.all_full_build_keys):
-                # TODO this smells funny
-                (bd, pat) = config.with_build_data_final(
-                    ref_final_key,
-                    build_key,
-                    lambda bd: (bd, bd.refdata.ref.chr_pattern),
-                    lambda bd: (bd, bd.refdata.ref.chr_pattern),
-                    lambda hap, bd: (bd, bd.refdata.ref.chr_pattern.from_either(hap)),
-                )
-                for i in bd.chr_indices:
-                    # chr number, ref_final_key@build_key, chr name
-                    line = [
-                        str(i.value),
-                        f"{ref_final_key}@{build_key}",
-                        i.chr_name_full(pat),
-                    ]
-                    f.write("\t".join(line) + "\n")
+        write_chr_mapper(config, output[0])
 
 
+# TODO this needs to be made haplotype-aware
 rule make_coverage_plots:
     input:
         # this first input isn't actually used, but ensures the unit tests pass
