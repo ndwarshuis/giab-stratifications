@@ -41,7 +41,7 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     else:
         gap_inputs: list[Path] = inputs["gaps"]
 
-        gaps_df = sconf.with_build_data_and_bed_hap(
+        gaps_df = sconf.with_build_data_and_bed_full(
             cfg.wc_to_reffinalkey(ws),
             cfg.wc_to_buildkey(ws),
             go,

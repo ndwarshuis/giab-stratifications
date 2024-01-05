@@ -6,6 +6,11 @@ Y = TypeVar("Y")
 Z = TypeVar("Z")
 
 
+# 'id' in python apparently isn't this
+def noop(x: X) -> X:
+    return x
+
+
 def compose(g: Callable[[Y], Z], f: Callable[[X], Y]) -> Callable[[X], Z]:
     return lambda x: g(f(x))
 

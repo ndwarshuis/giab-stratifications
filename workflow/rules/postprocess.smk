@@ -176,8 +176,7 @@ rule write_chr_name_mapper:
                     f.write("\t".join(line) + "\n")
 
 
-# TODO this should say "coverage plots" or something
-rule validate_strats:
+rule make_coverage_plots:
     input:
         # this first input isn't actually used, but ensures the unit tests pass
         # before running the rmd script
@@ -308,11 +307,10 @@ rule generate_tarballs:
         """
 
 
-# TODO expand rule is wrong
 rule checksum_everything:
     input:
         rules.copy_READMEs.output,
-        rules.validate_strats.output,
+        rules.make_coverage_plots.output,
         rules.summarize_happy.output,
         rules.all_comparisons.input,
         [

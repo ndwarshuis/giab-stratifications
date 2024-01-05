@@ -42,6 +42,7 @@ from common.functional import (
     none_unsafe,
     unzip2,
     unzip3,
+    noop,
 )
 from common.io import is_gzip, is_bgzip
 import common.bed as bed
@@ -512,6 +513,8 @@ class RefHttpSrc(HttpSrc_):
 
 
 RefSrc = RefFileSrc | RefHttpSrc
+HapRefSrc = Haploid_[RefSrc]
+DipRefSrc = Diploid_[RefSrc]
 
 # TODO this is for more than just "bed files" (right now it basically means "a
 # file that is either not zipped or gzipped but not bgzipped")
@@ -558,8 +561,18 @@ class CoreLevel(Enum):
     OtherDifficult = "OtherDifficult"
 
 
+class _NonDivergentConversion:
+    @property
+    def init_mapper(self) -> bed.InitMapper:
+        return NotImplemented
+
+    @property
+    def final_mapper(self) -> bed.FinalMapper:
+        return NotImplemented
+
+
 @dataclass
-class HapToHapChrConversion:
+class HapToHapChrConversion(_NonDivergentConversion):
     fromPattern: HapChrPattern
     toPattern: HapChrPattern
     indices: set[ChrIndex]
@@ -574,7 +587,7 @@ class HapToHapChrConversion:
 
 
 @dataclass
-class DipToDipChrConversion:
+class DipToDipChrConversion(_NonDivergentConversion):
     fromPattern: DipChrPattern
     toPattern: DipChrPattern
     indices: set[ChrIndex]
@@ -1375,20 +1388,6 @@ class RefDataToSrc(Protocol):
         pass
 
 
-def ref_data_to_src_(rd: AnyRefData, hap: Haplotype | None, f: RefDataToSrc) -> BedSrc:
-    src = with_ref_data(rd, lambda rd: f(rd), lambda rd: f(rd), lambda rd: f(rd))
-    # TODO mypy doens't like me using my 'maybe' functional functions
-    if src is None:
-        raise DesignError()
-    return from_hap_or_dip(src, hap)
-
-
-def ref_data_to_src(
-    rd: AnyRefData, hap: Haplotype | None, f: StratInputToSrc
-) -> BedSrc:
-    return ref_data_to_src_(rd, hap, lambda rd: f(rd.strat_inputs))
-
-
 class BuildDataToBed(Protocol):
     A = TypeVar("A", HapBedSrc, DipBedSrc)
 
@@ -1467,18 +1466,6 @@ def with_build_data(
         return dip2_f(bd)
     else:
         assert_never(bd)
-
-
-def build_data_to_src(
-    bd: AnyBuildData,
-    hap: Haplotype | None,
-    f: BuildDataToSrc,
-) -> BedSrc:
-    src = with_build_data(bd, lambda bd: f(bd), lambda bd: f(bd), lambda bd: f(bd))
-    # TODO mypy doens't like me using my 'maybe' functional functions
-    if src is None:
-        raise DesignError()
-    return from_hap_or_dip(src, hap)
 
 
 def to_ref_data_unsafe(
@@ -1565,7 +1552,7 @@ def all_bed_refsrckeys(
         Stratification[RefSourceT, AnyBedT, AnyBedT_, AnySrcT],
     ],
     f: BuildDataToSrc,
-) -> list[str]:
+) -> list[RefKeyFullS]:
     return [rk for rk, _ in all_bed_build_and_refsrckeys(xs, f)]
 
 
@@ -2033,26 +2020,16 @@ class GiabStrats(BaseModel):
     def buildkey_to_ref_mappers(
         self, rk: RefKeyFullS, bk: BuildKey
     ) -> tuple[bed.InitMapper, bed.FinalMapper]:
-        return self.with_build_data_final(
+        m = self.with_build_data_full(
             rk,
             bk,
-            lambda bd: (
-                (c := bd.refdata.ref.noop_conversion(bd.chr_indices)).init_mapper,
-                c.final_mapper,
-            ),
-            lambda bd: (
-                (c := bd.refdata.ref.noop_conversion(bd.chr_indices)).init_mapper,
-                c.final_mapper,
-            ),
-            lambda hap, bd: (
-                (
-                    c := hap.from_either(
-                        *bd.refdata.ref.noop_conversion(bd.chr_indices)
-                    )
-                ).init_mapper,
-                c.final_mapper,
+            lambda bd: bd.refdata.ref.noop_conversion(bd.chr_indices),
+            lambda bd: bd.refdata.ref.noop_conversion(bd.chr_indices),
+            lambda hap, bd: hap.from_either(
+                *bd.refdata.ref.noop_conversion(bd.chr_indices)
             ),
         )
+        return (m.init_mapper, m.final_mapper)
 
     def buildkey_to_other_keys(
         self, rk: RefKeyFullS, bk: BuildKey
@@ -2060,8 +2037,7 @@ class GiabStrats(BaseModel):
         bd = self.to_build_data(strip_full_refkey(rk), bk)
         return [(lk, sk) for lk, s in bd.build.other_strats.items() for sk in s]
 
-    def refsrckey_to_ref_src(self, rsk: RefKeyFullS) -> RefSrc | None:
-        # TODO misleading name
+    def refsrckey_to_ref_src(self, rsk: RefKeyFullS) -> RefSrc:
         rk, hap = parse_full_refkey(rsk)
         src = self.to_ref_data(rk).ref.src
         return from_hap_or_dip(src, hap)
@@ -2074,40 +2050,42 @@ class GiabStrats(BaseModel):
             lambda si: fmap_maybe(lambda x: x.data.src, f(si))
         )
 
-    def refsrckey_to_bed_src(self, f: StratInputToBed, rsk: RefKeyFullS) -> BedSrc:
-        rk, hap = parse_full_refkey(rsk)
-        rd = self.to_ref_data(rk)
-        return ref_data_to_src(
-            rd, hap, lambda rd: fmap_maybe(lambda x: x.data.src, f(rd))
+    def _refkey_to_src(self, f: RefDataToSrc, rk: RefKeyFullS) -> BedSrc:
+        rk_, hap = parse_full_refkey(rk)
+        src = with_ref_data(
+            self.to_ref_data(rk_), lambda rd: f(rd), lambda rd: f(rd), lambda rd: f(rd)
+        )
+        # TODO mypy doens't like me using my 'maybe' functional functions
+        if src is None:
+            raise DesignError()
+        return from_hap_or_dip(src, hap)
+
+    def refsrckey_to_bed_src(self, f: StratInputToBed, rk: RefKeyFullS) -> BedSrc:
+        return self._refkey_to_src(
+            lambda rd: fmap_maybe(lambda x: x.data.src, f(rd.strat_inputs)), rk
+        )
+
+    def _refsrckey_to_xy_feature_src(self, rsk: RefKeyFullS, i: ChrIndex) -> BedSrc:
+        return (
+            self.to_ref_data(strip_full_refkey(rsk))
+            .strat_inputs.xy_feature_bed_unsafe(i)
+            .data.src.hap
         )
 
     def refsrckey_to_x_features_src(self, rsk: RefKeyFullS) -> BedSrc:
-        # TODO this is confusing
-        return not_none_unsafe(
-            self.to_ref_data(strip_full_refkey(rsk)).strat_inputs.xy.features,
-            lambda x: x.x_bed.data.src.hap,
-        )
+        return self._refsrckey_to_xy_feature_src(rsk, ChrIndex.CHRX)
 
     def refsrckey_to_y_features_src(self, rsk: RefKeyFullS) -> BedSrc:
-        return not_none_unsafe(
-            self.to_ref_data(strip_full_refkey(rsk)).strat_inputs.xy.features,
-            lambda x: x.y_bed.data.src.hap,
-        )
+        return self._refsrckey_to_xy_feature_src(rsk, ChrIndex.CHRY)
 
     def refkey_to_xy_ref_chr_pattern(
-        self, rfk: RefKeyFullS, i: ChrIndex
+        self, rk: RefKeyFullS, i: ChrIndex
     ) -> HapChrPattern:
-        rk, hap = parse_full_refkey(rfk)
-        rd = self.to_ref_data(rk)
-        return with_ref_data(
-            rd,
-            lambda rd: none_unsafe(hap, rd.ref.chr_pattern),
-            lambda rd: none_unsafe(
-                hap, rd.ref.chr_pattern.to_hap_pattern(i.xy_to_hap_unsafe)
-            ),
-            lambda rd: not_none_unsafe(
-                hap, lambda h: rd.ref.chr_pattern.from_either(h)
-            ),
+        return self.with_ref_data_full(
+            rk,
+            lambda rd: rd.ref.chr_pattern,
+            lambda rd: rd.ref.chr_pattern.to_hap_pattern(i.xy_to_hap_unsafe),
+            lambda hap, rd: rd.ref.chr_pattern.from_either(hap),
         )
 
     def buildkey_to_bed_refsrckeys(
@@ -2120,28 +2098,22 @@ class GiabStrats(BaseModel):
         )
 
     def buildkey_to_bed_src(
-        self, f: BuildDataToBed, rsk: RefKeyFullS, bk: BuildKey
+        self, f: BuildDataToBed, rk: RefKeyFullS, bk: BuildKey
     ) -> BedSrc:
-        # return self.refsrckey_to_bed_src(lambda rd: f(rd.to_build_data(bk)), rsk)
-        rk, hap = parse_full_refkey(rsk)
-        rd = self.to_ref_data(rk)
-        return ref_data_to_src_(
-            rd,
-            hap,
+        return self._refkey_to_src(
             lambda rd: fmap_maybe(lambda x: x.data.src, f(rd.to_build_data(bk))),
+            rk,
         )
 
-    # TODO only one if these functions is necessary
     def buildkey_to_vcf_src(
-        self, f: BuildDataToVCF, rsk: RefKeyFullS, bk: BuildKey
+        self, f: BuildDataToVCF, rk: RefKeyFullS, bk: BuildKey
     ) -> BedSrc:
-        rk, hap = parse_full_refkey(rsk)
-        bd = self.to_build_data(rk, bk)
-        return build_data_to_src(
-            bd,
-            hap,
-            lambda bd: fmap_maybe(lambda x: x.data.src, f(bd)),
-        )
+        rk_, hap = parse_full_refkey(rk)
+        bd = self.to_build_data(rk_, bk)
+        src = with_build_data(bd, lambda bd: f(bd), lambda bd: f(bd), lambda bd: f(bd))
+        if src is None:
+            raise DesignError()
+        return from_hap_or_dip(src.data.src, hap)
 
     def refkey_to_functional_refsrckeys(
         self, f: StratInputToSrc, rk: RefKey
@@ -2149,40 +2121,25 @@ class GiabStrats(BaseModel):
         return self.to_ref_data(rk).get_refkeys_unsafe(f)
 
     def refsrckey_to_functional_src(
-        self, f: StratInputToSrc, rsk: RefKeyFullS
+        self, f: StratInputToSrc, rk: RefKeyFullS
     ) -> BedSrc:
-        rk, hap = parse_full_refkey(rsk)
-        rd = self.to_ref_data(rk)
-        return ref_data_to_src(rd, hap, f)
-
-    @property
-    def _all_haploid_builds(self) -> list[tuple[RefKey, BuildKey]]:
-        return all_build_keys(self.haploid_stratifications)
-
-    @property
-    def _all_diploid1_builds(self) -> list[tuple[RefKey, BuildKey]]:
-        return all_build_keys(self.diploid1_stratifications)
-
-    @property
-    def _all_diploid2_builds(self) -> list[tuple[RefKey, BuildKey]]:
-        return all_build_keys(self.diploid2_stratifications)
+        return self._refkey_to_src(lambda rd: f(rd.strat_inputs), rk)
 
     @property
     def all_build_keys(self) -> tuple[list[RefKey], list[BuildKey]]:
         return unzip2(
-            self._all_haploid_builds
-            + self._all_diploid1_builds
-            + self._all_diploid2_builds
+            all_build_keys(self.haploid_stratifications)
+            + all_build_keys(self.diploid1_stratifications)
+            + all_build_keys(self.diploid2_stratifications)
         )
 
     @property
     def all_full_build_keys(self) -> tuple[list[RefKeyFullS], list[BuildKey]]:
-        rs, bs = unzip2(
+        return unzip2(
             all_ref_build_keys(self.haploid_stratifications)
             + all_ref_build_keys(self.diploid1_stratifications)
             + all_ref_build_keys(self.diploid2_stratifications)
         )
-        return (list(rs), list(bs))
 
     @property
     def all_ref_refsrckeys(self) -> list[RefKeyFullS]:
@@ -2202,15 +2159,6 @@ class GiabStrats(BaseModel):
         else:
             raise DesignError(f"invalid ref key: '{rk}'")
 
-    def with_ref_data(
-        self,
-        rk: RefKey,
-        hap_f: Callable[[HapRefData], X],
-        dip1_f: Callable[[Dip1RefData], X],
-        dip2_f: Callable[[Dip2RefData], X],
-    ) -> X:
-        return with_ref_data(self.to_ref_data(rk), hap_f, dip1_f, dip2_f)
-
     def to_build_data(self, rk: RefKey, bk: BuildKey) -> AnyBuildData:
         def hap(rd: HapRefData) -> AnyBuildData:
             return rd.to_build_data_unsafe(bk)
@@ -2223,6 +2171,30 @@ class GiabStrats(BaseModel):
 
         return with_ref_data(self.to_ref_data(rk), hap, dip1, dip2)
 
+    def with_ref_data(
+        self,
+        rk: RefKey,
+        hap_f: Callable[[HapRefData], X],
+        dip1_f: Callable[[Dip1RefData], X],
+        dip2_f: Callable[[Dip2RefData], X],
+    ) -> X:
+        return with_ref_data(self.to_ref_data(rk), hap_f, dip1_f, dip2_f)
+
+    def with_ref_data_full(
+        self,
+        rk: RefKeyFullS,
+        hap_f: Callable[[HapRefData], X],
+        dip1_f: Callable[[Dip1RefData], X],
+        dip2_f: Callable[[Haplotype, Dip2RefData], X],
+    ) -> X:
+        rk_, hap = parse_full_refkey(rk)
+        return self.with_ref_data(
+            rk_,
+            lambda rd: none_unsafe(hap, hap_f(rd)),
+            lambda rd: none_unsafe(hap, dip1_f(rd)),
+            lambda rd: not_none_unsafe(hap, lambda hap: dip2_f(hap, rd)),
+        )
+
     def with_build_data(
         self,
         rk: RefKey,
@@ -2233,7 +2205,7 @@ class GiabStrats(BaseModel):
     ) -> X:
         return with_build_data(self.to_build_data(rk, bk), hap_f, dip1_f, dip2_f)
 
-    def with_build_data_final(
+    def with_build_data_full(
         self,
         rfk: RefKeyFullS,
         bk: BuildKey,
@@ -2264,20 +2236,20 @@ class GiabStrats(BaseModel):
             rk,
             lambda rd: not_none_unsafe(get_bed_f(rd), lambda bd: hap_f(rd, bd)),
             lambda rd: with_dip_bedfile(
-                not_none_unsafe(get_bed_f(rd), lambda bd: bd),
+                not_none_unsafe(get_bed_f(rd), noop),
                 lambda bf: dip_1to1_f(rd, bf),
                 lambda bf: dip_2to1_f(rd, bf),
             ),
             lambda rd: with_dip_bedfile(
-                not_none_unsafe(get_bed_f(rd), lambda bd: bd),
+                not_none_unsafe(get_bed_f(rd), noop),
                 lambda bf: dip_1to2_f(rd, bf),
                 lambda bf: dip_2to2_f(rd, bf),
             ),
         )
 
-    def with_ref_data_and_bed_hap(
+    def with_ref_data_and_bed_full(
         self,
-        rfk: RefKeyFullS,
+        rk: RefKeyFullS,
         get_bed_f: RefDataToBed,
         hap_f: Callable[[HapRefData, HapBedFile], Z],
         dip_1to1_f: Callable[[Dip1RefData, Dip1BedFile], Z],
@@ -2285,35 +2257,14 @@ class GiabStrats(BaseModel):
         dip_2to1_f: Callable[[Dip1RefData, Dip2BedFile], Z],
         dip_2to2_f: Callable[[Haplotype, Dip2RefData, Dip2BedFile], Z],
     ) -> Z:
-        rk, hap = parse_full_refkey(rfk)
+        rk_, hap = parse_full_refkey(rk)
         return self.with_ref_data_and_bed(
-            rk,
+            rk_,
             get_bed_f,
             hap_f,
             dip_1to1_f,
             lambda rd, bf: not_none_unsafe(hap, lambda h: dip_1to2_f(h, rd, bf)),
             dip_2to1_f,
-            lambda rd, bf: not_none_unsafe(hap, lambda h: dip_2to2_f(h, rd, bf)),
-        )
-
-    def with_ref_data_bed_unsafe(
-        self,
-        rsk: RefKeyFullS,
-        get_bed_f: StratInputToBed,
-        hap_f: Callable[[HapRefData, HapBedFile], X],
-        dip_1to1_f: Callable[[Dip1RefData, Dip1BedFile], X],
-        dip_1to2_f: Callable[[Dip2RefData, Dip1BedFile], X],
-        dip_2to1_f: Callable[[Haplotype, Dip1RefData, Dip2BedFile], X],
-        dip_2to2_f: Callable[[Haplotype, Dip2RefData, Dip2BedFile], X],
-    ) -> X:
-        rk, hap = parse_full_refkey(rsk)
-        return self.with_ref_data_and_bed(
-            rk,
-            lambda rd: get_bed_f(rd.strat_inputs),
-            lambda rd, bd: none_unsafe(hap, hap_f(rd, bd)),
-            lambda rd, bd: none_unsafe(hap, dip_1to1_f(rd, bd)),
-            lambda rd, bd: none_unsafe(hap, dip_1to2_f(rd, bd)),
-            lambda rd, bf: not_none_unsafe(hap, lambda h: dip_2to1_f(h, rd, bf)),
             lambda rd, bf: not_none_unsafe(hap, lambda h: dip_2to2_f(h, rd, bf)),
         )
 
@@ -2338,9 +2289,9 @@ class GiabStrats(BaseModel):
             lambda rd, bf: dip_2to2_f(rd.to_build_data_unsafe(bk), bf),
         )
 
-    def with_build_data_and_bed_hap(
+    def with_build_data_and_bed_full(
         self,
-        rfk: RefKeyFullS,
+        rk: RefKeyFullS,
         bk: BuildKey,
         get_bed_f: BuildDataToBed,
         hap_f: Callable[[HapBuildData, HapBedFile], Z],
@@ -2349,8 +2300,8 @@ class GiabStrats(BaseModel):
         dip_2to1_f: Callable[[Dip1BuildData, Dip2BedFile], Z],
         dip_2to2_f: Callable[[Haplotype, Dip2BuildData, Dip2BedFile], Z],
     ) -> Z:
-        return self.with_ref_data_and_bed_hap(
-            rfk,
+        return self.with_ref_data_and_bed_full(
+            rk,
             lambda rd: get_bed_f(rd.to_build_data_unsafe(bk)),
             lambda rd, bf: hap_f(rd.to_build_data_unsafe(bk), bf),
             lambda rd, bf: dip_1to1_f(rd.to_build_data_unsafe(bk), bf),
@@ -2359,7 +2310,7 @@ class GiabStrats(BaseModel):
             lambda hap, rd, bf: dip_2to2_f(hap, rd.to_build_data_unsafe(bk), bf),
         )
 
-    def with_build_data_and_bed_i(
+    def _with_build_data_and_bed_i(
         self,
         rk: RefKey,
         bk: BuildKey,
@@ -2386,7 +2337,7 @@ class GiabStrats(BaseModel):
             ),
         )
 
-    def with_build_data_and_bed_io(
+    def _with_build_data_and_bed_io(
         self,
         rk: RefKey,
         bk: BuildKey,
@@ -2400,39 +2351,27 @@ class GiabStrats(BaseModel):
         dip_2to1_f: Callable[[tuple[X, X], Y, Dip1BuildData, Dip2BedFile], Z],
         dip_2to2_f: Callable[[tuple[X, X], tuple[Y, Y], Dip2BuildData, Dip2BedFile], Z],
     ) -> Z:
-        def out1(src: Haploid_[RefSrc], rk: RefKey) -> Y:
+        def out1(src: HapRefSrc) -> Y:
             return with_first(output_f(src.key(rk)), lambda o: write_outputs([o]))
 
-        def out2(src: Diploid_[RefSrc], rk: RefKey) -> tuple[Y, Y]:
+        def out2(src: DipRefSrc) -> tuple[Y, Y]:
             return with_first(
                 both(output_f, src.keys(rk)), lambda o: write_outputs([*o])
             )
 
-        return self.with_build_data_and_bed_i(
+        return self._with_build_data_and_bed_i(
             rk,
             bk,
             inputs,
             get_bed_f,
-            lambda i, bd, bf: hap_f(
-                i, out1(bd.refdata.ref.src, bd.refdata.refkey), bd, bf
-            ),
-            lambda i, bd, bf: dip_1to1_f(
-                i, out1(bd.refdata.ref.src, bd.refdata.refkey), bd, bf
-            ),
-            lambda i, bd, bf: dip_1to2_f(
-                i, out2(bd.refdata.ref.src, bd.refdata.refkey), bd, bf
-            ),
-            lambda i, bd, bf: dip_2to1_f(
-                i, out1(bd.refdata.ref.src, bd.refdata.refkey), bd, bf
-            ),
-            lambda i, bd, bf: dip_2to2_f(
-                i, out2(bd.refdata.ref.src, bd.refdata.refkey), bd, bf
-            ),
+            lambda i, bd, bf: hap_f(i, out1(bd.refdata.ref.src), bd, bf),
+            lambda i, bd, bf: dip_1to1_f(i, out1(bd.refdata.ref.src), bd, bf),
+            lambda i, bd, bf: dip_1to2_f(i, out2(bd.refdata.ref.src), bd, bf),
+            lambda i, bd, bf: dip_2to1_f(i, out1(bd.refdata.ref.src), bd, bf),
+            lambda i, bd, bf: dip_2to2_f(i, out2(bd.refdata.ref.src), bd, bf),
         )
 
-    # TODO refactor this so it takes only a builddata and not these weird
-    # strings, which will make this function independent of the class
-    def with_build_data_and_bed_io_(
+    def with_build_data_and_bed_io(
         self,
         rk: RefKey,
         bk: BuildKey,
@@ -2459,7 +2398,7 @@ class GiabStrats(BaseModel):
             with open(output, "w") as f:
                 json.dump([str(p) for p in ps], f)
 
-        self.with_build_data_and_bed_io(
+        self._with_build_data_and_bed_io(
             rk,
             bk,
             inputs,
@@ -2715,7 +2654,7 @@ def filter_sort_bed_main(
         raise DesignError(f"Output pattern must be a string, got {output_pattern}")
 
     # TODO these don't need to be lamba-wrapped
-    sconf.with_build_data_and_bed_io_(
+    sconf.with_build_data_and_bed_io(
         wc_to_refkey(ws),
         wc_to_buildkey(ws),
         [Path(i) for i in ins],
