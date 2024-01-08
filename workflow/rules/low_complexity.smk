@@ -392,10 +392,7 @@ checkpoint normalize_simreps:
     output:
         lc.inter.filtersort.data / "simreps.json",
     params:
-        output_pattern=lambda w: expand(
-            lc.inter.filtersort.subbed / "simreps.bed.gz",
-            build_key=w.build_key,
-        )[0],
+        output_pattern=lambda w: to_output_pattern(lc, "simreps", w),
     conda:
         "../envs/bedtools.yml"
     script:
@@ -437,10 +434,7 @@ checkpoint normalize_rmsk:
     output:
         lc.inter.filtersort.data / "rmsk.txt.gz",
     params:
-        output_pattern=lambda w: expand(
-            lc.inter.filtersort.subbed / "rmsk.bed.gz",
-            build_key=w.build_key,
-        )[0],
+        output_pattern=lambda w: to_output_pattern(lc, "rmsk", w),
     conda:
         "../envs/bedtools.yml"
     benchmark:
@@ -497,10 +491,7 @@ checkpoint normalize_censat:
     output:
         lc.inter.filtersort.data / "censat.json",
     params:
-        output_pattern=lambda w: expand(
-            lc.inter.filtersort.subbed / "censat.bed.gz",
-            build_key=w.build_key,
-        )[0],
+        output_pattern=lambda w: to_output_pattern(lc, "censat", w),
     conda:
         "../envs/bedtools.yml"
     script:

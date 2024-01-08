@@ -41,14 +41,8 @@ checkpoint normalize_cds:
     output:
         **{k: func.inter.filtersort.data / f"{k}.json" for k in ["cds", "vdj"]},
     params:
-        cds_output=lambda w: expand(
-            func.inter.filtersort.subbed / "cds.bed.gz",
-            build_key=w.build_key,
-        )[0],
-        vdj_output=lambda w: expand(
-            func.inter.filtersort.subbed / "vdj.bed.gz",
-            build_key=w.build_key,
-        )[0],
+        cds_output=lambda w: to_output_pattern(func, "cds", w),
+        vdj_output=lambda w: to_output_pattern(func, "vdj", w),
     conda:
         "../envs/bedtools.yml"
     script:

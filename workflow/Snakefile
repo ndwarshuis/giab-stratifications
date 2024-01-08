@@ -13,10 +13,27 @@ config = GiabStrats.parse_obj(config)
 
 
 def expand_final_to_src(paths, wildcards):
+    """Turn a final ref key into a source refkey.
+
+    This is only used in rules that are based directly on the reference, in
+    which case this is trivial because the final and source refkeys are always
+    the same. This rule is necessary because we make a distinction at the
+    wildcard level b/t source and final.
+
+    """
     return expand(paths, allow_missing=True, ref_src_key=wildcards.ref_final_key)
 
 
+def to_output_pattern(dirs, name, wildcards):
+    """Create and output pattern for a normalization rule."""
+    return expand(
+        dirs.inter.filtersort.subbed / f"{name}.bed.gz",
+        build_key=w.build_key,
+    )[0]
+
+
 def read_checkpoint(rulename, wildcards, other=[]):
+    """Read a normalization checkpoint"""
     r = getattr(checkpoints, rulename)
     c = r.get(
         ref_key=strip_full_refkey(wildcards.ref_final_key),
@@ -28,6 +45,7 @@ def read_checkpoint(rulename, wildcards, other=[]):
 
 
 def read_named_checkpoint(rulename, name, wildcards):
+    """Read a normalization checkpoint (with name)"""
     # TODO not DRY
     r = getattr(checkpoints, rulename)
     rk = strip_full_refkey(wildcards.ref_final_key)
@@ -38,12 +56,15 @@ def read_named_checkpoint(rulename, name, wildcards):
 
 
 def bed_src_inputs(pathlist, f, wildcards):
+    """Expand pathlist given a refkey and a function to lookup a source file
+    for which refsrckeys can be defined."""
     rk = wildcards.ref_key
     rsks = config.refkey_to_bed_refsrckeys(f, rk)
     return expand(pathlist, ref_src_key=rsks)
 
 
 def bed_src_bd_inputs(pathlist, f, wildcards):
+    """Like 'bed_src_inputs' but for build data. Used for benchmark files."""
     rk = wildcards.ref_key
     bk = wildcards.build_key
     rsks = config.buildkey_to_bed_refsrckeys(f, rk, bk)
@@ -51,6 +72,7 @@ def bed_src_bd_inputs(pathlist, f, wildcards):
 
 
 def to_bed_src(f, wildcards):
+    """Shorthand for looking up bed file source using a function and wildcards."""
     return config.refsrckey_to_bed_src(f, wildcards.ref_src_key)
 
 

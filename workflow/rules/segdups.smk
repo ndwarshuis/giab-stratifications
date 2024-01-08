@@ -19,10 +19,7 @@ checkpoint normalize_superdups:
     output:
         segdup.inter.filtersort.data / "segdups.json",
     params:
-        output_pattern=lambda w: expand(
-            segdup.inter.filtersort.subbed / "segdups.bed.gz",
-            build_key=w.build_key,
-        )[0],
+        output_pattern=lambda w: to_output_pattern(segdup, "segdups", w),
     conda:
         "../envs/bedtools.yml"
     script:
