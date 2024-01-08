@@ -3,7 +3,7 @@ from collections import namedtuple
 from common.config import (
     CoreLevel,
     si_to_rmsk,
-    si_to_trf,
+    si_to_simreps,
     si_to_satellites,
     strip_full_refkey,
 )
@@ -35,7 +35,7 @@ IMPERFECT_LENS = [11, 21]
 # refs we might miss a repeat like "AAaa"
 rule find_perfect_uniform_repeats:
     input:
-        ref=rules.filter_sort_ref.output,
+        ref=rules.normalize_ref.output,
         bin=rules.build_repseq.output,
     output:
         lc.inter.postsort.data / "uniform_repeats_R{unit_len}_T{total_len}.bed",
@@ -373,40 +373,40 @@ rule all_uniform_repeats:
 
 
 ################################################################################
-## trf
+## simple repeats
 
 
-use rule download_ref as download_trf with:
+use rule download_ref as download_simreps with:
     output:
-        lc.src.data / "trf_simreps.txt.gz",
+        lc.src.data / "simreps.txt.gz",
     log:
-        lc.src.log / "trf_simreps.log",
+        lc.src.log / "simreps.log",
     params:
-        src=lambda w: to_bed_src(si_to_trf, w),
+        src=lambda w: to_bed_src(si_to_simreps, w),
     localrule: True
 
 
-checkpoint filter_sort_trf:
+checkpoint normalize_simreps:
     input:
-        lambda w: bed_src_inputs(rules.download_trf.output, si_to_trf, w),
+        lambda w: bed_src_inputs(rules.download_simreps.output, si_to_simreps, w),
     output:
-        lc.inter.filtersort.data / "trf.json",
+        lc.inter.filtersort.data / "simreps.json",
     params:
         output_pattern=lambda w: expand(
-            lc.inter.filtersort.subbed / "trf.bed.gz",
+            lc.inter.filtersort.subbed / "simreps.bed.gz",
             build_key=w.build_key,
         )[0],
     conda:
         "../envs/bedtools.yml"
     script:
-        "../scripts/python/bedtools/low_complexity/filter_sort_trf.py"
+        "../scripts/python/bedtools/low_complexity/normalize_simreps.py"
 
 
-rule merge_trf:
+rule merge_simreps:
     input:
-        partial(read_checkpoint, "filter_sort_trf"),
+        partial(read_checkpoint, "normalize_simreps"),
     output:
-        lc.inter.postsort.data / "trf_simpleRepeats.bed.gz",
+        lc.inter.postsort.data / "simreps_merged.bed.gz",
     conda:
         "../envs/bedtools.yml"
     shell:
@@ -431,7 +431,7 @@ use rule download_ref as download_rmsk with:
     localrule: True
 
 
-checkpoint filter_sort_rmsk:
+checkpoint normalize_rmsk:
     input:
         lambda w: bed_src_inputs(rules.download_rmsk.output, si_to_rmsk, w),
     output:
@@ -444,14 +444,14 @@ checkpoint filter_sort_rmsk:
     conda:
         "../envs/bedtools.yml"
     benchmark:
-        lc.inter.filtersort.bench / "filter_sort_rmsk.txt"
+        lc.inter.filtersort.bench / "normalize_rmsk.txt"
     script:
-        "../scripts/python/bedtools/low_complexity/filter_sort_rmsk.py"
+        "../scripts/python/bedtools/low_complexity/normalize_rmsk.py"
 
 
 rule merge_rmsk_class:
     input:
-        lambda w: read_checkpoint("filter_sort_rmsk", w),
+        lambda w: read_checkpoint("normalize_rmsk", w),
     output:
         lc.inter.postsort.data / "rmsk_class_{rmsk_class}.bed.gz",
     conda:
@@ -491,7 +491,7 @@ use rule download_ref as download_censat with:
     localrule: True
 
 
-checkpoint filter_sort_censat:
+checkpoint normalize_censat:
     input:
         lambda w: bed_src_inputs(rules.download_censat.output, si_to_satellites, w),
     output:
@@ -504,14 +504,14 @@ checkpoint filter_sort_censat:
     conda:
         "../envs/bedtools.yml"
     script:
-        "../scripts/python/bedtools/low_complexity/filter_sort_censat.py"
+        "../scripts/python/bedtools/low_complexity/normalize_censat.py"
 
 
 # split this from the final rule since other rules depend on the satellites
 # bed file but add slop of their own, so this avoids adding slop twice
 rule merge_satellites_intermediate:
     input:
-        lambda w: read_checkpoint("filter_sort_censat", w)
+        lambda w: read_checkpoint("normalize_censat", w)
         if config.to_build_data(
             strip_full_refkey(w.ref_final_key), w.build_key
         ).refdata.has_low_complexity_censat
@@ -599,7 +599,7 @@ rule merge_repeats:
     input:
         beds=all_rmsk_classes["Low_complexity"]
         + all_rmsk_classes["Simple_repeat"]
-        + rules.merge_trf.output
+        + rules.merge_simreps.output
         + rules.all_perfect_uniform_repeats.input.R2_T10
         + rules.all_perfect_uniform_repeats.input.R3_T14
         + rules.all_perfect_uniform_repeats.input.R4_T19
@@ -732,7 +732,7 @@ use rule invert_satellites as invert_HPs_and_TRs with:
 def all_low_complexity(ref_final_key, _):
     rd = config.to_ref_data(strip_full_refkey(ref_final_key))
     rmsk = rd.has_low_complexity_rmsk
-    trf = rd.has_low_complexity_simreps
+    simreps = rd.has_low_complexity_simreps
     censat = rd.has_low_complexity_censat
     has_sats = rmsk or censat
 
@@ -750,11 +750,11 @@ def all_low_complexity(ref_final_key, _):
         else []
     )
 
-    # include tandem repeats and merged output if we have rmsk/censat and TRF
+    # include tandem repeats and merged output if we have rmsk/censat and simreps
     trs = (
         rules.all_TRs.input + rules.merge_filtered_TRs.output + rules.invert_TRs.output
     )
     merged = rules.merge_HPs_and_TRs.output + rules.invert_HPs_and_TRs.output
-    all_trs_and_hps = trs + merged if has_sats and trf else []
+    all_trs_and_hps = trs + merged if has_sats and simreps else []
 
     return all_trs_and_hps + sats + urs

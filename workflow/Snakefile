@@ -94,7 +94,7 @@ rule all_resources:
         expand(rules.download_ref.output, ref_src_key=config.all_ref_refsrckeys),
         expand(rules.download_gaps.output, ref_src_key=config.all_refkey_gap),
         expand(rules.download_rmsk.output, ref_src_key=config.all_refkey_rmsk),
-        expand(rules.download_trf.output, ref_src_key=config.all_refkey_trf),
+        expand(rules.download_simreps.output, ref_src_key=config.all_refkey_simreps),
         expand(rules.download_censat.output, ref_src_key=config.all_refkey_censat),
         expand(rules.download_superdups.output, ref_src_key=config.all_refkey_segdups),
         expand(rules.download_ftbl.output, ref_src_key=config.all_refkey_ftbl),

@@ -13,25 +13,25 @@ use rule download_ref as download_superdups with:
     localrule: True
 
 
-checkpoint filter_sort_superdups:
+checkpoint normalize_superdups:
     input:
         lambda w: bed_src_inputs(rules.download_superdups.output, si_to_superdups, w),
     output:
-        segdup.inter.filtersort.data / "filter_sorted.json",
+        segdup.inter.filtersort.data / "segdups.json",
     params:
         output_pattern=lambda w: expand(
-            segdup.inter.filtersort.subbed / "filter_sorted.bed.gz",
+            segdup.inter.filtersort.subbed / "segdups.bed.gz",
             build_key=w.build_key,
         )[0],
     conda:
         "../envs/bedtools.yml"
     script:
-        "../scripts/python/bedtools/segdups/filter_sort_superdups.py"
+        "../scripts/python/bedtools/segdups/normalize_superdups.py"
 
 
 rule merge_superdups:
     input:
-        bed=lambda w: read_checkpoint("filter_sort_superdups", w),
+        bed=lambda w: read_checkpoint("normalize_superdups", w),
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:

@@ -23,7 +23,7 @@ use rule download_ref as download_gff with:
         func.src.log / "gff.log",
 
 
-checkpoint filter_cds:
+checkpoint normalize_cds:
     input:
         unpack(
             lambda w: {
@@ -52,12 +52,12 @@ checkpoint filter_cds:
     conda:
         "../envs/bedtools.yml"
     script:
-        "../scripts/python/bedtools/functional/filter_cds.py"
+        "../scripts/python/bedtools/functional/normalize_cds.py"
 
 
 rule merge_functional:
     input:
-        bed=lambda w: read_named_checkpoint("filter_cds", "cds", w),
+        bed=lambda w: read_named_checkpoint("normalize_cds", "cds", w),
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:

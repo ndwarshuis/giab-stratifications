@@ -33,7 +33,7 @@ use rule download_ref as download_other with:
     localrule: True
 
 
-checkpoint filter_sort_other:
+checkpoint normalize_other:
     input:
         lambda w: expand(
             rules.download_other.output,
@@ -64,7 +64,7 @@ checkpoint filter_sort_other:
     wildcard_constraints:
         **other_constraints,
     script:
-        "../scripts/python/bedtools/other/filter_sort_other.py"
+        "../scripts/python/bedtools/other/normalize_other.py"
 
 
 rule remove_gaps_other:

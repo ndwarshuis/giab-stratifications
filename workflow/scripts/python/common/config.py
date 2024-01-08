@@ -400,14 +400,14 @@ def bd_to_si(
     return f(x.refdata.strat_inputs)
 
 
-def si_to_trf(x: StratInputs[AnyBedT, AnySrcT]) -> BedFile[AnyBedT] | None:
+def si_to_simreps(x: StratInputs[AnyBedT, AnySrcT]) -> BedFile[AnyBedT] | None:
     return x.low_complexity.simreps
 
 
-def bd_to_trf(
+def bd_to_simreps(
     x: BuildData_[RefSourceT, AnyBedT, AnyBedT_, AnySrcT],
 ) -> BedFile[AnyBedT] | None:
-    return si_to_trf(x.refdata.strat_inputs) if x.want_low_complexity else None
+    return si_to_simreps(x.refdata.strat_inputs) if x.want_low_complexity else None
 
 
 def si_to_rmsk(x: StratInputs[AnyBedT, AnySrcT]) -> BedFile[AnyBedT] | None:
@@ -673,7 +673,7 @@ def filter_sort_bed_main(
     obtained from the snakemake object).
     """
     sconf: GiabStrats = smk.config
-    ws: dict[str, str] = smk.wildcards
+    ws: SmkWildcards = smk.wildcards
 
     if not isinstance((ins := smk.input), list) and not all(
         isinstance(x, str) for x in ins
@@ -2888,9 +2888,9 @@ class GiabStrats(BaseModel):
         )
 
     @property
-    def all_refkey_trf(self) -> list[RefKeyFullS]:
+    def all_refkey_simreps(self) -> list[RefKeyFullS]:
         return self._all_bed_refsrckeys(
-            lambda bd: fmap_maybe(lambda x: x.data.src, bd_to_trf(bd))
+            lambda bd: fmap_maybe(lambda x: x.data.src, bd_to_simreps(bd))
         )
 
     @property

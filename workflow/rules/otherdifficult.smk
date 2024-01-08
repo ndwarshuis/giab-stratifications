@@ -23,7 +23,7 @@ rule get_gaps:
 
 rule remove_vdj_gaps:
     input:
-        bed=lambda w: read_named_checkpoint("filter_cds", "vdj", w),
+        bed=lambda w: read_named_checkpoint("normalize_cds", "vdj", w),
         genome=rules.get_genome.output,
         gapless=rules.get_gapless.output.auto,
     output:

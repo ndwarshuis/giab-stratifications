@@ -224,7 +224,7 @@ rule run_happy:
         refi=rules.index_unzipped_ref.output,
         ref=rules.unzip_ref.output,
         bench_vcf=lambda w: expand_final_to_src(rules.download_bench_vcf.output, w),
-        bench_bed=lambda w: read_checkpoint("filter_sort_bench_bed", w),
+        bench_bed=lambda w: read_checkpoint("normalize_bench_bed", w),
         query_vcf=lambda w: expand_final_to_src(rules.download_query_vcf.output, w),
         strats=rules.generate_tsv_list.output,
     output:
