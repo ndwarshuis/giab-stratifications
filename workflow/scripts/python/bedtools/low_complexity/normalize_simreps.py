@@ -3,7 +3,7 @@ import common.config as cfg
 
 
 def main(smk: Any) -> None:
-    cfg.filter_sort_bed_main(lambda bd: cfg.bd_to_si(cfg.si_to_trf, bd), smk)
+    cfg.filter_sort_bed_main(lambda bd: cfg.bd_to_si(cfg.si_to_simreps, bd), smk)
 
 
 main(snakemake)  # type: ignore

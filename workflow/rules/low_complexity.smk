@@ -35,7 +35,7 @@ IMPERFECT_LENS = [11, 21]
 # refs we might miss a repeat like "AAaa"
 rule find_perfect_uniform_repeats:
     input:
-        ref=rules.normalize_ref.output,
+        ref=rules.filter_sort_ref.output,
         bin=rules.build_repseq.output,
     output:
         lc.inter.postsort.data / "uniform_repeats_R{unit_len}_T{total_len}.bed",

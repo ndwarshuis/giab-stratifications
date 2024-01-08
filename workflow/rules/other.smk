@@ -70,7 +70,7 @@ checkpoint normalize_other:
 rule remove_gaps_other:
     input:
         bed=lambda w: read_checkpoint(
-            "filter_sort_other",
+            "normalize_other",
             w,
             ["other_level_key", "other_strat_key"],
         ),

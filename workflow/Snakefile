@@ -28,7 +28,7 @@ def to_output_pattern(dirs, name, wildcards):
     """Create and output pattern for a normalization rule."""
     return expand(
         dirs.inter.filtersort.subbed / f"{name}.bed.gz",
-        build_key=w.build_key,
+        build_key=wildcards.build_key,
     )[0]
 
 
