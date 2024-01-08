@@ -160,7 +160,6 @@ rule write_chr_name_mapper:
         write_chr_mapper(config, output[0])
 
 
-# TODO this needs to be made haplotype-aware
 rule make_coverage_plots:
     input:
         # this first input isn't actually used, but ensures the unit tests pass
@@ -194,7 +193,7 @@ rule make_coverage_plots:
         core_levels=[c.value for c in CoreLevel],
         other_levels=config.other_levels,
     script:
-        "../scripts/rmarkdown/rmarkdown/validate.Rmd"
+        "../scripts/rmarkdown/rmarkdown/coverage_plots.Rmd"
 
 
 rule unzip_ref:

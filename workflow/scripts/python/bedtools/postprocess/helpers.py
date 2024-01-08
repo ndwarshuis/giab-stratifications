@@ -18,11 +18,12 @@ def write_chr_mapper(sconf: cfg.GiabStrats, o: Path) -> None:
                     for h in cfg.Haplotype
                 ],
                 lambda hap, rd: [
-                    (i, h, rd.ref.chr_pattern.from_either(hap).to_chr_name(i))
+                    (i, hap, rd.ref.chr_pattern.from_either(hap).to_chr_name(i))
                     for i in cis
                 ],
             )
             for i, h, n in xs:
-                # chr number, ref_final_key@build_key, haplotype, chr name
-                line = [str(i.value), f"{rk}@{bk}", h, n]
-                f.write("\t".join(line) + "\n")
+                if n is not None:
+                    # chr number, ref_final_key@build_key, haplotype, chr name
+                    line = [str(i.value), f"{rk}@{bk}", str(h.value + 1), n]
+                    f.write("\t".join(line) + "\n")
