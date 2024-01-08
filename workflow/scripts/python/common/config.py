@@ -2102,10 +2102,10 @@ class GiabStrats(BaseModel):
     ]
     paths: Paths = Paths()
     tools: Tools = Tools()
+    comparison_strats: dict[CompareKey, HttpUrl] = {}
     haploid_stratifications: dict[RefKey, HapStrat] = {}
     diploid1_stratifications: dict[RefKey, Dip1Strat] = {}
     diploid2_stratifications: dict[RefKey, Dip2Strat] = {}
-    comparison_strats: dict[CompareKey, HttpUrl] = {}
     benchmark_subsets: list[str] = [
         "AllAutosomes",
         "AllTandemRepeats",
@@ -2134,6 +2134,7 @@ class GiabStrats(BaseModel):
         "segdups",
     ]
 
+    # TODO validate comparison keys
     @validator(
         "haploid_stratifications",
         "diploid1_stratifications",
@@ -2173,7 +2174,7 @@ class GiabStrats(BaseModel):
         values: dict[str, Any],
     ) -> HapStrat:
         try:
-            prev = cast(dict[CompareKey, HttpUrl], values["previous"])
+            prev = cast(dict[CompareKey, HttpUrl], values["comparison_strats"])
             bad = [
                 f"version='{pk}'; build='{bk}'"
                 for bk, b in v.builds.items()
@@ -2181,10 +2182,9 @@ class GiabStrats(BaseModel):
                 for pk in b.comparison.other
                 if pk not in prev
             ]
-            if len(bad) > 0:
-                assert (
-                    False
-                ), f"builds referencing invalid previous version keys: {', '.join(bad)}"
+            assert (
+                len(bad) == 0
+            ), f"builds referencing invalid previous version keys: {', '.join(bad)}"
         except KeyError:
             pass
         return v
