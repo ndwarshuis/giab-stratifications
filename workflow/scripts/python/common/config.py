@@ -2174,13 +2174,12 @@ class GiabStrats(BaseModel):
         values: dict[str, Any],
     ) -> HapStrat:
         try:
-            prev = cast(dict[CompareKey, HttpUrl], values["comparison_strats"])
+            prev: dict[CompareKey, HttpUrl] = values["comparison_strats"]
             bad = [
                 f"version='{pk}'; build='{bk}'"
                 for bk, b in v.builds.items()
                 if b.comparison is not None
-                for pk in b.comparison.other
-                if pk not in prev
+                if (pk := b.comparison.other) not in prev
             ]
             assert (
                 len(bad) == 0
