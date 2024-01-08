@@ -3,9 +3,9 @@ import subprocess as sp
 from typing import Callable
 from typing_extensions import assert_never
 from tempfile import NamedTemporaryFile as Tmp
-from common.io import is_bgzip, is_gzip
+from common.io import is_bgzip, is_gzip, get_md5, setup_logging
+from common.functional import DesignError
 import common.config as cfg
-from common.io import get_md5, setup_logging
 
 # hacky curl/gzip wrapper; this exists because I got tired of writing
 # specialized rules to convert gzip/nozip files to bgzip and back :/
@@ -79,7 +79,7 @@ def main(opath: str, src: cfg.BedSrc | cfg.RefSrc | None) -> None:
                 assert_never(src)
 
     elif src is None:
-        assert False, "file src is null; this should not happen"
+        raise DesignError("file src is null; this should not happen")
     else:
         assert_never(src)
 

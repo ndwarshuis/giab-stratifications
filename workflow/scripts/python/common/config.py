@@ -137,7 +137,8 @@ def with_dip_bedfile(
     elif is_dip2_bed(bf):
         return dip2(bf)
     else:
-        assert False, "TODO this is a mypy FP"
+        # TODO this is a mypy bug, I should be able to use assert_never here
+        raise DesignError("not a dip1 or dip2")
         # assert_never(bf)
 
 
@@ -1986,8 +1987,7 @@ class GiabStrats(BaseModel):
             dip1: list[RefKey] = list(values["diploid2_stratifications"])
             dip2 = list(v)
             ds = list(duplicates_everseen(hap + dip1 + dip2))
-            if len(ds) > 0:
-                assert False, f"duplicate refkeys: {', '.join(ds)}"
+            assert len(ds) == 0, f"duplicate refkeys: {', '.join(ds)}"
         except KeyError:
             pass
         return v
