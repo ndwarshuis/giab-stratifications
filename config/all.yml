@@ -537,7 +537,7 @@ haploid_stratifications:
               chr_pattern: {template: '%i'}
 
         comparison:
-          other: GRCh37_v32
+          other: GRCh37_v33
 
         include:
           telomeres: false
@@ -573,7 +573,7 @@ haploid_stratifications:
             src:
               hap:
                 url: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/simpleRepeat.txt.gz
-                md5: aa89dad8ab80270f963f2c99f1df3697
+                md5: b0e801344ba654a5146a2ba3e9973462
           params:
             bed_cols: {chr: 1, start: 2, end: 3}
       xy:
@@ -979,7 +979,7 @@ haploid_stratifications:
                   md5: 5f70b5f407b48e701376bad6129330e5
 
         comparison:
-          other: GRCh38_v32
+          other: GRCh38_v33
 
         include:
           telomeres: false
@@ -1064,11 +1064,11 @@ haploid_stratifications:
         ftbl_src:
           hap:
             url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_feature_table.txt.gz
-            md5: a7192b354d455e9164f6c41393e7967a
+            md5: 1453f2dc1ee28bac690aa999d1242e61
         gff_src:
           hap:
             url: https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_009914755.1_T2T-CHM13v2.0/GCF_009914755.1_T2T-CHM13v2.0_genomic.gff.gz
-            md5: 970d3ed5947b37eae52e6c347aae0f59
+            md5: ef95051dbf2005a6269dd21399fe08db
       mappability:
         unplaced_chr_patterns: ["^chrM$"] 
     builds:
@@ -1114,7 +1114,7 @@ haploid_stratifications:
                   md5: 891f3c539842f148213c6bb2ec493606
 
         comparison:
-          other: CHM13_v32
+          other: CHM13_v33
 
 # NOTE: download these manually to their resource paths and remove the two toplevel directories after extraction (these were all tarred to
 # "results/final/<target>" instead of simply "<target>")
