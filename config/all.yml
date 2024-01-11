@@ -1116,6 +1116,35 @@ haploid_stratifications:
         comparison:
           other: CHM13_v33
 
+diploid2_stratifications:
+  HG002:
+    ref:
+      src:
+        hap1:
+          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.1.mat.fasta.gz
+        hap2:
+          url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.1.pat.fasta.gz
+    low_complexity:
+      rmsk: null
+      simreps: null
+      satellites: null
+    xy:
+      features: null
+      x_par: null
+      y_par: null
+    segdups:
+      superdups: null
+    functional: null
+    mappability:
+      unplaced_chr_patterns: ["^chr(MT|EBV)$"]
+    builds:
+      test-autosome:
+        chr_filter: []
+        include:
+          xy: false
+          segdups: false
+          functional: false
+
 # NOTE: download these manually to their resource paths and remove the two toplevel directories after extraction (these were all tarred to
 # "results/final/<target>" instead of simply "<target>")
 comparison_strats:
