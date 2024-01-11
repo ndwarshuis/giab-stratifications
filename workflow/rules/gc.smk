@@ -7,7 +7,6 @@ import json
 gc = config.to_bed_dirs(CoreLevel.GC)
 
 
-# TODO this can take a gzipped fa file
 rule find_gc_content:
     input:
         ref=rules.filter_sort_ref.output,

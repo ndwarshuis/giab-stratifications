@@ -714,6 +714,10 @@ class RefKeyFull:
         return RefKey(self.key)
 
     @property
+    def has_hap(self) -> bool:
+        return self.hap is not None
+
+    @property
     def as_tuple(self) -> tuple[str, Haplotype | None]:
         return (str(self.key), self.hap)
 
