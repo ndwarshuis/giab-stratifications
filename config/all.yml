@@ -1124,19 +1124,20 @@ diploid2_stratifications:
           url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.1.mat.fasta.gz
         hap2:
           url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.1.pat.fasta.gz
-    low_complexity:
-      rmsk: null
-      simreps: null
-      satellites: null
-    xy:
-      features: null
-      x_par: null
-      y_par: null
-    segdups:
-      superdups: null
-    functional: null
-    mappability:
-      unplaced_chr_patterns: ["^chr(MT|EBV)$"]
+    strat_inputs:
+      low_complexity:
+        rmsk: null
+        simreps: null
+        satellites: null
+      xy:
+        features: null
+        x_par: null
+        y_par: null
+      segdups:
+        superdups: null
+      functional: null
+      mappability:
+        unplaced_chr_patterns: ["^chr(MT|EBV)$"]
     builds:
       test-autosome:
         chr_filter: []
