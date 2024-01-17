@@ -1,15 +1,8 @@
 ################################################################################
 # global pipeline config
 
-stages:
-  - lint
-  - snakemake_global
-  - snakemake_conda
-  - test
-
 variables:
   ENV_DIR: ./this-env
-  LINT_DIR: stratlint
   TESTCONF: config/testing.yml
   TESTCONFFULL: config/testing-full.yml
   # speed up cache compression
@@ -44,114 +37,66 @@ image: condaforge/mambaforge:4.12.0-0
     files:
       - config/testing.yml
 
-.lint_cache: &lint_cache
-  paths:
-    - stratlint-*
-  key:
-    files:
-      - workflow/scripts/python/*/env.yml
-      - workflow/scripts/rmarkdown/*/env.yml
 
 .activate_smk: &activate_smk
   before_script:
     - eval "$(${CONDA_DIR}/bin/conda shell.bash hook 2> /dev/null)"
+    - test -d $ENV_DIR && echo Env exists || mamba env create -f env.yml -p $ENV_DIR
     - conda activate $ENV_DIR
-
-################################################################################
-# set up global conda environment
-
-# - ASSUME mamba is already installed on the system hosting the gitlab runner
-# - ASSUME the cache will track any changes to env.yml and will force an update
-#   if this changes
-install_global_env:
-  stage: snakemake_global
-  script:
-    - >
-      test -d $ENV_DIR
-      && echo "Env already created"
-      || mamba env create -f env.yml -p $ENV_DIR
-  cache: 
-    - <<: *smk_global_cache
-
 
 ################################################################################
 # lint code
 
-install_lint_envs:
-  stage: lint
-  script: ./setup_dev.sh $LINT_DIR
-  cache:
-    - <<: *lint_cache
-
 run_linters:
-  stage: lint
+  stage: test
   script:
     - echo $CONDA_EXE
     - eval "$(${CONDA_DIR}/bin/conda shell.bash hook 2> /dev/null)"
-    - ./lint.sh $LINT_DIR
+    - ./setup_dev.sh stratlint
+    - ./lint.sh stratlint
   cache:
-    - <<: *lint_cache
-      policy: pull
-
-################################################################################
-# set up snakemake rule conda environments
-
-install_smk_conda_envs:
-  stage: snakemake_conda
-  <<: *activate_smk
-  script:
-    - snakemake --use-conda -c 1 --configfile=$TESTCONFFULL --conda-create-envs-only
-  cache:
-    - <<: *smk_global_cache
-      policy: pull
-    - <<: *smk_envs_cache
+    paths:
+      - stratlint-*
+    key:
+      files:
+        - workflow/scripts/python/*/env.yml
+        - workflow/scripts/rmarkdown/*/env.yml
 
 ################################################################################
 # test snakemake things
 
 snakemake_dry_full:
-  needs: [install_global_env]
   stage: test
   <<: *activate_smk
   script:
-    - snakemake --use-conda -c 1 --configfile=$TESTCONFFULL --dryrun
+    - snakemake --use-conda -c 1 --configfile=$TESTCONFFULL all --dryrun
   cache:
     - <<: *smk_global_cache
-      policy: pull
 
 snakemake_dry:
-  needs: [install_global_env]
   stage: test
   <<: *activate_smk
   script:
-    - snakemake --use-conda -c 1 --configfile=$TESTCONFFULL --dryrun
+    - snakemake --use-conda -c 1 --configfile=$TESTCONF all --dryrun
   cache:
     - <<: *smk_global_cache
-      policy: pull
 
 snakemake_resources:
-  needs: [install_smk_conda_envs, install_global_env]
   stage: test
   <<: *activate_smk
   script:
     - snakemake -p --use-conda -c 8 --configfile=$TESTCONF all_resources
   cache:
     - <<: *smk_global_cache
-      policy: pull
-    - <<: *smk_envs_cache
-      policy: pull
     - <<: *smk_resources_cache
 
 snakemake_results:
-  needs: [install_smk_conda_envs, install_global_env]
+  needs: [snakemake_resources]
   stage: test
   <<: *activate_smk
   script:
-    - snakemake -p --use-conda -c 8 --configfile=$TESTCONF
+    - snakemake -p --use-conda -c 8 --configfile=$TESTCONF all
   cache:
     - <<: *smk_global_cache
-      policy: pull
     - <<: *smk_envs_cache
-      policy: pull
     - <<: *smk_resources_cache
-      policy: pull
