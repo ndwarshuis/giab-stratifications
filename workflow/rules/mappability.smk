@@ -1,6 +1,6 @@
 from os.path import splitext, basename
 from pathlib import Path
-from common.config import CoreLevel
+from common.config import CoreLevel, strip_full_refkey
 
 mlty = config.to_bed_dirs(CoreLevel.MAPPABILITY)
 
@@ -176,7 +176,7 @@ rule wig_to_bed:
 
 
 def nonunique_inputs(wildcards):
-    rk = wildcards.ref_final_key
+    rk = strip_full_refkey(wildcards.ref_final_key)
     bk = wildcards.build_key
     l, m, e = config.to_build_data(rk, bk).mappability_params
     return expand(rules.wig_to_bed.output, zip, allow_missing=True, l=l, m=m, e=e)
