@@ -94,8 +94,9 @@ wildcard_constraints:
     sex_chr="[XY]",
 
 
-include: "rules/repseq.smk"
+include: "rules/tools.smk"
 include: "rules/ref.smk"
+include: "rules/diploid.smk"
 include: "rules/xy.smk"
 include: "rules/low_complexity.smk"
 include: "rules/gc.smk"

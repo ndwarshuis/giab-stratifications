@@ -2868,33 +2868,6 @@ class GiabStrats(BaseModel):
             _dip_2to2_f,
         )
 
-    def refkey_is_dip1(self, rk: RefKeyFullS) -> bool:
-        """Test if refkey is dip1 or dip2.
-
-        Return True if dip1, false if dip2, and error otherwise.
-
-        Incoming key must have a haplotype appended to it. Otherwise error.
-
-        This function is useful for cases where dip1 rules need to be "split"
-        into component haplotypes. Normally each rule for a dip1 configuration
-        is denoted by only the refkey (since both haplotypes are in each file).
-        However, if split in the manner above we need to disambiguate by
-        appending the haplotype, in which case the key become indistinguishable
-        from a dip2 key unless we run the logic of checking the het1/dip1/dip2
-        refkey maps (which is what this function does).
-        """
-        rk_, hap = parse_full_refkey(rk)
-        if hap is None:
-            raise DesignError(f"Refkey must have a haplotype {rk_}")
-        if rk_ in self.haploid_stratifications:
-            raise DesignError(f"Refkey must be either dip1 or dip2: {rk_}")
-        elif rk_ in self.diploid1_stratifications:
-            return True
-        elif rk_ in self.diploid2_stratifications:
-            return False
-        else:
-            raise DesignError(f"Unknown refkey: {rk_}")
-
     # final refkey/buildkey lists (for the "all" target and related)
 
     @property
@@ -2978,6 +2951,43 @@ class GiabStrats(BaseModel):
     @property
     def all_refkey_gff(self) -> list[RefKeyFullS]:
         return self._all_bed_refsrckeys(bd_to_gff)
+
+    # other nice functions
+
+    def refkey_is_dip1(self, rk: RefKeyFullS) -> bool:
+        """Test if refkey is dip1 or dip2.
+
+        Return True if dip1, false if dip2, and error otherwise.
+
+        Incoming key must have a haplotype appended to it. Otherwise error.
+
+        This function is useful for cases where dip1 rules need to be "split"
+        into component haplotypes. Normally each rule for a dip1 configuration
+        is denoted by only the refkey (since both haplotypes are in each file).
+        However, if split in the manner above we need to disambiguate by
+        appending the haplotype, in which case the key become indistinguishable
+        from a dip2 key unless we run the logic of checking the het1/dip1/dip2
+        refkey maps (which is what this function does).
+        """
+        rk_, hap = parse_full_refkey(rk)
+        if hap is None:
+            raise DesignError(f"Refkey must have a haplotype {rk_}")
+        if rk_ in self.haploid_stratifications:
+            raise DesignError(f"Refkey must be either dip1 or dip2: {rk_}")
+        elif rk_ in self.diploid1_stratifications:
+            return True
+        elif rk_ in self.diploid2_stratifications:
+            return False
+        else:
+            raise DesignError(f"Unknown refkey: {rk_}")
+
+    def dip1_either(self, left: X, right: X, rk: RefKeyFullS) -> X:
+        """Return left if dip1, right if dip2, and error otherwise."""
+        return left if self.refkey_is_dip1(rk) else right
+
+    def thread_per_chromosome(self, rk: RefKeyFullS, bk: BuildKey, n: int) -> int:
+        cis = self.to_build_data(strip_full_refkey(rk), bk).chr_indices
+        return min(n, len(cis))
 
 
 ################################################################################

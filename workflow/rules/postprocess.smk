@@ -2,6 +2,7 @@ from os.path import dirname, basename
 from more_itertools import unique_everseen, unzip
 from os import scandir
 from common.config import CoreLevel, strip_full_refkey
+from common.functional import DesignError
 from bedtools.postprocess.helpers import write_chr_mapper
 
 post_inter_dir = config.intermediate_build_dir / "postprocess"
@@ -38,7 +39,8 @@ def expand_strat_targets_inner(ref_final_key, build_key):
     # combine and ensure that all "targets" refer to final bed files
     all_targets = [y for xs in all_function + all_rule for y in xs]
     invalid = [f for f in all_targets if not f.startswith(str(config.final_root_dir))]
-    assert len(invalid) == 0, f"invalid targets: {invalid}"
+    if len(invalid) > 0:
+        raise DesignError(f"invalid targets: {invalid}")
     return all_targets
 
 
@@ -195,28 +197,6 @@ rule make_coverage_plots:
         other_levels=config.other_levels,
     script:
         "../scripts/rmarkdown/rmarkdown/coverage_plots.Rmd"
-
-
-rule unzip_ref:
-    input:
-        rules.filter_sort_ref.output,
-    output:
-        post_log_dir / "happy" / "ref.fa",
-    shell:
-        "gunzip -c {input} > {output}"
-
-
-rule index_unzipped_ref:
-    input:
-        rules.unzip_ref.output,
-    output:
-        rules.unzip_ref.output[0] + ".fai",
-    conda:
-        "../envs/bedtools.yml"
-    shell:
-        """
-        samtools faidx {input}
-        """
 
 
 rule run_happy:

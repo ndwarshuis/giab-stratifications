@@ -1,0 +1,10 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - k8=0.2.5
+  - minimap2=2.26
+  - htsbox=r346
+  - samtools=1.14
+  - gzip=1.12
+  - bedtools=2.30.0

@@ -576,7 +576,6 @@ diploid2_stratifications:
           segdups: false
           functional: false
           mappability: []
-          hets: false
 
 comparison_strats:
   GRCh38_v33: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.3/genome-stratifications-GRCh38@all.tar.gz

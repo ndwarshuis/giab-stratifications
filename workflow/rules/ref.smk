@@ -81,6 +81,32 @@ rule filter_sort_ref:
         """
 
 
+# needed for some downstream rules that can't consume a bgzip'ed ref (htsbox and
+# happy)
+rule unzip_ref:
+    input:
+        rules.filter_sort_ref.output,
+    output:
+        ref.inter.build.data / "ref_filtered.fa",
+    shell:
+        """
+        gunzip -c {input} > {output}
+        """
+
+
+rule index_unzipped_ref:
+    input:
+        rules.unzip_ref.output,
+    output:
+        rules.unzip_ref.output[0] + ".fai",
+    conda:
+        "../envs/bedtools.yml"
+    shell:
+        """
+        samtools faidx {input}
+        """
+
+
 use rule download_ref as download_gaps with:
     output:
         ref.src.reference.data / "gap.bed.gz",
@@ -193,46 +219,30 @@ checkpoint normalize_bench_bed:
 # diploid-specific
 
 
-# needed for some downstream rules that can't consume a bgzip'ed ref
-rule unzip_ref:
-    input:
-        rules.filter_sort_ref.output,
-    output:
-        ref.inter.build.data / "ref_filtered.fa",
-    conda:
-        "../envs/utils.yml"
-    shell:
-        """
-        gunzip -c {input} > {output}
-        """
-
-
-rule index_unzipped_ref:
-    input:
-        rules.unzip_ref.output,
-    output:
-        ref.inter.build.data / "ref.fna.fai",
-    conda:
-        "../envs/utils.yml"
-    log:
-        ref.inter.build.log / "index_ref.log",
-    shell:
-        """
-        samtools faidx {input} -o - 2> {log} > {output}
-        """
-
-
 # Split a single reference file into two haplotypes. Only valid for dip1
 # references; anything else will indicate an error by singing some lovely
 # emoprog
+def test(w):
+    print(w.ref_final_key)
+    return expand(
+        rules.filter_sort_ref.output,
+        allow_missing=True,
+        ref_final_key=strip_full_refkey(w["ref_final_key"]),
+    )
+
+
 rule split_ref:
     input:
-        lambda w: expand(
-            rules.filter_sort_ref.output,
-            ref_final_key=strip_full_refkey(w["ref_final_key"]),
-        ),
+        test,
+        # lambda w: expand(
+        #     rules.filter_sort_ref.output,
+        #     allow_missing=True,
+        #     ref_final_key=strip_full_refkey(w["ref_final_key"]),
+        # ),
     output:
         ref.inter.build.data / "ref_split.fa.gz",
+    conda:
+        "../envs/bedtools.yml"
     script:
         "../scripts/python/bedtools/ref/split_ref.py"
 

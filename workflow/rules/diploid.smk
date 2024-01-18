@@ -1,4 +1,9 @@
-from common.config import CoreLevel, strip_full_refkey, flip_full_refkey
+from common.config import (
+    CoreLevel,
+    parse_full_refkey_class,
+    strip_full_refkey,
+    flip_full_refkey,
+)
 
 dip = config.to_bed_dirs(CoreLevel.DIPLOID)
 
@@ -9,9 +14,11 @@ dip = config.to_bed_dirs(CoreLevel.DIPLOID)
 def minimap_inputs(wildcards):
     rk = wildcards["ref_final_key"]
     other_rk = flip_full_refkey(rk)
-    dip1_paths = (rules.split_ref.output, rules.index_split_ref.output)
-    dip2_paths = (rules.unzip_ref.output, rules.index_unzipped_ref.output)
-    fa, idx = dip1_paths if config.refkey_is_dip1(rk) else dip2_paths
+    fa, idx = config.dip1_either(
+        (rules.split_ref.output, rules.index_split_ref.output),
+        (rules.unzip_ref.output, rules.index_unzipped_ref.output),
+        rk,
+    )
 
     def expand_rk(path, rk):
         return expand(path, allow_missing=True, ref_final_key=rk)
@@ -32,12 +39,14 @@ rule cross_align_large:
     input:
         unpack(minimap_inputs),
     output:
-        dip.inter.build.data / "large_cross_align.paf.gz",
+        dip.inter.postsort.data / "large_cross_align.paf.gz",
     # TODO I can cheat a bit here and cap the thread count to the number of
     # chromosomes desired (since mm2 runs with one thread/chromosome)
-    threads: 8
+    threads: lambda w: config.thread_per_chromosome(w.ref_final_key, w.build_key, 8)
     log:
-        dip.inter.build.log / "cross_align_large.log",
+        dip.inter.postsort.log / "cross_align_large.log",
+    conda:
+        "../envs/quasi-dipcall.yml"
     shell:
         """
         minimap2 -c --paf-no-hit -t{threads} --cs -z200000,10000,200 -xasm5 \
@@ -52,11 +61,17 @@ rule large_cross_alignment_to_bed:
     input:
         paf=rules.cross_align_large.output,
         paftools_bin=rules.download_paftools.output,
-        genome=rules.get_split_genome.output,
+        genome=lambda w: config.dip1_either(
+            rules.get_split_genome.output,
+            rules.get_genome.output,
+            w["ref_final_key"],
+        ),
     output:
-        dip.inter.build.data / "large_cross_align.bed.gz",
+        dip.inter.postsort.data / "large_cross_align.bed.gz",
     log:
-        dip.inter.build.log / "large_cross_alignment_to_bed.log",
+        dip.inter.postsort.log / "large_cross_alignment_to_bed.log",
+    conda:
+        "../envs/quasi-dipcall.yml"
     shell:
         """
         gunzip -c {input.paf} | \
@@ -73,13 +88,15 @@ rule cross_align_small:
     input:
         unpack(minimap_inputs),
     output:
-        dip.inter.build.data / "small_cross_align.sam.gz",
+        dip.inter.postsort.data / "small_cross_align.sam.gz",
     # TODO I can cheat a bit here and cap the thread count to the number of
     # chromosomes desired (since mm2 runs with one thread/chromosome)
-    threads: 8
+    threads: lambda w: config.thread_per_chromosome(w.ref_final_key, w.build_key, 8)
     log:
-        dip.inter.build.log / "cross_align_small.log",
+        dip.inter.postsort.log / "cross_align_small.log",
     # this is what dipcall does to produce the pair file in one step
+    conda:
+        "../envs/quasi-dipcall.yml"
     shell:
         """
         minimap2 -a -t{threads} --cs -z200000,10000,200 -xasm5 \
@@ -93,9 +110,14 @@ rule cross_align_small:
 rule filter_sort_small_cross_alignment:
     input:
         aux_bin=rules.download_dipcall_aux.output,
-        sam=rules.cross_align_hap.output,
+        sam=rules.cross_align_small.output,
     output:
-        dip.inter.build.data / "sorted_small_cross_alignments.bam",
+        dip.inter.postsort.data / "sorted_small_cross_alignments.bam",
+    conda:
+        "../envs/quasi-dipcall.yml"
+    resources:
+        # TODO don't hardcode
+        mem_mb=1000,
     shell:
         """
         k8 {input.aux_bin} samflt {input.sam} | \
@@ -110,17 +132,21 @@ rule filter_sort_small_cross_alignment:
 
 rule small_cross_alignment_to_bed:
     input:
-        bam=rule.filter_sort_small_cross_alignment.output,
-        hap=lambda w: rules.split_ref.output
-        if config.refkey_is_dip1(w["ref_final_key"])
-        else rules.unzip_ref.output,
+        bam=rules.filter_sort_small_cross_alignment.output,
+        hap=lambda w: config.dip1_either(
+            rules.split_ref.output,
+            rules.unzip_ref.output,
+            w["ref_final_key"],
+        ),
     output:
-        dip.inter.build.data / "small_cross_align.bed.gz",
+        dip.inter.postsort.data / "small_cross_align.bed.gz",
+    conda:
+        "../envs/quasi-dipcall.yml"
     shell:
         """
         htsbox pileup -q5 -evcf {input.hap} {input.bam} | \
         grep -v '^#' | \
-        awk 'OFS="\t" {print $1, $2-1, $2+length($4)-1}' | \
+        awk 'OFS="\t" {{print $1, $2-1, $2+length($4)-1}}' | \
         gzip -c > {output}
         """
 
@@ -130,12 +156,12 @@ rule merge_large_and_small_hets:
         small=rules.small_cross_alignment_to_bed.output,
         large=rules.large_cross_alignment_to_bed.output,
     output:
-        dip.inter.build.data / "het_regions.bed.gz",
+        dip.inter.postsort.data / "het_regions.bed.gz",
     conda:
         "../envs/bedtools.yml"
     shell:
         """
-        multiIntersect -i {input.small} {input.large} | \
+        multiIntersectBed -i {input.small} {input.large} | \
         mergeBed -i stdin | \
         gzip -c > {output}
         """
@@ -153,37 +179,39 @@ rule combine_dip1_hets:
             for h in cfg.Haplotype
         },
     output:
-        dip.inter.build.data / "combined_het_regions.bed.gz",
-    conda:
-        "../envs/bedtools.yml"
+        dip.inter.postsort.data / "combined_het_regions.bed.gz",
     shell:
         """
         cat {input.hap1} {input.hap2} > {output}
         """
 
 
-def dip1_or_dip2(dip2, dip1, wildcards):
-    return dip2 if cfg.parse_full_refkey(w.ref_key_full).has_hap else dip1
+def het_region_inputs(wildcards):
+    return (
+        rules.merge_large_and_small_hets.output
+        if parse_full_refkey_class(wildcards.ref_final_key).has_hap
+        else rules.combine_dip1_hets.output
+    )
 
 
 rule filter_snp_hets:
     input:
-        lambda w: dip1_or_dip2(rules.zip_hets.output, rules.merge_dip1_hets.output, w),
+        het_region_inputs,
     output:
-        dip.inter.build.data / "snp_het_regions.bed.gz",
+        dip.inter.postsort.data / "snp_het_regions.bed.gz",
     conda:
         "../envs/bedtools.yml"
     shell:
         """
-        gunzip -c xalign_same.bed.gz | \
-        awk '{if($3-$2==1) {print $0}}' | \
+        gunzip -c {input} | \
+        awk '{{if($3-$2==1) {{print $0}}}}' | \
         bgzip -c > {output}
         """
 
 
 rule merge_het_regions:
     input:
-        lambda w: dip1_or_dip2(rules.zip_hets.output, rules.merge_dip1_hets.output, w),
+        het_region_inputs,
     output:
         dip.final("het_regions_{merge_len}k"),
     conda:
@@ -194,7 +222,7 @@ rule merge_het_regions:
         merge_len=f"\d+",
     shell:
         """
-        mergeBed {input} -d $(({merge_len}*1000)) | \
+        mergeBed -i {input} -d $(({wildcards.merge_len}*1000)) | \
         intersectBed -a stdin -b {params.gapless} -sorted | \
         bgzip -c > {output}
         """
@@ -214,7 +242,7 @@ rule invert_het_regions:
         merge_len=f"\d+",
     shell:
         """
-        complementBed -i {input} -g {params.genome} |
+        complementBed -i {input} -g {params.genome} | \
         intersectBed -a stdin -b {params.gapless} -sorted | \
         bgzip -c > {output}
         """
@@ -241,7 +269,10 @@ use rule invert_het_regions as invert_het_snp_regions with:
 def het_hom_inputs(ref_final_key, build_key):
     bd = config.to_build_data(strip_full_refkey(ref_final_key), build_key)
     return expand(
-        rules.invert_het_regions.output + rules.invert_het_snp_regions.output,
+        rules.invert_het_regions.output
+        + rules.invert_het_snp_regions.output
+        + rules.merge_het_regions.output
+        + rules.merge_het_snp_regions.output,
         merge_len=bd.build.include.hets,
         ref_final_key=ref_final_key,
         build_key=build_key,
