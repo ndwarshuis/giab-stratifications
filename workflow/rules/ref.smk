@@ -1,4 +1,10 @@
-from common.config import si_to_gaps, bd_to_bench_bed, bd_to_bench_vcf, bd_to_query_vcf
+from common.config import (
+    si_to_gaps,
+    bd_to_bench_bed,
+    bd_to_bench_vcf,
+    bd_to_query_vcf,
+    strip_full_refkey,
+)
 
 ref = config.ref_dirs
 
@@ -63,7 +69,7 @@ rule filter_sort_ref:
         fa=lambda w: expand_final_to_src(rules.download_ref.output, w),
         genome=rules.get_genome.output,
     output:
-        ref.inter.build.data / "ref_filtered.fa",
+        ref.inter.build.data / "ref_filtered.fa.gz",
     conda:
         "../envs/utils.yml"
     log:
@@ -73,6 +79,36 @@ rule filter_sort_ref:
         samtools faidx {input.fa} $(cut -f1 {input.genome} | tr '\n' ' ') 2> {log} | \
         bgzip -c > {output}
         """
+
+
+# needed for some downstream rules that can't consume a bgzip'ed ref
+rule unzip_ref:
+    input:
+        rules.filter_sort_ref.output,
+    output:
+        ref.inter.build.data / "ref_filtered.fa.gz",
+    conda:
+        "../envs/utils.yml"
+    shell:
+        """
+        gunzip -c {input} > {output}
+        """
+
+
+# Split a single reference file into two haplotypes. This is only needed for
+# diploid stratifications but put here since it makes more sense to keep
+# reference operations together. Only valid for dip1 references; anything else
+# will indicate an error by singing some lovely emoprog
+rule split_ref:
+    input:
+        lambda w: expand(
+            rules.filter_sort_ref.output,
+            ref_final_key=strip_full_refkey(w["ref_final_key"]),
+        ),
+    output:
+        ref.inter.build.data / "ref_split.fa.gz",
+    script:
+        "../scripts/python/bedtools/ref/split_ref.py"
 
 
 use rule download_ref as download_gaps with:

@@ -3,20 +3,6 @@
 # different asm)
 
 
-# htsbox doesn't work if the ref is zipped
-rule unzip_ref:
-    input:
-        rules.filter_sort_ref.output,
-    output:
-        TODO,
-    conda:
-        "../envs/utils.yml"
-    shell:
-        """
-        gunzip -c {input} > {output}
-        """
-
-
 # Dipcall normally outputs a bed file that roughly corresponds to "regions with
 # low divergence". Since we are interested in large structural variation in
 # addition to small variants, obtain this bed file using the same process and
