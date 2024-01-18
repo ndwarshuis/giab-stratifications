@@ -1,4 +1,6 @@
 # TODO add rule to split ref if dip1
+# TODO don't hardcode minimap2 params (which might be changed if we move to a
+# different asm)
 
 
 # htsbox doesn't work if the ref is zipped
@@ -15,7 +17,58 @@ rule unzip_ref:
         """
 
 
-rule cross_align_hap:
+# Dipcall normally outputs a bed file that roughly corresponds to "regions with
+# low divergence". Since we are interested in large structural variation in
+# addition to small variants, obtain this bed file using the same process and
+# the flip it.
+rule cross_align_large:
+    input:
+        this_hap=TODO,
+        other_hap=TODO,
+        paftools_bin=TODO,
+        # NOTE this will always be per-haplotype and must correspond to "this_hap"
+        genome=TODO,
+    output:
+        TODO,
+    # TODO I can cheat a bit here and cap the thread count to the number of
+    # chromosomes desired (since mm2 runs with one thread/chromosome)
+    threads: 8
+    log:
+        align=TODO,
+        call=TODO,
+    shell:
+        """
+        minimap2 -c --paf-no-hit -t{threads} --cs -z200000,10000,200 -xasm5 \
+          {input.this_hap} \
+          {input.other_hap} \
+          2> {align.map} | \
+        bgzip -c > {output}
+        """
+
+
+rule large_cross_alignment_to_bed:
+    input:
+        paf=TODO,
+        paftools_bin=TODO,
+        # NOTE this will always be per-haplotype and must correspond to "this_hap"
+        genome=TODO,
+    output:
+        TODO,
+    log:
+        TODO,
+    shell:
+        """
+        gunzip -c {input.paf} | \
+        sort -k6,6 -k8,8n | \
+        k8 {input.paftools_bin} call - 2> {log} | \
+        grep ^R | \
+        cut -f2- | \
+        bedtools complement -i stdin -g {input.genome} | \
+        gzip -c > {output}
+        """
+
+
+rule cross_align_small:
     input:
         this_hap=TODO,
         other_hap=TODO,
@@ -38,11 +91,9 @@ rule cross_align_hap:
         """
 
 
-rule filter_sort_cross_alignment:
+rule filter_sort_small_cross_alignment:
     input:
         aux_bin=TODO,
-        # TODO this needs to be unzipped
-        hap=TODO,
         sam=rules.cross_align_hap.output,
     output:
         TODO,
@@ -50,6 +101,7 @@ rule filter_sort_cross_alignment:
         """
         k8 {input.aux_bin} samflt {input.sam} | \
         samtools sort -m{resources.mem_mb}M --threads {threads} | \
+        > {output}
         """
 
 
@@ -57,9 +109,10 @@ rule filter_sort_cross_alignment:
 # clearly not mapped to the other, something like this: awk '{if ((gensub("_PATERNAL", "", 1, $1) == gensub("_MATERNAL", "", 1, $3)) || ("@" == substr($0,0,1))) { print $0 }}'
 
 
-rule cross_alignment_to_hets:
+rule small_cross_alignment_to_bed:
     input:
-        bam=rule.filter_sort_cross_alignment.output,
+        bam=rule.filter_sort_small_cross_alignment.output,
+        # TODO this needs to be unzipped
         hap=TODO,
     output:
         TODO,
@@ -68,22 +121,26 @@ rule cross_alignment_to_hets:
         htsbox pileup -q5 -evcf {input.hap} {input.bam} | \
         grep -v '^#' | \
         awk 'OFS="\t" {print $1, $2-1, $2+length($4)-1}' | \
-        bgzip -c > {output}
+        gzip -c > {output}
         """
 
 
-rule zip_hets:
+rule merge_large_and_small:
     input:
-        rules.cross_alignment_to_bed.output,
+        small=TODO,
+        large=TODO,
     output:
         TODO,
+    # TODO bgzip here since this might be a final file
     shell:
         """
-        bgzip -c {input} > {output}
+        multiIntersect -i {input.small} {input.large} | \
+        mergeBed -i stdin | \
+        gzip -c > {output}
         """
 
 
-rule merge_dip1_hets:
+rule combine_dip1_hets:
     # NOTE: the wildcard value of ref_final_key will not have a haplotype (as
     # per logic of dip1 references)
     input:
@@ -97,9 +154,8 @@ rule merge_dip1_hets:
     output:
         TODO,
     shell:
-        # TODO inputs are not bgzipped
         """
-        cat {input.hap1} {input.hap2} | bgzip -c > {output}
+        cat {input.hap1} {input.hap2} | gunzip -c | bgzip -c > {output}
         """
 
 
