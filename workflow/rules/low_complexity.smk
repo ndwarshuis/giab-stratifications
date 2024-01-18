@@ -27,7 +27,7 @@ unit_name_constraint = f"({'|'.join(uniform_repeats)})"
 
 bases_constraint = "[ATGC]{2}"
 
-COMPLIMENTS = ["AT", "GC"]
+COMPLEMENTS = ["AT", "GC"]
 IMPERFECT_LENS = [11, 21]
 
 
@@ -93,7 +93,7 @@ rule all_perfect_uniform_repeats:
             )
             for u in uniform_repeats.values()
             for t in u.total_lens
-            for bs in COMPLIMENTS
+            for bs in COMPLEMENTS
         },
     localrule: True
 
@@ -103,7 +103,7 @@ def lookup_perfect_uniform_repeat(unit_name, total_len):
     return rules.all_perfect_uniform_repeats.input[f"R{ul}_T{total_len}"]
 
 
-def lookup_perfect_uniform_repeat_compliment(unit_name, total_len, bases):
+def lookup_perfect_uniform_repeat_complement(unit_name, total_len, bases):
     ul = uniform_repeats[unit_name].unit_len
     return rules.all_perfect_uniform_repeats.input[f"R{ul}_T{total_len}_{bases}"]
 
@@ -136,9 +136,9 @@ rule subtract_uniform_repeats:
         "subtractBed -a {input.a} -b {input.b} > {output}"
 
 
-def repeat_range_compliment_inputs(wildcards):
+def repeat_range_complement_inputs(wildcards):
     return {
-        k: lookup_perfect_uniform_repeat_compliment(
+        k: lookup_perfect_uniform_repeat_complement(
             wildcards.unit_name, t, wildcards.bases
         )
         for k, t in zip(
@@ -148,9 +148,9 @@ def repeat_range_compliment_inputs(wildcards):
     }
 
 
-rule subtract_uniform_repeat_compliment:
+rule subtract_uniform_repeat_complement:
     input:
-        unpack(repeat_range_compliment_inputs),
+        unpack(repeat_range_complement_inputs),
     output:
         lc.inter.postsort.data
         / "uniform_repeat_range_{bases}_{unit_name}_{total_lenA}to{total_lenB}.bed",
@@ -209,9 +209,9 @@ use rule slop_uniform_repeats as slop_uniform_repeat_ranges with:
         total_lenB="\d+",
 
 
-use rule slop_uniform_repeats as slop_uniform_repeats_compliment with:
+use rule slop_uniform_repeats as slop_uniform_repeats_complement with:
     input:
-        lambda w: lookup_perfect_uniform_repeat_compliment(
+        lambda w: lookup_perfect_uniform_repeat_complement(
             w.unit_name,
             int(w.total_len),
             w.bases,
@@ -224,10 +224,10 @@ use rule slop_uniform_repeats as slop_uniform_repeats_compliment with:
         bases=bases_constraint,
 
 
-use rule slop_uniform_repeats as slop_uniform_repeat_ranges_compliment with:
+use rule slop_uniform_repeats as slop_uniform_repeat_ranges_complement with:
     input:
         lambda w: expand(
-            rules.subtract_uniform_repeat_compliment.output,
+            rules.subtract_uniform_repeat_complement.output,
             allow_missing=True,
             unit_name=w.unit_name,
             total_lenA=int(w.total_lenA),
@@ -287,7 +287,7 @@ rule merge_imperfect_uniform_repeats:
         """
 
 
-use rule merge_imperfect_uniform_repeats as merge_imperfect_uniform_repeats_compliment with:
+use rule merge_imperfect_uniform_repeats as merge_imperfect_uniform_repeats_complement with:
     input:
         lambda w: expand(
             rules.merge_perfect_uniform_repeats.output,
@@ -316,11 +316,11 @@ rule all_uniform_repeats:
             )
             + (
                 expand(
-                    rules.slop_uniform_repeats_compliment.output,
+                    rules.slop_uniform_repeats_complement.output,
                     allow_missing=True,
                     unit_name=k,
                     total_len=x,
-                    bases=COMPLIMENTS,
+                    bases=COMPLEMENTS,
                 )
                 if k == "homopolymer"
                 else []
@@ -343,12 +343,12 @@ rule all_uniform_repeats:
             )
             + (
                 expand(
-                    rules.slop_uniform_repeat_ranges_compliment.output,
+                    rules.slop_uniform_repeat_ranges_complement.output,
                     allow_missing=True,
                     unit_name=k,
                     total_lenA=a,
                     total_lenB=b - 1,
-                    bases=COMPLIMENTS,
+                    bases=COMPLEMENTS,
                 )
                 if k == "homopolymer"
                 else []
@@ -356,10 +356,10 @@ rule all_uniform_repeats:
         ],
         # Imperfect (greater than X)
         expand(
-            rules.merge_imperfect_uniform_repeats_compliment.output,
+            rules.merge_imperfect_uniform_repeats_complement.output,
             allow_missing=True,
             merged_len=IMPERFECT_LENS,
-            bases=COMPLIMENTS,
+            bases=COMPLEMENTS,
         ),
         **{
             f"imperfect_ge{x}": expand(

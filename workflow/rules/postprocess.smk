@@ -18,6 +18,7 @@ def expand_strat_targets_inner(ref_final_key, build_key):
         (all_low_complexity, bd.want_low_complexity),
         (gc_inputs_flat, bd.want_gc),
         (mappabilty_inputs, bd.want_mappability),
+        (het_hom_inputs, bd.want_hets),
         (all_xy_sex, True),
         (all_other, True),
     ]

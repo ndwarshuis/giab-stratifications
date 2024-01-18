@@ -179,14 +179,31 @@ Z = TypeVar("Z")
 # Helper functions
 
 
-def parse_full_refkey(s: RefKeyFullS) -> tuple[RefKey, Haplotype | None]:
+def flip_hap(h: Haplotype) -> Haplotype:
+    return h.from_either(Haplotype.HAP2, Haplotype.HAP1)
+
+
+def parse_full_refkey_class(s: RefKeyFullS) -> RefKeyFull:
     m = re.match("(.+)\\.(hap[12])", s)
     # ASSUME this will never fail due to the hap1/2 permitted match pattern
-    return (RefKey(s), None) if m is None else (RefKey(m[1]), Haplotype.from_name(m[2]))
+    rk, hap = (s, None) if m is None else (m[1], Haplotype.from_name(m[2]))
+    return RefKeyFull(RefKey(rk), hap)
+
+
+def parse_full_refkey(s: RefKeyFullS) -> tuple[RefKey, Haplotype | None]:
+    return parse_full_refkey_class(s).as_tuple
 
 
 def strip_full_refkey(s: RefKeyFullS) -> RefKey:
     return parse_full_refkey(s)[0]
+
+
+def flip_full_refkey_class(r: RefKeyFull) -> RefKeyFull:
+    return RefKeyFull(r.key, fmap_maybe(flip_hap, r.hap))
+
+
+def flip_full_refkey(s: RefKeyFullS) -> RefKeyFullS:
+    return flip_full_refkey_class(parse_full_refkey_class(s)).name
 
 
 def choose_xy_unsafe(c: "ChrIndex", x_res: X, y_res: X) -> X:
@@ -718,8 +735,8 @@ class RefKeyFull:
         return self.hap is not None
 
     @property
-    def as_tuple(self) -> tuple[str, Haplotype | None]:
-        return (str(self.key), self.hap)
+    def as_tuple(self) -> tuple[RefKey, Haplotype | None]:
+        return (self.key, self.hap)
 
     @property
     def name(self) -> RefKeyFullS:
@@ -843,7 +860,8 @@ class CoreLevel(Enum):
     XY = "XY"
     # overlaps with "other" strat categories, needed because this is where
     # the gaps strat will go
-    OtherDifficult = "OtherDifficult"
+    OTHER_DIFFICULT = "OtherDifficult"
+    DIPLOID = "Diploid"
 
 
 # chromosome name conversions
@@ -1355,6 +1373,8 @@ class Tools(BaseModel):
     """Urls for tools to download/build/use in the pipeline."""
 
     repseq: HttpUrl = "https://github.com/ndwarshuis/repseq/archive/refs/tags/v1.1.0.tar.gz"  # type: ignore
+    paftools: HttpUrl = "https://raw.githubusercontent.com/lh3/minimap2/e28a55be86b298708a2a67c924d665a00b8d829c/misc/paftools.js"  # type: ignore
+    dipcall_aux: HttpUrl = "https://raw.githubusercontent.com/lh3/dipcall/6bd5d7724699491f215aeb5fb628490ebf2cc3ae/dipcall-aux.js"  # type: ignore
     gemlib: HttpUrl = "https://sourceforge.net/projects/gemlibrary/files/gem-library/Binary%20pre-release%203/GEM-binaries-Linux-x86_64-core_i3-20130406-045632.tbz2/download"  # type: ignore
 
 
@@ -1713,7 +1733,7 @@ class Include(BaseModel):
     # the haploid case; it technically should be a validation error since it
     # makes no sense in the case of haploid, but here it is setup to not hurt
     # anything.
-    hets: bool = True
+    hets: set[int] = {10, 20, 50, 100, 500}
 
 
 class OtherBedFile(BedFile[AnyBedT], Generic[AnyBedT]):
@@ -2031,6 +2051,16 @@ class BuildData_(Generic[RefSourceT, AnyBedT, AnyBedT_, AnySrcT]):
             and self.refdata.strat_inputs.functional is not None
             and len(self.chr_indices & vdj_chrs) > 0
         )
+
+    @property
+    def want_hets(self) -> bool:
+        r = self.refdata.ref
+        if isinstance(r, HapChrSrc):
+            return False
+        elif isinstance(r, Dip1ChrSrc) or isinstance(r, Dip2ChrSrc):
+            return len(self.build.include.hets) > 0
+        else:
+            assert_never(r)
 
     @property
     def mappability_params(

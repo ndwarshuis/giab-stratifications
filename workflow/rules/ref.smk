@@ -59,7 +59,7 @@ rule get_genome:
     conda:
         "../envs/bedtools.yml"
     log:
-        ref.inter.build.data / "get_genome.log",
+        ref.inter.build.log / "get_genome.log",
     script:
         "../scripts/python/bedtools/ref/get_genome.py"
 
@@ -79,36 +79,6 @@ rule filter_sort_ref:
         samtools faidx {input.fa} $(cut -f1 {input.genome} | tr '\n' ' ') 2> {log} | \
         bgzip -c > {output}
         """
-
-
-# needed for some downstream rules that can't consume a bgzip'ed ref
-rule unzip_ref:
-    input:
-        rules.filter_sort_ref.output,
-    output:
-        ref.inter.build.data / "ref_filtered.fa.gz",
-    conda:
-        "../envs/utils.yml"
-    shell:
-        """
-        gunzip -c {input} > {output}
-        """
-
-
-# Split a single reference file into two haplotypes. This is only needed for
-# diploid stratifications but put here since it makes more sense to keep
-# reference operations together. Only valid for dip1 references; anything else
-# will indicate an error by singing some lovely emoprog
-rule split_ref:
-    input:
-        lambda w: expand(
-            rules.filter_sort_ref.output,
-            ref_final_key=strip_full_refkey(w["ref_final_key"]),
-        ),
-    output:
-        ref.inter.build.data / "ref_split.fa.gz",
-    script:
-        "../scripts/python/bedtools/ref/split_ref.py"
 
 
 use rule download_ref as download_gaps with:
@@ -157,6 +127,9 @@ rule get_gapless:
         "../envs/bedtools.yml"
     script:
         "../scripts/python/bedtools/ref/get_gapless.py"
+
+
+# benchmark
 
 
 use rule download_ref as download_bench_vcf with:
@@ -215,3 +188,68 @@ checkpoint normalize_bench_bed:
         )[0],
     script:
         "../scripts/python/bedtools/ref/normalize_bench_bed.py"
+
+
+# diploid-specific
+
+
+# needed for some downstream rules that can't consume a bgzip'ed ref
+rule unzip_ref:
+    input:
+        rules.filter_sort_ref.output,
+    output:
+        ref.inter.build.data / "ref_filtered.fa",
+    conda:
+        "../envs/utils.yml"
+    shell:
+        """
+        gunzip -c {input} > {output}
+        """
+
+
+rule index_unzipped_ref:
+    input:
+        rules.unzip_ref.output,
+    output:
+        ref.inter.build.data / "ref.fna.fai",
+    conda:
+        "../envs/utils.yml"
+    log:
+        ref.inter.build.log / "index_ref.log",
+    shell:
+        """
+        samtools faidx {input} -o - 2> {log} > {output}
+        """
+
+
+# Split a single reference file into two haplotypes. Only valid for dip1
+# references; anything else will indicate an error by singing some lovely
+# emoprog
+rule split_ref:
+    input:
+        lambda w: expand(
+            rules.filter_sort_ref.output,
+            ref_final_key=strip_full_refkey(w["ref_final_key"]),
+        ),
+    output:
+        ref.inter.build.data / "ref_split.fa.gz",
+    script:
+        "../scripts/python/bedtools/ref/split_ref.py"
+
+
+use rule index_unzipped_ref as index_split_ref with:
+    input:
+        rules.split_ref.output,
+    output:
+        ref.inter.build.data / "ref.fna.fai",
+    log:
+        ref.inter.build.log / "index_ref.log",
+
+
+use rule get_genome as get_split_genome with:
+    input:
+        rules.split_ref.output,
+    output:
+        ref.inter.build.data / "split_genome.txt",
+    log:
+        ref.inter.build.log / "get_split_genome.log",

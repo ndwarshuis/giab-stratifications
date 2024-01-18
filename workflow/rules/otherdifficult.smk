@@ -1,6 +1,6 @@
 from common.config import CoreLevel
 
-odiff = config.to_bed_dirs(CoreLevel.OtherDifficult)
+odiff = config.to_bed_dirs(CoreLevel.OTHER_DIFFICULT)
 
 
 rule get_gaps:
