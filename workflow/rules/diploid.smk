@@ -173,7 +173,7 @@ rule filter_SNVorSV:
     shell:
         """
         gunzip -c {input} | \
-        awk 'length($4)>={params.sv_cutoff} || length($4)==0' | \
+        awk '$4>={params.sv_cutoff} || ($4==0 && ($3-$2==1))' | \
         cut -f1,2,3 | \
         gzip -c > {output}
         """
