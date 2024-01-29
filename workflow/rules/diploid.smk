@@ -31,20 +31,20 @@ def minimap_inputs(wildcards):
     }
 
 
-# Dipcall normally outputs a bed file that roughly corresponds to "regions with
-# low divergence". Since we are interested in large structural variation in
+# Dipcall normally outputs a bed file that roughly corresponds to regions with
+# no breaks. Since we are interested in large structural variation in
 # addition to small variants, obtain this bed file using the same process and
-# the flip it.
-rule cross_align_large:
+# then flip it.
+rule cross_align_breaks:
     input:
         unpack(minimap_inputs),
     output:
-        dip.inter.postsort.data / "large_cross_align.paf.gz",
+        dip.inter.postsort.data / "breaks_cross_align.paf.gz",
     # TODO I can cheat a bit here and cap the thread count to the number of
     # chromosomes desired (since mm2 runs with one thread/chromosome)
     threads: lambda w: config.thread_per_chromosome(w.ref_final_key, w.build_key, 8)
     log:
-        dip.inter.postsort.log / "cross_align_large.log",
+        dip.inter.postsort.log / "cross_align_breaks.log",
     conda:
         "../envs/quasi-dipcall.yml"
     shell:
@@ -57,9 +57,9 @@ rule cross_align_large:
         """
 
 
-rule large_cross_alignment_to_bed:
+rule breaks_cross_alignment_to_bed:
     input:
-        paf=rules.cross_align_large.output,
+        paf=rules.cross_align_breaks.output,
         paftools_bin=rules.download_paftools.output,
         genome=lambda w: config.dip1_either(
             rules.get_split_genome.output,
@@ -67,9 +67,9 @@ rule large_cross_alignment_to_bed:
             w["ref_final_key"],
         ),
     output:
-        dip.inter.postsort.data / "large_cross_align.bed.gz",
+        dip.inter.postsort.data / "breaks_cross_align.bed.gz",
     log:
-        dip.inter.postsort.log / "large_cross_alignment_to_bed.log",
+        dip.inter.postsort.log / "breaks_cross_alignment_to_bed.log",
     conda:
         "../envs/quasi-dipcall.yml"
     shell:
@@ -84,16 +84,18 @@ rule large_cross_alignment_to_bed:
         """
 
 
-rule cross_align_small:
+# Get variants (large and small) between the two haplotypes using the same
+# process dipcall uses to produce its *.pair.vcf.gz file.
+rule cross_align_variants:
     input:
         unpack(minimap_inputs),
     output:
-        dip.inter.postsort.data / "small_cross_align.sam.gz",
+        dip.inter.postsort.data / "variant_cross_align.sam.gz",
     # TODO I can cheat a bit here and cap the thread count to the number of
     # chromosomes desired (since mm2 runs with one thread/chromosome)
     threads: lambda w: config.thread_per_chromosome(w.ref_final_key, w.build_key, 8)
     log:
-        dip.inter.postsort.log / "cross_align_small.log",
+        dip.inter.postsort.log / "cross_align_variants.log",
     # this is what dipcall does to produce the pair file in one step
     conda:
         "../envs/quasi-dipcall.yml"
@@ -107,12 +109,12 @@ rule cross_align_small:
         """
 
 
-rule filter_sort_small_cross_alignment:
+rule filter_sort_variant_cross_alignment:
     input:
         aux_bin=rules.download_dipcall_aux.output,
-        sam=rules.cross_align_small.output,
+        sam=rules.cross_align_variants.output,
     output:
-        dip.inter.postsort.data / "sorted_small_cross_alignments.bam",
+        dip.inter.postsort.data / "sorted_variant_cross_alignments.bam",
     conda:
         "../envs/quasi-dipcall.yml"
     resources:
@@ -130,54 +132,88 @@ rule filter_sort_small_cross_alignment:
 # clearly not mapped to the other, something like this: awk '{if ((gensub("_PATERNAL", "", 1, $1) == gensub("_MATERNAL", "", 1, $3)) || ("@" == substr($0,0,1))) { print $0 }}'
 
 
-rule small_cross_alignment_to_bed:
+rule variant_cross_alignment_to_bed:
     input:
-        bam=rules.filter_sort_small_cross_alignment.output,
+        bam=rules.filter_sort_variant_cross_alignment.output,
         hap=lambda w: config.dip1_either(
             rules.split_ref.output,
             rules.unzip_ref.output,
             w["ref_final_key"],
         ),
     output:
-        dip.inter.postsort.data / "small_cross_align.bed.gz",
+        dip.inter.postsort.data / "variant_cross_align.bed.gz",
     conda:
         "../envs/quasi-dipcall.yml"
+    # Convert vcf tob bed using POS and length of REF for the region bounds, and
+    # add a fourth column for the absolute value of the indel length (for
+    # filtering later)
     shell:
         """
         htsbox pileup -q5 -evcf {input.hap} {input.bam} | \
         grep -v '^#' | \
-        awk 'OFS="\t" {{print $1, $2-1, $2+length($4)-1}}' | \
+        awk 'OFS="\t" {{
+          ref = length($4);
+          alt = length($5);
+          print $1, $2-1, $2+length($4)-1, (ref > alt) ? ref - alt : alt - ref
+        }}' | \
         gzip -c > {output}
         """
 
 
-rule merge_large_and_small_hets:
+rule filter_SNVorSV:
     input:
-        small=rules.small_cross_alignment_to_bed.output,
-        large=rules.large_cross_alignment_to_bed.output,
+        rules.variant_cross_alignment_to_bed.output,
+    output:
+        dip.inter.postsort.data / "SNVorSV_variants.bed.gz",
+    params:
+        ## TODO don't hard code this
+        sv_cutoff=50,
+    conda:
+        "../envs/quasi-dipcall.yml"
+    shell:
+        """
+        gunzip -c {input} | \
+        awk 'length($4)>={params.sv_cutoff} || length($4)==0' | \
+        cut -f1,2,3 | \
+        gzip -c > {output}
+        """
+
+
+rule merge_all_hets:
+    input:
+        rules.variant_cross_alignment_to_bed.output,
+        rules.breaks_cross_alignment_to_bed.output,
     output:
         dip.inter.postsort.data / "het_regions.bed.gz",
     conda:
         "../envs/bedtools.yml"
     shell:
         """
-        multiIntersectBed -i {input.small} {input.large} | \
+        multiIntersectBed -i {input} | \
         mergeBed -i stdin | \
         gzip -c > {output}
         """
 
 
-rule combine_dip1_hets:
+use rule merge_all_hets as merge_SNVorSV_hets with:
+    input:
+        rules.filter_SNVorSV.output,
+        rules.breaks_cross_alignment_to_bed.output,
+    output:
+        dip.inter.postsort.data / "SNV_or_SV_het_regions.bed.gz",
+
+
+def combine_dip_inputs(rule, wildcards):
     # NOTE: the wildcard value of ref_final_key will not have a haplotype (as
     # per logic of dip1 references)
+    k = cfg.RefKeyFull(wildcards.ref_final_key, h).name
+    r = getattr(rules, rule).output
+    return {h.name: expand(r, ref_final_key=k) for h in cfg.Haplotype}
+
+
+rule combine_dip1_hets:
     input:
-        lambda w: {
-            h.name: expand(
-                rules.merge_large_and_small.output,
-                ref_final_key=cfg.RefKeyFull(w.ref_final_key, h).name,
-            )
-            for h in cfg.Haplotype
-        },
+        unpack(lambda w: combine_dip_inputs("merge_all_hets", w)),
     output:
         dip.inter.postsort.data / "combined_het_regions.bed.gz",
     shell:
@@ -186,32 +222,22 @@ rule combine_dip1_hets:
         """
 
 
-def het_region_inputs(wildcards):
-    return (
-        rules.merge_large_and_small_hets.output
-        if parse_full_refkey_class(wildcards.ref_final_key).has_hap
-        else rules.combine_dip1_hets.output
-    )
-
-
-rule filter_snp_hets:
+use rule combine_dip1_hets as combine_SNVorSV_dip1_hets with:
     input:
-        het_region_inputs,
+        unpack(lambda w: combine_dip_inputs("merge_SNVorSV_hets", w)),
     output:
-        dip.inter.postsort.data / "snp_het_regions.bed.gz",
-    conda:
-        "../envs/bedtools.yml"
-    shell:
-        """
-        gunzip -c {input} | \
-        awk '{{if($3-$2==1) {{print $0}}}}' | \
-        bgzip -c > {output}
-        """
+        dip.inter.postsort.data / "combined_SNV_SV_het_regions.bed.gz",
+
+
+def dip1_either(left, right, wildcards):
+    left_ = getattr(rules, left).output
+    right_ = getattr(rules, right).output
+    return config.dip1_either(left_, right_, wildcards.ref_final_key)
 
 
 rule merge_het_regions:
     input:
-        het_region_inputs,
+        lambda w: dip1_either("combine_dip1_hets", "merge_all_hets", w),
     output:
         dip.final("het_regions_{merge_len}k"),
     conda:
@@ -226,6 +252,15 @@ rule merge_het_regions:
         intersectBed -a stdin -b {params.gapless} -sorted | \
         bgzip -c > {output}
         """
+
+
+use rule merge_het_regions as merge_het_SNVorSV_regions with:
+    input:
+        lambda w: dip1_either("combine_SNVorSV_dip1_hets", "merge_SNVorSV_hets", w),
+    output:
+        dip.final("het_SNVorSV_regions_{merge_len}k"),
+    wildcard_constraints:
+        merge_len=f"\d+",
 
 
 rule invert_het_regions:
@@ -248,20 +283,11 @@ rule invert_het_regions:
         """
 
 
-use rule merge_het_regions as merge_het_snp_regions with:
+use rule invert_het_regions as invert_het_SNVorSV_regions with:
     input:
-        rules.filter_snp_hets.output,
+        rules.merge_het_SNVorSV_regions.output,
     output:
-        dip.final("het_snp_regions_{merge_len}k"),
-    wildcard_constraints:
-        merge_len=f"\d+",
-
-
-use rule invert_het_regions as invert_het_snp_regions with:
-    input:
-        rules.merge_het_snp_regions.output,
-    output:
-        dip.final("hom_snp_regions_{merge_len}k"),
+        dip.final("hom_SNVorSV_regions_{merge_len}k"),
     wildcard_constraints:
         merge_len=f"\d+",
 
@@ -270,9 +296,9 @@ def het_hom_inputs(ref_final_key, build_key):
     bd = config.to_build_data(strip_full_refkey(ref_final_key), build_key)
     return expand(
         rules.invert_het_regions.output
-        + rules.invert_het_snp_regions.output
+        + rules.invert_het_SNVorSV_regions.output
         + rules.merge_het_regions.output
-        + rules.merge_het_snp_regions.output,
+        + rules.merge_het_SNVorSV_regions.output,
         merge_len=bd.build.include.hets,
         ref_final_key=ref_final_key,
         build_key=build_key,
