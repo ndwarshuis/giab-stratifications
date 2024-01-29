@@ -154,7 +154,7 @@ rule variant_cross_alignment_to_bed:
         awk 'OFS="\t" {{
           ref = length($4);
           alt = length($5);
-          print $1, $2-1, $2+length($4)-1, (ref > alt) ? ref - alt : alt - ref
+          print $1, $2-1, $2+length($4)-1, (ref>alt) ? ref-alt : alt-ref
         }}' | \
         gzip -c > {output}
         """
