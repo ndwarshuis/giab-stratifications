@@ -1727,12 +1727,12 @@ class Include(BaseModel):
     #
     # This parameter is only used for diploid configurations. While it will be
     # present for all configurations, it will only be read when needed.
-    # Defaulting to True means that the user never needs to specify it if they
-    # want this for diploid (which they probably do) and they don't need to care
-    # in haploid cases. The only issue would be if the user specified this in
-    # the haploid case; it technically should be a validation error since it
-    # makes no sense in the case of haploid, but here it is setup to not hurt
-    # anything.
+    # Defaulting to a finite set means that the user never needs to specify it
+    # if they want this for diploid (which they probably do) and they don't need
+    # to care in haploid cases. The only issue would be if the user specified
+    # this in the haploid case; it technically should be a validation error
+    # since it makes no sense in the case of haploid, but here it is setup to
+    # not hurt anything.
     hets: set[int] = {10, 20, 50, 100, 500}
 
 
