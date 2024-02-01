@@ -214,6 +214,12 @@ rule run_happy:
     log:
         post_log_dir / "happy" / "happy.log",
     threads: 8
+    benchmark:
+        post_bench_dir / "run_happy.txt"
+    resources:
+        mem_mb=lambda w: config.buildkey_to_malloc(
+            w.ref_final_key, w.build_key, lambda m: m.runHappy
+        ),
     script:
         "../scripts/python/bedtools/postprocess/run_happy.py"
 

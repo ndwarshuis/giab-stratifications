@@ -22,6 +22,12 @@ checkpoint normalize_superdups:
         output_pattern=lambda w: to_output_pattern(segdup, "segdups", w),
     conda:
         "../envs/bedtools.yml"
+    resources:
+        mem_mb=lambda w: config.buildkey_to_malloc(
+            w.ref_key, w.build_key, lambda m: m.normalizeSuperdups
+        ),
+    benchmark:
+        segdup.inter.filtersort.bench / "normalize_segdups.txt"
     script:
         "../scripts/python/bedtools/segdups/normalize_superdups.py"
 

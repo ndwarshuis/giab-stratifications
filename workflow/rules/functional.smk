@@ -43,6 +43,10 @@ checkpoint normalize_cds:
     params:
         cds_output=lambda w: to_output_pattern(func, "cds", w),
         vdj_output=lambda w: to_output_pattern(func, "vdj", w),
+    resources:
+        mem_mb=lambda w: config.buildkey_to_malloc(
+            w.ref_key, w.build_key, lambda m: m.normalizeCds
+        ),
     benchmark:
         func.inter.filtersort.bench / "normalize_cds.txt"
     conda:

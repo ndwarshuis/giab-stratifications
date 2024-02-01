@@ -40,11 +40,15 @@ rule cross_align_breaks:
         unpack(minimap_inputs),
     output:
         dip.inter.postsort.data / "breaks_cross_align.paf.gz",
-    # TODO I can cheat a bit here and cap the thread count to the number of
-    # chromosomes desired (since mm2 runs with one thread/chromosome)
     threads: lambda w: config.thread_per_chromosome(w.ref_final_key, w.build_key, 8)
     log:
         dip.inter.postsort.log / "cross_align_breaks.log",
+    benchmark:
+        dip.inter.postsort.bench / "cross_align_breaks.txt"
+    resources:
+        mem_mb=lambda w: config.buildkey_to_malloc(
+            w.ref_final_key, w.build_key, lambda m: m.crossAlignBreaks
+        ),
     conda:
         "../envs/quasi-dipcall.yml"
     shell:
@@ -91,14 +95,18 @@ rule cross_align_variants:
         unpack(minimap_inputs),
     output:
         dip.inter.postsort.data / "variant_cross_align.sam.gz",
-    # TODO I can cheat a bit here and cap the thread count to the number of
-    # chromosomes desired (since mm2 runs with one thread/chromosome)
     threads: lambda w: config.thread_per_chromosome(w.ref_final_key, w.build_key, 8)
     log:
         dip.inter.postsort.log / "cross_align_variants.log",
     # this is what dipcall does to produce the pair file in one step
     conda:
         "../envs/quasi-dipcall.yml"
+    benchmark:
+        dip.inter.postsort.bench / "cross_align_variants.txt"
+    resources:
+        mem_mb=lambda w: config.buildkey_to_malloc(
+            w.ref_final_key, w.build_key, lambda m: m.crossAlignVariants
+        ),
     shell:
         """
         minimap2 -a -t{threads} --cs -z200000,10000,200 -xasm5 \
@@ -115,15 +123,23 @@ rule filter_sort_variant_cross_alignment:
         sam=rules.cross_align_variants.output,
     output:
         dip.inter.postsort.data / "sorted_variant_cross_alignments.bam",
+    benchmark:
+        dip.inter.postsort.bench / "filter_sort_variant_cross_alignment.txt"
     conda:
         "../envs/quasi-dipcall.yml"
+    threads: 4
     resources:
-        # TODO don't hardcode
-        mem_mb=1000,
+        mem_mb=lambda w, threads: config.buildkey_to_malloc(
+            w.ref_final_key,
+            w.build_key,
+            lambda m: m.filterSortVariantCrossAlignment,
+        ),
+    params:
+        mem_per_thread=lambda w, threads, resources: int(resources.mem_mb / threads),
     shell:
         """
         k8 {input.aux_bin} samflt {input.sam} | \
-        samtools sort -m{resources.mem_mb}M --threads {threads} \
+        samtools sort -m{params.mem_per_thread}M --threads {threads} \
         > {output}
         """
 

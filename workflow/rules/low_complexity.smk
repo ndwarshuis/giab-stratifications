@@ -395,6 +395,12 @@ checkpoint normalize_simreps:
         output_pattern=lambda w: to_output_pattern(lc, "simreps", w),
     conda:
         "../envs/bedtools.yml"
+    resources:
+        mem_mb=lambda w: config.buildkey_to_malloc(
+            w.ref_key, w.build_key, lambda m: m.normalizeSimreps
+        ),
+    benchmark:
+        lc.inter.filtersort.bench / "normalize_simreps.txt"
     script:
         "../scripts/python/bedtools/low_complexity/normalize_simreps.py"
 
@@ -439,6 +445,10 @@ checkpoint normalize_rmsk:
         "../envs/bedtools.yml"
     benchmark:
         lc.inter.filtersort.bench / "normalize_rmsk.txt"
+    resources:
+        mem_mb=lambda w: config.buildkey_to_malloc(
+            w.ref_key, w.build_key, lambda m: m.normalizeRmsk
+        ),
     script:
         "../scripts/python/bedtools/low_complexity/normalize_rmsk.py"
 
@@ -485,6 +495,9 @@ use rule download_ref as download_censat with:
     localrule: True
 
 
+# TODO add config directives to override the mem_mb in each of these since the
+# input sizes can vary wildly depending on how many columns/rows/datatypes are
+# actually in them. 2-4k is probably a safe default
 checkpoint normalize_censat:
     input:
         lambda w: bed_src_inputs(rules.download_censat.output, si_to_satellites, w),
@@ -492,6 +505,12 @@ checkpoint normalize_censat:
         lc.inter.filtersort.data / "censat.json",
     params:
         output_pattern=lambda w: to_output_pattern(lc, "censat", w),
+    benchmark:
+        lc.inter.filtersort.bench / "normalize_censat.txt"
+    resources:
+        mem_mb=lambda w: config.buildkey_to_malloc(
+            w.ref_key, w.build_key, lambda m: m.normalizeCensat
+        ),
     conda:
         "../envs/bedtools.yml"
     script:

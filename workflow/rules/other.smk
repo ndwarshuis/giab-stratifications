@@ -59,6 +59,10 @@ checkpoint normalize_other:
             ref_final_key="%s",
             build_key=w.build_key,
         )[0],
+    resources:
+        mem_mb=lambda w: config.buildkey_to_malloc(
+            w.ref_key, w.build_key, lambda m: m.normalizeOther
+        ),
     conda:
         "../envs/bedtools.yml"
     wildcard_constraints:

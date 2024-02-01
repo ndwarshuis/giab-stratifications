@@ -1779,6 +1779,39 @@ class BuildCompare(BaseModel):
     ignore_generated: list[str] = []
 
 
+class Malloc(BaseModel):
+    """Manual memory allocations for rules in Mb
+
+    Note, this can obviously be done with snakemake itself, but I want to set
+    these per-build if needed.
+
+    These are only needed for "high" memory steps, which really only means
+    things that involve sorting, hap.py, minimap, or GEM.
+    """
+
+    # mappability steps
+    gemIndex: int = 16000  # GEM
+    gemMappability: int = 12000  # GEM
+    gemToWig: int = 8000  # GEM
+    mergeNonunique: int = 4000  # sort
+
+    # normalization steps (all of which involve a sort)
+    normalizeRmsk: int = 4000
+    normalizeSimreps: int = 4000
+    normalizeCensat: int = 4000
+    normalizeSuperdups: int = 4000
+    normalizeCds: int = 4000
+    normalizeOther: int = 4000
+
+    # diploid steps
+    crossAlignBreaks: int = 16000  # minimap2
+    crossAlignVariants: int = 16000  # minimap2
+    filterSortVariantCrossAlignment: int = 16000  # samtools sort
+
+    # happy
+    runHappy: int = 24000
+
+
 class Build(GenericModel, Generic[AnyBedT, AnyBedT_]):
     chr_filter: set[ChrIndex]
     comparison: BuildCompare | None = None
@@ -1788,6 +1821,7 @@ class Build(GenericModel, Generic[AnyBedT, AnyBedT_]):
     # politely alerted in case they specify any diploid params for a haploid
     # config.
     include: Include = Include()
+    malloc: Malloc | None = Malloc()
 
     @property
     def compare_key(self) -> CompareKey | None:
@@ -2167,6 +2201,7 @@ class GiabStrats(BaseModel):
         "notinAllTandemRepeatsandHomopolymers_slop5",
         "segdups",
     ]
+    malloc: Malloc = Malloc()
 
     # TODO validate comparison keys
     @validator(
@@ -2406,6 +2441,17 @@ class GiabStrats(BaseModel):
         return self._scripts_dir(["rmarkdown", basename])
 
     # general accessors
+
+    def buildkey_to_malloc(
+        self,
+        rk: RefKeyFullS,
+        bk: BuildKey,
+        f: Callable[[Malloc], int],
+    ) -> int:
+        bd = self.to_build_data(strip_full_refkey(rk), bk)
+        return max(
+            fmap_maybe_def(f(self.malloc), lambda m: f(m), bd.build.malloc), 1000
+        )
 
     def buildkey_to_ref_mappers(
         self, rk: RefKeyFullS, bk: BuildKey
