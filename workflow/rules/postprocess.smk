@@ -99,6 +99,19 @@ rule unit_test_strats:
         "../scripts/python/bedtools/postprocess/run_unit_tests.py"
 
 
+rule get_coverage_table:
+    input:
+        _test=rules.unit_test_strats.output,
+        bedlist=rules.list_all_strats.output[0],
+        gapless=rules.get_gapless.output.auto,
+    output:
+        touch(post_inter_dir / "coverage.tsv.gz"),
+    benchmark:
+        post_bench_dir / "get_coverage_table.txt"
+    script:
+        "../scripts/python/bedtools/postprocess/get_coverage_table.py"
+
+
 rule download_comparison_strat_tarball:
     output:
         directory(config.resources_dir / "comparisons" / "{compare_key}"),
@@ -154,18 +167,6 @@ rule all_comparisons:
     localrule: True
 
 
-# Rule to make a dataframe which maps chromosome names to a common nomenclature
-# (for the validation markdown). The only reason this exists is because
-# snakemake flattens this list of tuples when I pass it as a param to the rmd
-# script...dataframe in IO monad it is :/
-rule write_chr_name_mapper:
-    output:
-        config.intermediate_root_dir / ".validation" / "chr_mapper.tsv",
-    localrule: True
-    run:
-        write_chr_mapper(config, output[0])
-
-
 rule make_coverage_plots:
     input:
         # this first input isn't actually used, but ensures the unit tests pass
@@ -177,20 +178,13 @@ rule make_coverage_plots:
                 ref_final_key=(t := config.all_full_build_keys)[0],
                 build_key=t[1],
             ),
-            "strats": expand(
-                rules.list_all_strats.output,
-                zip,
-                ref_final_key=t[0],
-                build_key=t[1],
-            ),
-            "nonN": expand(
-                rules.get_gapless.output.auto,
+            "coverage": expand(
+                rules.get_coverage_table.output,
                 zip,
                 ref_final_key=t[0],
                 build_key=t[1],
             ),
         },
-        chr_mapper=rules.write_chr_name_mapper.output,
     output:
         validation_dir / "coverage_plots.html",
     conda:

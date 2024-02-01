@@ -14,94 +14,22 @@ library(tidyverse)
 
 knitr::opts_chunk$set(fig.width=25, fig.height=6, fig_caption=TRUE)
 
-chr_mapper <- readr::read_tsv(
-  snakemake@input$chr_mapper,
-  col_names = c("chrom_index", "build_key", "haplotype", "chrom"),
-  col_types = "iccc"
-) %>%
-  arrange(chrom_index, build_key)
-
-bed_cols <- c("chrom", "start", "end")
-
-read_bed <- function(path) {
-  readr::read_tsv(path,
-                  comment = "#",
-                  col_types = "cii",
-                  col_names = bed_cols) %>%
-  mutate(region_size = end - start)
+read_coverage_table <- function(path) {
+  read_tsv(
+    path,
+    col_types = "ccccd",
+    col_names = c("key", "stype", "strat", "chrom", "coverage")
+  )
 }
 
-read_nonN <- function(path) {
-  read_bed(path) %>%
-    mutate(build_key = path %>% dirname() %>% basename()) %>%
-    left_join(chr_mapper, by = c("chrom", "build_key")) %>%
-    select(-chrom)
-}
-
-read_strat <- function(path) {
-  strat_filename <- basename(path)
-  read_bed(path) %>%
-    group_by(chrom) %>%
-    summarise(total_region = sum(region_size), .groups = "drop") %>%
-    mutate(build_key = path %>% dirname() %>% dirname() %>% basename(),
-           ## genome = str_extract(strat_filename, "^[^_]+_(HG[0-9]+)_.bed.gz", 1),
-           ## strat_level = str_extract(strat_filename, 
-           ##                           if_else(is.na(genome),
-           ##                                   "^[^_]+_(.*).bed.gz",
-           ##                                   "^[^_]+_HG[0-9]+_(.*).bed.gz"),
-           ##                           1),
-           strat_name = str_extract(strat_filename, "^[^_]+_(.*).bed.gz", 1)) %>%
-    left_join(chr_mapper, by = c("chrom", "build_key")) %>%
-    select(-chrom)
-}
-
-df_chr_sizes <- snakemake@input$nonN %>%
-  map_dfr(read_nonN) %>%
-  group_by(chrom_index, build_key) %>%
-  summarise(nonN_ref_len = sum(region_size), .groups = "drop")
-
-chr_build_combinations <- chr_mapper %>%
-  expand(chrom_index, nesting(build_key,  haplotype))
-
-file_list <- snakemake@input$strats %>%
-  map(readLines) %>%
-  flatten()
-
-chr_name <- function(i) {
-  case_when(i == 23 ~ "X",
-            i == 24 ~ "Y",
-            0 < i & i < 23 ~ as.character(i),
-            TRUE ~ "oops")
-}
-
-chr_levels <- chr_name(1:24)
-
-format_key <- function(build_key, haplotype) {
-  ms <- str_match(build_key, "(.+?)(\\.hap(1|2))?@(.+)")
-  sprintf("%s@%s-%s", ms[,2], ms[,5], haplotype)
-}
-
-
-read_strats <- function(stype, gaps) {
-  fs <- keep(file_list, ~ basename(dirname(.x)) == stype)
-  if (length(fs) > 0) {
-    df <- map_dfr(fs, read_strat)
-    all_combos <- chr_build_combinations %>%
-      expand(nesting(chrom_index, build_key, haplotype), strat_name = df$strat_name)
-    df %>%
-      # join the full cartesian product of all chromosomes and paths, then fill
-      # missing with 0 so that we get an empty space on the graphs indicating
-      # zero coverage
-      full_join(all_combos, by = c("chrom_index", "strat_name", "build_key", "haplotype")) %>%
-      left_join(df_chr_sizes, by = c("chrom_index", "build_key")) %>%
-      mutate(strat_type = stype,
-             key = format_key(build_key, haplotype),
-             coverage = total_region / nonN_ref_len,
-             chrom = factor(chr_name(chrom_index), levels = chr_levels)) %>%
-      replace_na(list(coverage = 0))
-  } else {
-    NULL
-  }
+read_coverage <- function(paths) {
+  df <- snakemake@input$coverage %>%
+    map_dfr(read_coverage_table)
+  all_combos <- expand(df, key, chrom, nesting(stype, strat))
+  df %>%
+    right_join(all_combos, by = c("chrom", "key", "stype", "strat")) %>%
+    replace_na(list(coverage = 0)) %>%
+    arrange(stype, strat)
 }
 
 coverage_plot <- function(df, level) {
@@ -121,14 +49,14 @@ coverage_plot <- function(df, level) {
   cat("\n\n")
 }
 
-coverage_plots <- function(stype, gaps) {
-  cat(sprintf("## %s\n\n", stype))
-  df <- read_strats(stype, gaps)
-  if (is.null(df)) {
+coverage_plots <- function(df, .stype) {
+  cat(sprintf("## %s\n\n", .stype))
+  .df <- filter(df, stype == .stype)
+  if (nrow(.df) == 0) {
     cat("None\n\n")
   } else {
-    df %>%
-      group_by(strat_name) %>%
+    .df %>%
+      group_by(strat) %>%
       group_walk(coverage_plot)
   }
 }
@@ -149,7 +77,8 @@ files. These files can be assumed to:
 # Coverage Plots
 
 ```{r, echo = FALSE, results = "asis"}
+df <- read_coverage(snakemake@input$coverage)
 snakemake@params$core_levels %>%
   union(snakemake@params$other_levels) %>%
-  walk(coverage_plots)
+  walk(~ coverage_plots(df, .x))
 ```
