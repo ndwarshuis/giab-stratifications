@@ -34,7 +34,7 @@ def write_simple_range_beds(
     for out, bigger, smaller in torun:
         with open(out, "wb") as f:
             p0 = sp.Popen(
-                ["subtractBed", "-a", bigger.bed, "-b", smaller.bed],
+                ["subtractBed", "-a", bigger.bed, "-b", smaller.bed, "-sorted"],
                 stdout=sp.PIPE,
             )
             p1 = sp.run(["bgzip", "-c"], stdin=p0.stdout, stdout=f)
@@ -58,7 +58,7 @@ def write_middle_range_bed(
             stdout=sp.PIPE,
         )
         p1 = sp.Popen(
-            ["subtractBed", "-a", "stdin", "-b", lower.bed],
+            ["subtractBed", "-a", "stdin", "-b", lower.bed, "-sorted"],
             stdin=p0.stdout,
             stdout=sp.PIPE,
         )

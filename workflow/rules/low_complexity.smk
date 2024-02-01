@@ -133,7 +133,7 @@ rule subtract_uniform_repeats:
         total_lenA="\d+",
         total_lenb="\d+",
     shell:
-        "subtractBed -a {input.a} -b {input.b} > {output}"
+        "subtractBed -a {input.a} -b {input.b} -sorted > {output}"
 
 
 def repeat_range_complement_inputs(wildcards):
@@ -164,7 +164,7 @@ rule subtract_uniform_repeat_complement:
         total_lenb="\d+",
         bases=bases_constraint,
     shell:
-        "subtractBed -a {input.a} -b {input.b} > {output}"
+        "subtractBed -a {input.a} -b {input.b} -sorted > {output}"
 
 
 rule slop_uniform_repeats:
@@ -637,7 +637,7 @@ rule filter_TRs:
     shell:
         """
         awk '({params.lower}+10)<=($3-$2) && ($3-$2)<({params.upper}+10)' {input.tr} | \
-        subtractBed -a stdin -b {input.hp} | \
+        subtractBed -a stdin -b {input.hp} -sorted | \
         intersectBed -a stdin -b {input.gapless} -sorted -g {input.genome} | \
         bgzip -c > {output}
         """
