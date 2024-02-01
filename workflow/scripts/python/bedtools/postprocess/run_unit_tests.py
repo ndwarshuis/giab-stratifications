@@ -1,7 +1,6 @@
-import pandas as pd
+import gzip
 from typing import Any, NamedTuple
 from pathlib import Path
-from pybedtools import BedTool as bt  # type: ignore
 from os.path import dirname, basename
 from os import scandir
 import common.config as cfg
@@ -15,8 +14,8 @@ RevMapper = dict[str, InternalChrIndex]
 
 
 class GaplessBT(NamedTuple):
-    auto: bt
-    parY: bt
+    auto: Path
+    parY: Path
 
 
 def test_bgzip(strat_file: Path) -> list[str]:
@@ -24,86 +23,87 @@ def test_bgzip(strat_file: Path) -> list[str]:
     return [] if is_bgzip(strat_file) else ["is not bgzip file"]
 
 
+def test_bed_format(strat_file: Path, reverse_map: RevMapper) -> str | None:
+    with gzip.open(strat_file) as f:
+        prevChrom = ""
+        prevChromIdx = -1
+        prevStart = -1
+        prevEnd = -1
+        for i in f:
+            # should have three columns separated by tabs
+            cells = i.split(b"\t")
+            if len(cells) != 3:
+                return "bed file has wrong number of columns"
+
+            # types of each column should be str/int/int
+            chrom = cells[0].decode()
+            try:
+                start = int(cells[1])
+                end = int(cells[2])
+            except ValueError as e:
+                return str(e)
+
+            # chrom should be valid
+            try:
+                chromIdx = reverse_map[chrom]
+            except KeyError:
+                return f"invalid chr: {chrom}"
+
+            # chrom column should be sorted in ascending order
+            if not prevChromIdx <= chromIdx:
+                return "chrom column not sorted"
+
+            # end should be greater than start
+            if not start < end:
+                return f"invalid region: {chrom} {start} {end}"
+
+            # regions should be separated by at least one bp
+            if not ((prevEnd < start) or (prevChromIdx < chromIdx)):
+                return (
+                    "non-disjoint regions: "
+                    f"{prevChrom} {prevStart} {prevEnd}"
+                    f"and {chrom} {start} {end}"
+                )
+
+            prevChrom = chrom
+            prevChromIdx = chromIdx
+            prevStart = start
+            prevEnd = end
+
+    # we made it, this file is legit :)
+    return None
+
+
+def test_bed_not_in_gaps(strat_file: Path, gapless: GaplessBT) -> bool:
+    # ignore the actual gapless file for obvious reasons
+    if "gaps_slop15kb" in basename(strat_file):
+        return True
+    else:
+        isXY = basename(dirname(strat_file)) == "XY"
+        gapless_path = gapless.parY if isXY else gapless.auto
+        # gunzip needed here because subtract bed will output gibberish if we
+        # give it an empty gzip file
+        p0 = sp.Popen(["gunzip", "-c", strat_file], stdout=sp.PIPE)
+        p1 = sp.run(
+            ["subtractBed", "-a", "stdin", "-b", gapless_path, "-sorted"],
+            stdin=p0.stdout,
+            stdout=sp.PIPE,
+        )
+        return len(p1.stdout) == 0
+
+
 def test_bed(
     strat_file: Path,
     reverse_map: RevMapper,
     gapless: GaplessBT,
 ) -> list[str]:
-    """Each stratification should be a valid bed file."""
-
-    # test bed files in multiple phases, where each phase depends on the
-    # previous being valid
-    #
-    # Phase 1: try to import the dataframe (with almost no assumptions except
-    # that it has no header)
-    try:
-        # no low mem since we don't want to assume what dtypes each column has,
-        # and by default pandas will chunk the input which could lead to mixed
-        # types
-        df = pd.read_table(strat_file, header=0, low_memory=False)
-    except pd.errors.EmptyDataError:
-        # if df is empty, nothing to do
-        return []
-    except Exception as e:
-        # catch any other weird read errors
-        return [str(e)]
-
-    # Phase 2: ensure "bed file" has 3 columns
-    if len(df.columns) != 3:
-        return ["bed file has wrong number of columns"]
-
-    # Phase 3: ensure "bed file" has column of the correct type
-    cols = {"chrom": str, "start": int, "end": int}
-    df.columns = pd.Index([*cols])
-
-    try:
-        df = df.astype(cols)
-    except ValueError as e:
-        return [str(e)]
-
-    # Phase 4: we now know we have a real bed file, ensure that we didn't
-    # invent any new chromosomes (try to convert chrom column to ints, which
-    # will produce NaNs on error)
-    chr_ints = df["chrom"].map(reverse_map).astype("Int64")
-    invalid_chrs = df["chrom"][chr_ints.isnull()].unique().tolist()
-    if len(invalid_chrs) > 0:
-        return [f"invalid chrs: {invalid_chrs}"]
-
-    # Phase 5: test remaining assumptions:
-    # - chromosome column is sorted
-    # - each region is disjoint and ascending (eg the start of a region is at
-    #   least 1bp away from the end of the previous)
-    # - does not intersect with gap regions (if any) or extend beyond chr bounds
-    same_chrom = df["chrom"] == df["chrom"].shift(1)
-    distance = (df["start"] - df["end"].shift(1))[same_chrom]
-    overlapping_lines = distance[distance < 1].index.tolist()
-
-    # choose gap file depending on if this is an XY strat or not; note that the
-    # built-in gaps file (if applicable) is obviously whitelisted from this
-    # check
-    if "gaps_slop15kb" in basename(strat_file):
-        no_gaps = True
+    if (format_error := test_bed_format(strat_file, reverse_map)) is not None:
+        return [format_error]
     else:
-        isXY = basename(dirname(strat_file)) == "XY"
-        gapless_bt = gapless.parY if isXY else gapless.auto
-        gaps = bt.from_dataframe(df).subtract(gapless_bt).to_dataframe()
-        no_gaps = len(gaps) == 0
-
-    return [
-        msg
-        for result, msg in [
-            (
-                pd.Index(chr_ints).is_monotonic_increasing,
-                "chromosomes not sorted",
-            ),
-            (
-                len(overlapping_lines) == 0,
-                f"non-disjoint regions at lines: {overlapping_lines}",
-            ),
-            (no_gaps, "bed contains gap regions"),
-        ]
-        if result is False
-    ]
+        if test_bed_not_in_gaps(strat_file, gapless):
+            return []
+        else:
+            return ["has gaps"]
 
 
 def test_checksums(checksums: Path) -> list[str]:
@@ -181,8 +181,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     # check individual stratification files
 
     gapless = GaplessBT(
-        auto=bt(str(smk.input["gapless_auto"])),
-        parY=bt(str(smk.input["gapless_parY"])),
+        auto=Path(smk.input["gapless_auto"]),
+        parY=Path(smk.input["gapless_parY"]),
     )
 
     strat_failures = [

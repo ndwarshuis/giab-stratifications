@@ -49,7 +49,9 @@ def read_gff(i: Path) -> pd.DataFrame:
         usecols=list(columns),
     )[list(columns)]
     df.columns = pd.Index(range(len(df.columns)))
-    return df
+    # for some reason there are lots of rows where the start/end are the same;
+    # these are useless to us so remove them
+    return df[df[1] != df[2]].copy()
 
 
 def write_gff(

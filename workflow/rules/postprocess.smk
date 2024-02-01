@@ -7,6 +7,7 @@ from bedtools.postprocess.helpers import write_chr_mapper
 
 post_inter_dir = config.intermediate_build_dir / "postprocess"
 post_log_dir = config.log_build_dir / "postprocess"
+post_bench_dir = config.bench_build_dir / "postprocess"
 validation_dir = config.final_root_dir / "validation"
 
 
@@ -90,6 +91,8 @@ rule unit_test_strats:
         touch(post_inter_dir / "unit_tests.done"),
     log:
         post_log_dir / "unit_tests.log",
+    benchmark:
+        post_bench_dir / "unit_test_strats.txt"
     conda:
         "../envs/bedtools.yml"
     script:

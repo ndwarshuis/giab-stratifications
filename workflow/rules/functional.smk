@@ -43,6 +43,8 @@ checkpoint normalize_cds:
     params:
         cds_output=lambda w: to_output_pattern(func, "cds", w),
         vdj_output=lambda w: to_output_pattern(func, "vdj", w),
+    benchmark:
+        func.inter.filtersort.bench / "normalize_cds.txt"
     conda:
         "../envs/bedtools.yml"
     script:
