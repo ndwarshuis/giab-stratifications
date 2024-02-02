@@ -151,7 +151,7 @@ rule compare_strats:
     log:
         post_log_dir / "comparison.log",
     conda:
-        "../envs/bedtools.yml"
+        "../envs/diff.yml"
     threads: 8
     script:
         "../scripts/python/bedtools/postprocess/diff_previous_strats.py"

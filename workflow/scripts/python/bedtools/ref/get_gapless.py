@@ -1,8 +1,14 @@
 from typing import Any
 from pathlib import Path
 import common.config as cfg
-from pybedtools import BedTool as bt  # type: ignore
-from common.bed import write_bed
+from common.bed import (
+    write_bed,
+    bed_to_stream,
+    read_bed_default,
+    complementBed,
+    mergeBed,
+    subtractBed,
+)
 from common.functional import match1_unsafe, match2_unsafe
 import pandas as pd
 
@@ -31,7 +37,8 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
 
     # convert genome to bed file (where each region is just the length of
     # one chromosome)
-    genome_bed = read_genome_bed(Path(inputs["genome"]))
+    genome_path = Path(inputs["genome"])
+    genome_bed = read_genome_bed(genome_path)
 
     # If we have gap input, make the gapless file, otherwise just symlink to the
     # genome bed file (which just means the entire genome is gapless)
@@ -69,9 +76,17 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
             ),
         )
 
-        gaps: pd.DataFrame = bt.from_dataframe(gaps_df).merge(d=100).to_dataframe()
-        gaps_bed = bt().from_dataframe(gaps)
-        gaps_with_parY = bt().from_dataframe(genome_bed).subtract(gaps_bed)
+        with bed_to_stream(gaps_df) as s:
+            _, o = mergeBed(s, ["-d", "100"])
+            gaps_bed = read_bed_default(o)
+
+        with bed_to_stream(gaps_bed) as s:
+            _, o = complementBed(s, genome_path)
+            gaps_with_parY = read_bed_default(o)
+
+        # gaps: pd.DataFrame = bt.from_dataframe(gaps_df).merge(d=100).to_dataframe()
+        # gaps_bed = bt().from_dataframe(gaps)
+        # gaps_with_parY = bt().from_dataframe(genome_bed).subtract(gaps_bed)
 
         # If we have a parY bed, subtract parY from the gaps bed, otherwise
         # just link them since we have nothing to subtract off
@@ -79,12 +94,14 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         # makes things cleaner)
         if hasattr(inputs, "parY"):
             parY_src = Path(inputs["parY"])
-            gaps_no_parY = gaps_with_parY.subtract(bt(parY_src))
+            with bed_to_stream(gaps_with_parY) as s:
+                _, o = subtractBed(s, parY_src)
+                gaps_no_parY = read_bed_default(o)
+            write_bed(parY_out, gaps_with_parY)
+            write_bed(auto_out, gaps_no_parY)
 
-            write_bed(parY_out, gaps_with_parY.to_dataframe())
-            write_bed(auto_out, gaps_no_parY.to_dataframe())
         else:
-            write_bed(auto_out, gaps)
+            write_bed(auto_out, gaps_bed)
             parY_out.symlink_to(auto_out.resolve())
 
 

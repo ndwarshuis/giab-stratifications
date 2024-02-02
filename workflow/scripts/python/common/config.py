@@ -95,6 +95,7 @@ Conventions:
 * paternal sorts before maternal
 * chromosomes are numbered and sorted 1-24 where X and Y are 23/24 respectively
 """
+
 from __future__ import annotations
 import sys
 import json

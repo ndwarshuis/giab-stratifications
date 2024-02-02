@@ -1,15 +1,19 @@
 from pathlib import Path
 from typing import Any
 import common.config as cfg
-from pybedtools import BedTool as bt  # type: ignore
-from common.bed import filter_sort_bed, write_bed
+from common.bed import (
+    filter_sort_bed,
+    bed_to_stream,
+    intersectBed,
+    bgzip_file,
+)
 
 
 def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     ws: dict[str, str] = smk.wildcards
     bed_input = Path(smk.input["bed"])
-    gapless_input: str = smk.input["gapless"]
-    genome_input: str = smk.input["genome"][0]
+    gapless_input = Path(smk.input["gapless"])
+    genome_input = Path(smk.input["genome"][0])
     bed_output = smk.output[0]
 
     level = smk.params["level"]
@@ -29,17 +33,9 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
     level_mask = df_sorted[bf.level_col].str.contains(level)
     df_filtered = df_sorted[level_mask].drop(columns=[bf.level_col])
     # TODO put this in its own rule to simplify script?
-    df_gapless = (
-        bt()
-        .from_dataframe(df_filtered)
-        .intersect(
-            gapless_input,
-            sorted=True,
-            g=genome_input,
-        )
-        .to_dataframe()
-    )
-    write_bed(bed_output, df_gapless)
+    with bed_to_stream(df_filtered) as s:
+        _, o = intersectBed(s, gapless_input, genome_input)
+        bgzip_file(o, bed_output)
 
 
 main(snakemake, snakemake.config)  # type: ignore
