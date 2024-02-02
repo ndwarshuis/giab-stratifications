@@ -3,7 +3,6 @@ from more_itertools import unique_everseen, unzip
 from os import scandir
 from common.config import CoreLevel, strip_full_refkey
 from common.functional import DesignError
-from bedtools.postprocess.helpers import write_chr_mapper
 
 post_inter_dir = config.intermediate_build_dir / "postprocess"
 post_log_dir = config.log_build_dir / "postprocess"
