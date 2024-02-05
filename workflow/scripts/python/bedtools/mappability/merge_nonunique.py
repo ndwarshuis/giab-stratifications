@@ -76,7 +76,10 @@ def main(smk: Any, sconf: cfg.GiabStrats) -> None:
         merge_bed(mi_out, all_lowmap)
 
     with open(smk.output[0], "w") as f:
-        obj = {"all_lowmap": str(all_lowmap), "single_lowmap": single_lowmap}
+        obj = {
+            "all_lowmap": str(all_lowmap),
+            "single_lowmap": [str(p) for p in single_lowmap],
+        }
         json.dump(obj, f)
 
 
