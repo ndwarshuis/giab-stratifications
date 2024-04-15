@@ -1237,20 +1237,20 @@ diploid2_stratifications:
             # regions actually starts at IGKDEL
             hap1:
               lines:
-                - { chr: 2,  start: 88868026,  end: 90383962  } # IGK
-                - { chr: 7,  start: 38373031,  end: 38494619  } # TRB
-                - { chr: 7,  start: 142831130, end: 143396923 } # TRG
-                - { chr: 14, start: 21320868,  end: 22186895  } # TRA/D
-                - { chr: 14, start: 105296423, end: 105793951 } # IGH
-                - { chr: 22, start: 20560551,  end: 21469623  } # IGL
+                - { chr: 2,  start: 88868025,  end: 90383961  } # IGK
+                - { chr: 7,  start: 38373030,  end: 38494618  } # TRB
+                - { chr: 7,  start: 142831129, end: 143396922 } # TRG
+                - { chr: 14, start: 21320867,  end: 22186894  } # TRA/D
+                - { chr: 14, start: 105296422, end: 105793950 } # IGH
+                - { chr: 22, start: 20560550,  end: 21469622  } # IGL
             hap2:
               lines:
-                - { chr: 2,  start: 88855565,  end: 90457524  } # IGK
-                - { chr: 7,  start: 38345243,  end: 38476020  } # TRB
-                - { chr: 7,  start: 143849923, end: 144425197 } # TRG
-                - { chr: 14, start: 23572455,  end: 24503858  } # TRA/D
-                - { chr: 14, start: 107586021, end: 108649328 } # IGH
-                - { chr: 22, start: 24652429,  end: 25418532  } # IGL
+                - { chr: 2,  start: 88855564,  end: 90457523  } # IGK
+                - { chr: 7,  start: 38345242,  end: 38476019  } # TRB
+                - { chr: 7,  start: 143849922, end: 144425196 } # TRG
+                - { chr: 14, start: 23572454,  end: 24503857  } # TRA/D
+                - { chr: 14, start: 107586020, end: 108649327 } # IGH
+                - { chr: 22, start: 24652428,  end: 25418531  } # IGL
         # lifted off from hg38 stratification above
         kir:
           bed:
