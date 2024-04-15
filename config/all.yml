@@ -1213,7 +1213,13 @@ diploid2_stratifications:
               url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/annotation/centromere/hg002v1.0.1.cenSatv1.0.noheader.bb
               md5: 33e8a32a5509d89aa8310f450f727896
           sat_col: 3
-      xy: {}
+      xy:
+        x_par:
+          start: [0, 2392381]
+          end: [154008454, 154341405]
+        y_par:
+          start: [1, 2454197]
+          end: [62092325, 62425490]
       segdups:
         superdups:
           bed:
