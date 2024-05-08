@@ -13,24 +13,16 @@ default-resources:
   - partition=batch
   - mem_mb=1000
   - time="8:0:0"
-set-resources:
-  # gem is totally ravenous
-  - gem_index:mem_mb=32000
-  - gem_mappability:mem_mb=32000
-  - gem_to_wig:mem_mb=32000
-  # some rules involve large files, so more memory
-  - get_nonunique:mem_mb=4000
-  - subtract_uniform_repeats:mem_mb=4000
-  - subtract_uniform_repeat_compliment:mem_mb=4000
-  - filter_sort_rmsk:mem_mb=4000
-  - filter_sort_existing:mem_mb=4000
-  - filter_TRs:mem_mb=4000
-  - unit_test_strats:mem_mb=8000
-  - validate_strats:mem_mb=12000
-  - run_happy:mem_mb=24000
-set-threads:
-  - gem_index=32
-  - gem_mappability=32
+# set-resources:
+#   # gem is totally ravenous
+#   - gem_index:mem_mb=32000
+#   - gem_mappability:mem_mb=32000
+#   - gem_to_wig:mem_mb=32000
+#   # some rules involve large files, so more memory
+#   - run_happy:mem_mb=24000
+# set-threads:
+#   - gem_index=32
+#   - gem_mappability=32
 restart-times: 0
 max-jobs-per-second: 10
 max-status-checks-per-second: 1
