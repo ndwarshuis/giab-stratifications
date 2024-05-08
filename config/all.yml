@@ -1277,7 +1277,7 @@ diploid2_stratifications:
       all:
         chr_filter: []
         include:
-          xy: false
+          xy: true
           kir: true
           mhc: true
 
