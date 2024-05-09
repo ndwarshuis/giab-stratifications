@@ -1,6 +1,77 @@
 All updates are summarized here. For exact versions and provenance information,
 see the configuration file at `config/all.yml`.
 
+# 3.4
+
+## NEW - HG002 Diploid Stratifications
+
+The major addition to this update is the inclusion of stratifications for
+the HG002 T2T Q100 assemblies. Since this is a diploid assembly, two sets of
+stratifications for each haplotype are included in two separate directories.
+`HG002.hap1` corresponds to paternal and `HG002.hap2` corresponds to maternal.
+The stratifications in each of these are analogous to those for the three
+previous haploid references.
+
+Additionally, HG002 includes a new groups of
+stratifications under the `Diploid` directory which includes the following
+(where `X` is either `1` or `2`):
+
+`Diploid/HG002.hapX_het_regions_5k.bed.gz`
+`Diploid/HG002.hapX_het_regions_10k.bed.gz`
+`Diploid/HG002.hapX_het_regions_25k.bed.gz`
+`Diploid/HG002.hapX_het_regions_50k.bed.gz`
+`Diploid/HG002.hapX_het_regions_100k.bed.gz`
+`Diploid/HG002.hapX_het_SNVorSV_regions_5k.bed.gz`
+`Diploid/HG002.hapX_het_SNVorSV_regions_10k.bed.gz`
+`Diploid/HG002.hapX_het_SNVorSV_regions_25k.bed.gz`
+`Diploid/HG002.hapX_het_SNVorSV_regions_50k.bed.gz`
+`Diploid/HG002.hapX_het_SNVorSV_regions_100k.bed.gz`
+`Diploid/HG002.hapX_hom_regions_5k.bed.gz`
+`Diploid/HG002.hapX_hom_regions_10k.bed.gz`
+`Diploid/HG002.hapX_hom_regions_25k.bed.gz`
+`Diploid/HG002.hapX_hom_regions_50k.bed.gz`
+`Diploid/HG002.hapX_hom_regions_100k.bed.gz`
+`Diploid/HG002.hapX_hom_SNVorSV_regions_5k.bed.gz`
+`Diploid/HG002.hapX_hom_SNVorSV_regions_10k.bed.gz`
+`Diploid/HG002.hapX_hom_SNVorSV_regions_25k.bed.gz`
+`Diploid/HG002.hapX_hom_SNVorSV_regions_50k.bed.gz`
+`Diploid/HG002.hapX_hom_SNVorSV_regions_100k.bed.gz`
+
+The `het` bed files cover regions that are within k base pairs of a het variant
+relative to the other haplotype. The `het_SNVorSV` bed files are a subtype of
+this which only considers SNV or SV (>50bp variants or alignment breaks)
+variants. These may be useful for troubleshooting assembly errors which use SNVs
+or SVs for phasing.
+
+To be more concrete, the `HG002.hap1_het_regions_10k` file includes regions that
+are within 10 kb of a SNV, INDEL, or SV on hap1 (paternal) relative to hap2
+(paternal).
+
+The `hom` bed files are simply complements of the analogous `het` bed files.
+
+## CHM13, GRCh38, GRCh38
+
+These assemblies received no major updates in this release. 
+
+Mappabilty and union changed slightly due to the non-determinism in GEM. This
+resulted in at most ~200 base pairs being changed depending on the reference.
+This affected the following bed files:
+
+`Mappability/<ref>_lowmappabilityall.bed.gz`
+`Mappability/<ref>_nonunique_l100_m2_e1.bed.gz`
+`Mappability/<ref>_notinlowmappabilityall.bed.gz`
+`Union/<ref>_alllowmapandsegdupregions.bed.gz`
+`Union/<ref>_notinalllowmapandsegdupregions.bed.gz`
+
+Additionally, the GFF files used to create the refseq CDS region files received
+updates in late 2023, resulting in the following gains to
+`Functional/<ref>_refseq_cds.bed.gz` (and equal corresponding loss in
+`Functional/<ref>_notinrefseq_cds.bed.gz`) for each of the three references:
+
+* GRCh37: -134 bp
+* GRCh38: -128 bp
+* CHM13: 164651 bp
+
 # 3.3
 
 ## Small fixes
