@@ -118,52 +118,6 @@ haploid_stratifications:
         # lifted straight from v3.1
         other_strats:
           $GRCh37_external
-          OtherDifficult:
-            L1H_gt500:
-              data:
-                bed:
-                  chr_pattern: {template: '%i'}
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_L1H_gt500.bed.gz}
-              description: L1Hs greater than 500 base pairs.
-            contigs_lt500kb:
-              data:
-                bed:
-                  chr_pattern: {template: '%i'}
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_contigs_lt500kb.bed.gz}
-              description: Reference assembly contigs smaller than 500kb.
-            hg38_minimap2_asm20_N10_gt1contig_gt1kb:
-              data:
-                bed:
-                  chr_pattern: {template: '%i'}
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hg38_minimap2_asm20_N10_gt1contig_gt1kb.bed.gz}
-              description: GRCh37 regions covered by >1 contig from GRCh38 using minimap2.
-            hg38_minimap2_asm20_N10_nocovgt1kb:
-              data:
-                bed:
-                  chr_pattern: {template: '%i'}
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hg38_minimap2_asm20_N10_nocovgt1kb.bed.gz}
-              remove_gaps: true
-              description: GRCh37 regions covered by no contigs from GRCh38 using minimap2.
-            hs37d5_decoy_alignments:
-              data:
-                bed:
-                  chr_pattern: {template: '%i'}
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hs37d5_decoy_alignments.bed.gz}
-              remove_gaps: true
-              description: Alignments of the hs37d5 decoy sequences to GRCh37, potentially duplicated regions.
-            missing_and_multiple_alignments_of_GRCh38:
-              data:
-                bed:
-                  chr_pattern: {template: '%i'}
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_missing_and_multiple_alignments_of_GRCh38.bed.gz}
-              description: GRCh37 regions covered by >1 contig or no contigs from GRCh38 as defined by GRC as SP or SPonly.
-            allOtherDifficultregions:
-              data:
-                bed:
-                  chr_pattern: {template: '%i'}
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_allOtherDifficultregions.bed.gz}
-              remove_gaps: true
-              description: Union of all OtherDifficult Regions
         bench:
           query_vcf:
             vcf:
@@ -299,52 +253,6 @@ haploid_stratifications:
         chr_filter: []
         other_strats:
           $GRCh38_external
-          OtherDifficult:
-            L1H_gt500:
-              data:
-                bed:
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_L1H_gt500.bed.gz }
-              description: L1Hs greater than 500 base pairs.
-            LD_discordant_haplotypes_slop5bp:
-              data:
-                bed:
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_LD_discordant_haplotypes_slop5bp.bed.gz }
-              description: Rare haplotye boundries in GRCh38.
-            collapsed_duplication_FP_regions:
-              data:
-                bed:
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_collapsed_duplication_FP_regions.bed.gz }
-              description: Conservative collapsed errors with clusters of CHM13 hets in GRCh38.
-            contigs_lt500kb:
-              data:
-                bed:
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_contigs_lt500kb.bed.gz }
-              description: reference assembly contigs smaller than 500kb
-            false_duplications_correct_copy:
-              data:
-                bed:
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_false_duplications_correct_copy.bed.gz }
-              description: Correct copy of falsely duplicated region.
-            false_duplications_incorrect_copy:
-              data:
-                bed:
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_false_duplications_incorrect_copy.bed.gz }
-              description: Incorrect copy of falsely duplicated region.
-            gnomAD_InbreedingCoeff_slop1bp_merge1000bp:
-              data:
-                bed:
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_gnomAD_InbreedingCoeff_slop1bp_merge1000bp.bed.gz }
-              description: gnomAD inbreedingcoeff variants.
-            population_CNV_FP_regions:
-              data:
-                bed:
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_population_CNV_FP_regions.bed.gz }
-              description: Collapses in GRCh38 with clusters of CHM13 hets that are variable in the population so many not errors.
-            allOtherDifficultregions:
-              data:
-                bed:
-                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_allOtherDifficultregions.bed.gz }
-              description: Union of the above regions.
         bench:
           query_vcf:
             vcf:

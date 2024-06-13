@@ -281,12 +281,94 @@ def to_ancestry(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
     return dict(es)
 
 
+def to_otherdifficult(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
+    def go(k: str, d: str) -> tuple[str, Entry]:
+        return to_entry("OtherDifficult", k, d, ref, md5s)
+
+    common = [
+        go(*x)
+        for x in [
+            (
+                "L1H_gt500",
+                "L1Hs greater than 500 base pairs.",
+            ),
+            (
+                "contigs_lt500kb",
+                f"{ref.value} contigs smaller than 500kb.",
+            ),
+            (
+                "allOtherDifficultregions",
+                "Union of all other `OtherDifficult` regions.",
+            ),
+        ]
+    ]
+
+    only37 = [
+        go(*x)
+        for x in [
+            (
+                "hg38_minimap2_asm20_N10_gt1contig_gt1kb",
+                "GRCh37 regions covered by at least one contig from GRCh38 "
+                "using minimap2.",
+            ),
+            (
+                "hg38_minimap2_asm20_N10_nocovgt1kb",
+                "GRCh37 regions covered by no contigs from GRCh38 using minimap2.",
+            ),
+            (
+                "hs37d5_decoy_alignments",
+                "Alignments of the hs37d5 decoy sequences to GRCh37, "
+                "potentially duplicated regions.",
+            ),
+            (
+                "missing_and_multiple_alignments_of_GRCh38",
+                "GRCh37 regions covered by >1 contig or no contigs from "
+                "GRCh38 as defined by GRC as SP or SPonly.",
+            ),
+        ]
+    ]
+
+    only38 = [
+        go(*x)
+        for x in [
+            (
+                "LD_discordant_haplotypes_slop5bp",
+                "Rare haplotye boundries in GRCh38.",
+            ),
+            (
+                "collapsed_duplication_FP_regions",
+                "Conservative collapsed errors with clusters of CHM13 hets in "
+                "GRCh38.",
+            ),
+            (
+                "false_duplications_correct_copy",
+                "Correct copy of falsely duplicated region.",
+            ),
+            (
+                "false_duplications_incorrect_copy",
+                "Incorrect copy of falsely duplicated region.",
+            ),
+            (
+                "gnomAD_InbreedingCoeff_slop1bp_merge1000bp",
+                "gnomAD inbreedingcoeff variants.",
+            ),
+            (
+                "population_CNV_FP_regions",
+                "Collapses in GRCh38 with clusters of CHM13 hets that are "
+                "variable in the population so many not errors.",
+            ),
+        ]
+    ]
+    return dict(common + only37 if ref is Ref.GRCH37 else only38)
+
+
 def to_entries(r: Ref) -> str:
     md5s = read_md5s(r)
     return yaml.dump(
         {
             "GenomeSpecific": to_genome_specific(r, md5s),
             "FunctionalTechnicallyDifficult": to_functional_tech_diff(r, md5s),
+            "OtherDifficult": to_otherdifficult(r, md5s),
             **({"Ancestry": to_ancestry(r, md5s)} if r is Ref.GRCH38 else {}),
         },
         sort_keys=False,
