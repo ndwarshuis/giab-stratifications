@@ -1,17 +1,25 @@
 #! /usr/bin/env python3
 
 import re
+import sys
+from enum import Enum
+import argparse
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, Callable
 from textwrap import indent
+from urllib import request
 import yaml  # type: ignore
 
 
-REFS = ["GRCh37", "GRCh38"]
-
-BASEURL = Path(
-    "https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1"
+BASEURL = (
+    "https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/"
+    "release/genome-stratifications/v3.1"
 )
+
+
+class Ref(Enum):
+    GRCH37 = "GRCh37"
+    GRCH38 = "GRCh38"
 
 
 class Url(TypedDict):
@@ -19,50 +27,69 @@ class Url(TypedDict):
     md5: str
 
 
-class Bed(TypedDict):
-    hap: Url
-
-
 class ChrPattern(TypedDict):
     template: str
 
 
-class Entry(TypedDict):
-    bed: Bed
-    remove_gaps: bool
+class Src(TypedDict):
+    hap: Url
     chr_pattern: ChrPattern
+
+
+class Bed(TypedDict):
+    bed: Src
+
+
+class Entry(TypedDict):
+    data: Bed
     description: str
+    remove_gaps: bool
 
 
-def to_entries(ref: str) -> str:
-    with open(f"config/{ref}_genome_specific_md5.tsv", "rt") as f:
-        md5s = {
-            Path((s := i.strip().split("\t"))[1])
-            .name.replace(f"{ref}_", "")
-            .replace(".bed.gz", ""): s[0]
-            for i in f
-        }
+Hashes = dict[str, str]
 
-    # dump each of these individually to preserve order
-    def to_entry(key: str, desc: str) -> str:
-        url = BASEURL / ref / f"{ref}_{key}.bed.gz"
-        x: dict[str, Entry] = {
-            key: {
+
+# dump each of these individually to preserve order
+def to_entry(key: str, desc: str, ref: Ref, md5s: Hashes) -> tuple[str, Entry]:
+    url = f"{BASEURL}/{ref.value}/{ref.value}_{key}.bed.gz"
+    return (
+        key,
+        {
+            "data": {
                 "bed": {
                     "hap": {
                         "url": str(url),
                         "md5": md5s[key],
                     },
+                    "chr_pattern": {
+                        "template": "%i" if ref is Ref.GRCH37 else "chr%i",
+                    },
                 },
-                "chr_pattern": {"template": "%i" if ref == "GRCh37" else "chr%i"},
-                "remove_gaps": True,
-                "description": desc,
-            }
-        }
-        return yaml.dump(x)
+            },
+            "description": desc,
+            "remove_gaps": True,
+        },
+    )
+
+
+def read_md5s(r: Ref) -> Hashes:
+    url = f"{BASEURL}/{r.value}/v3.1-genome-stratifications-{r.value}-md5s.txt"
+    res = request.urlopen(url)
+    return {
+        Path((s := i.decode().strip().split(" "))[1])
+        .name.replace(f"{r.value}_", "")
+        .replace(".bed.gz", ""): s[0]
+        for i in res
+    }
+
+
+def to_genome_specific(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
+
+    def go(key: str, desc: str) -> tuple[str, Entry]:
+        return to_entry(key, desc, ref, md5s)
 
     all_genomes = [
-        to_entry(f"{g}_v4.2.1_{t}", d)
+        go(f"{g}_v4.2.1_{t}", d)
         for g in [f"HG00{i}" for i in range(1, 8)]
         for (t, d) in [
             (
@@ -127,14 +154,14 @@ def to_entries(ref: str) -> str:
             ),
             (
                 "complexandSVs_alldifficultregions",
-                f"Union of {ref}_alldifficultregions.bed.gz from "
+                f"Union of {ref.value}_alldifficultregions.bed.gz from "
                 f"`OtherDifficult` and complexandSVs above for {g}.",
             ),
         ]
     ]
 
     hg002_only = [
-        to_entry(f"HG002_{t}", d)
+        go(f"HG002_{t}", d)
         for (t, d) in [
             (
                 "v4.2.1_Tier1plusTier2_v0.6.1",
@@ -160,11 +187,15 @@ def to_entries(ref: str) -> str:
     ]
 
     parents_only = [
-        to_entry(f"HG00{g}_v4.2.1_SV_pbsv_slop25percent", "FIXME") for g in [3, 4, 6, 7]
+        go(
+            f"HG00{g}_v4.2.1_SV_pbsv_slop25percent",
+            "FIXME",
+        )
+        for g in [3, 4, 6, 7]
     ]
 
-    children_only = {
-        to_entry(
+    children_only = [
+        go(
             f"HG00{g}_v4.2.1_inversions_slop25percent",
             (
                 "Putative inversions detected in either haplotype of the "
@@ -174,15 +205,16 @@ def to_entries(ref: str) -> str:
             ),
         )
         for g in [1, 2, 5]
-    }
+    ]
 
-    misc = {
-        to_entry(
-            f"HG00{g}_v4.2.1_SV_pbsv_hifiasm_dipcall_svanalyzer_slop25percent", "FIXME"
+    misc = [
+        go(
+            f"HG00{g}_v4.2.1_SV_pbsv_hifiasm_dipcall_svanalyzer_slop25percent",
+            "FIXME",
         )
         for g in [1, 5]
-    }
-    return "".join(
+    ]
+    return dict(
         [
             *all_genomes,
             *hg002_only,
@@ -193,18 +225,90 @@ def to_entries(ref: str) -> str:
     )
 
 
-with open("config/all.yml", "r") as f:
-    config = f.read()
+def to_functional_tech_diff(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
+    genes = (
+        "MRC1 and part of CNR2" if ref is Ref.GRCH37 else "CBS, CRYAA, KCNE1, and H19"
+    )
+    es = [
+        to_entry(*x, ref, md5s)
+        for x in [
+            (
+                "BadPromoters",
+                "Identified transcription start sites or first exons that "
+                "have systematically low coverage as described in "
+                '["Characterizing and measuring bias in sequence data"]'
+                "(https://doi.org/10.1186/gb-2013-14-5-r51)",
+            ),
+            (
+                "CMRGv1.00_duplicationinKMT2C",
+                "Regions of KMT2C that are duplicated in most or all "
+                f"individuals relative to {ref.value}.",
+            ),
+            (
+                "CMRGv1.00_falselyduplicatedgenes",
+                f"Genes that are falsely duplicated in {ref.value} ({genes}).",
+            ),
+        ]
+    ]
+    return dict(es)
 
-for r in REFS:
-    pat = f" +\\${r}_genome_specific"
 
-    if (m := re.search(pat, config)) is not None:
+def to_ancestry(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
+    es = [
+        to_entry(
+            f"ancestry_{a}",
+            f"Regions in {aa} ancestry that closely match GRCh38",
+            ref,
+            md5s,
+        )
+        for (a, aa) in [
+            ("AFR", "African"),
+            ("AMR", "American"),
+            ("EAS", "East-Asian"),
+            ("EUR", "European"),
+            ("Neanderthal", "Neanderthal-introgressed"),
+            ("SAS", "South0Asian"),
+        ]
+    ]
+    return dict(es)
+
+
+def to_entries(r: Ref) -> str:
+    md5s = read_md5s(r)
+    return yaml.dump(
+        {
+            "GenomeSpecific": to_genome_specific(r, md5s),
+            "FunctionalTechnicallyDifficult": to_functional_tech_diff(r, md5s),
+            **({"Ancestry": to_ancestry(r, md5s)} if r is Ref.GRCH38 else {}),
+        },
+        sort_keys=False,
+    )
+
+
+def sub_pattern(suffix: str, r: Ref, s: str, f: Callable[[Ref], str]) -> str:
+    pat = f" +\\${r.value}_{suffix}"
+
+    if (m := re.search(pat, s)) is not None:
         spaces = len(m[0]) - len(m[0].lstrip())
     else:
         print(f"could not find {pat}")
         exit(1)
 
-    config = re.sub(pat, indent(to_entries("GRCh38"), " " * spaces), config)
+    return re.sub(pat, indent(f(r), " " * spaces), s)
 
-print(config)
+
+def main() -> None:
+    parser = argparse.ArgumentParser("Build the main config file")
+    parser.add_argument("path", metavar="PATH", help="path to template")
+    args = parser.parse_args()
+
+    with open(args.path, "r") as f:
+        config = f.read()
+
+    for r in Ref:
+        config = sub_pattern("external", r, config, to_entries)
+
+    sys.stdout.write(config)
+
+
+main()

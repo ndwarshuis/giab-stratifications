@@ -117,60 +117,60 @@ haploid_stratifications:
         chr_filter: []
         # lifted straight from v3.1
         other_strats:
+          $GRCh37_external
           OtherDifficult:
-            allOtherDifficultregions:
-              bed:
-                chr_pattern: {template: '%i'}
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_allOtherDifficultregions.bed.gz}
-              remove_gaps: true
             L1H_gt500:
-              bed:
-                chr_pattern: {template: '%i'}
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_L1H_gt500.bed.gz}
+              data:
+                bed:
+                  chr_pattern: {template: '%i'}
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_L1H_gt500.bed.gz}
+              description: L1Hs greater than 500 base pairs.
             contigs_lt500kb:
-              bed:
-                chr_pattern: {template: '%i'}
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_contigs_lt500kb.bed.gz}
+              data:
+                bed:
+                  chr_pattern: {template: '%i'}
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_contigs_lt500kb.bed.gz}
+              description: Reference assembly contigs smaller than 500kb.
             hg38_minimap2_asm20_N10_gt1contig_gt1kb:
-              bed:
-                chr_pattern: {template: '%i'}
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hg38_minimap2_asm20_N10_gt1contig_gt1kb.bed.gz}
+              data:
+                bed:
+                  chr_pattern: {template: '%i'}
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hg38_minimap2_asm20_N10_gt1contig_gt1kb.bed.gz}
+              description: GRCh37 regions covered by >1 contig from GRCh38 using minimap2.
             hg38_minimap2_asm20_N10_nocovgt1kb:
-              bed:
-                chr_pattern: {template: '%i'}
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hg38_minimap2_asm20_N10_nocovgt1kb.bed.gz}
+              data:
+                bed:
+                  chr_pattern: {template: '%i'}
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hg38_minimap2_asm20_N10_nocovgt1kb.bed.gz}
               remove_gaps: true
+              description: GRCh37 regions covered by no contigs from GRCh38 using minimap2.
             hs37d5_decoy_alignments:
-              bed:
-                chr_pattern: {template: '%i'}
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hs37d5_decoy_alignments.bed.gz}
+              data:
+                bed:
+                  chr_pattern: {template: '%i'}
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_hs37d5_decoy_alignments.bed.gz}
               remove_gaps: true
+              description: Alignments of the hs37d5 decoy sequences to GRCh37, potentially duplicated regions.
             missing_and_multiple_alignments_of_GRCh38:
-              bed:
-                chr_pattern: {template: '%i'}
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_missing_and_multiple_alignments_of_GRCh38.bed.gz}
-          FunctionalTechnicallyDifficult:
-            BadPromoters:
-              bed:
-                chr_pattern: {template: '%i'}
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/FunctionalTechnicallyDifficultRegions/GRCh37_BadPromoters.bed.gz }
-            CMRGv1.00_duplicationinKMT2C:
-              bed:
-                chr_pattern: {template: '%i'}
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/FunctionalTechnicallyDifficultRegions/GRCh37_CMRGv1.00_duplicationinKMT2C.bed.gz }
-            CMRGv1.00_falselyduplicatedgenes:
-              bed:
-                chr_pattern: {template: '%i'}
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/FunctionalTechnicallyDifficultRegions/GRCh37_CMRGv1.00_falselyduplicatedgenes.bed.gz }
-          GenomeSpecific:
-            $GRCh37_genome_specific
+              data:
+                bed:
+                  chr_pattern: {template: '%i'}
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_missing_and_multiple_alignments_of_GRCh38.bed.gz}
+              description: GRCh37 regions covered by >1 contig or no contigs from GRCh38 as defined by GRC as SP or SPonly.
+            allOtherDifficultregions:
+              data:
+                bed:
+                  chr_pattern: {template: '%i'}
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh37/OtherDifficult/GRCh37_allOtherDifficultregions.bed.gz}
+              remove_gaps: true
+              description: Union of all OtherDifficult Regions
         bench:
           query_vcf:
-            bed:
+            vcf:
               hap:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/analysis/PacBio_CCS_15kb_20kb_chemistry2_10312019/GRCh37/deepvariant_HG002_15kb_20kb_52X_SequelII.vcf.gz
           bench_vcf:
-            bed:
+            vcf:
               hap:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/analysis/NIST_HG002_DraftBenchmark_defrabbV0.015-20240215/GRCh37_HG2-T2TQ100-V1.0.vcf.gz
                 md5: a6bcd8ba0221b08925479758ba37d25d
@@ -298,72 +298,60 @@ haploid_stratifications:
       all:
         chr_filter: []
         other_strats:
-          Ancestry:
-            ancestry_AFR:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/ancestry/GRCh38_ancestry_AFR.bed.gz }
-            ancestry_AMR:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/ancestry/GRCh38_ancestry_AMR.bed.gz }
-            ancestry_EAS:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/ancestry/GRCh38_ancestry_EAS.bed.gz }
-            ancestry_EUR:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/ancestry/GRCh38_ancestry_EUR.bed.gz }
-            ancestry_SAS:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/ancestry/GRCh38_ancestry_SAS.bed.gz }
-            ancestry_Neanderthal:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/ancestry/GRCh38_ancestry_Neanderthal.bed.gz }
-          FunctionalTechnicallyDifficult:
-            BadPromoters:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/FunctionalTechnicallyDifficultRegions/GRCh38_BadPromoters.bed.gz }
-            CMRGv1.00_duplicationinKMT2C:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/FunctionalTechnicallyDifficultRegions/GRCh38_CMRGv1.00_duplicationinKMT2C.bed.gz }
-            CMRGv1.00_falselyduplicatedgenes:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/FunctionalTechnicallyDifficultRegions/GRCh38_CMRGv1.00_falselyduplicatedgenes.bed.gz }
-          GenomeSpecific:
-            $GRCh38_genome_specific
+          $GRCh38_external
           OtherDifficult:
             L1H_gt500:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_L1H_gt500.bed.gz }
+              data:
+                bed:
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_L1H_gt500.bed.gz }
+              description: L1Hs greater than 500 base pairs.
             LD_discordant_haplotypes_slop5bp:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_LD_discordant_haplotypes_slop5bp.bed.gz }
-            allOtherDifficultregions:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_allOtherDifficultregions.bed.gz }
+              data:
+                bed:
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_LD_discordant_haplotypes_slop5bp.bed.gz }
+              description: Rare haplotye boundries in GRCh38.
             collapsed_duplication_FP_regions:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_collapsed_duplication_FP_regions.bed.gz }
+              data:
+                bed:
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_collapsed_duplication_FP_regions.bed.gz }
+              description: Conservative collapsed errors with clusters of CHM13 hets in GRCh38.
             contigs_lt500kb:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_contigs_lt500kb.bed.gz }
+              data:
+                bed:
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_contigs_lt500kb.bed.gz }
+              description: reference assembly contigs smaller than 500kb
             false_duplications_correct_copy:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_false_duplications_correct_copy.bed.gz }
+              data:
+                bed:
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_false_duplications_correct_copy.bed.gz }
+              description: Correct copy of falsely duplicated region.
             false_duplications_incorrect_copy:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_false_duplications_incorrect_copy.bed.gz }
+              data:
+                bed:
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_false_duplications_incorrect_copy.bed.gz }
+              description: Incorrect copy of falsely duplicated region.
             gnomAD_InbreedingCoeff_slop1bp_merge1000bp:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_gnomAD_InbreedingCoeff_slop1bp_merge1000bp.bed.gz }
+              data:
+                bed:
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_gnomAD_InbreedingCoeff_slop1bp_merge1000bp.bed.gz }
+              description: gnomAD inbreedingcoeff variants.
             population_CNV_FP_regions:
-              bed:
-                hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_population_CNV_FP_regions.bed.gz }
+              data:
+                bed:
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_population_CNV_FP_regions.bed.gz }
+              description: Collapses in GRCh38 with clusters of CHM13 hets that are variable in the population so many not errors.
+            allOtherDifficultregions:
+              data:
+                bed:
+                  hap: {url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/GRCh38/OtherDifficult/GRCh38_allOtherDifficultregions.bed.gz }
+              description: Union of the above regions.
         bench:
           query_vcf:
-            bed:
+            vcf:
               hap:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/analysis/PacBio_CCS_15kb_20kb_chemistry2_10312019/GRCh38/deepvariant_HG002_GRCh38_15kb_20kb_53X_SequelII.vcf.gz
           bench_vcf:
-            bed:
+            vcf:
               hap:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/analysis/NIST_HG002_DraftBenchmark_defrabbV0.015-20240215/GRCh38_HG2-T2TQ100-V1.0.vcf.gz
                 md5: 43e4218c65937c5572abfe2f15a6374e
@@ -497,15 +485,13 @@ haploid_stratifications:
                 23: NC_060947.1
                 24: NC_060948.1
         mhc:
-          bed:
-            hap:
-              lines:
-                - { chr: 6, start: 28381448, end: 33301940 }
+          hap:
+            lines:
+              - { chr: 6, start: 28381448, end: 33301940 }
         kir:
-          bed:
-            hap:
-              lines:
-                - { chr: 19, start: 57809628, end: 57966046 }
+          hap:
+            lines:
+              - { chr: 19, start: 57809628, end: 57966046 }
 
       mappability:
         unplaced_chr_patterns: ["^chrM$"] 
@@ -518,18 +504,20 @@ haploid_stratifications:
         other_strats:
           OtherDifficult:
             rDNA:
-              bed:
-                hap:
-                  url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/CHM13v2.0/OtherDifficult/CHM13v2.0_rDNA.bed.gz 
-                  md5: 2127e7ae1e62ab834746e7318f4e8415
+              data:
+                bed:
+                  hap:
+                    url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.1/CHM13v2.0/OtherDifficult/CHM13v2.0_rDNA.bed.gz 
+                    md5: 2127e7ae1e62ab834746e7318f4e8415
+              description: Ribosomal DNA arrays.
         bench:
           query_vcf:
-            bed:
+            vcf:
               hap:
                 url: https://storage.googleapis.com/brain-genomics/awcarroll/misc/giab/HG002.pacbio.chm13.vcf.gz
           # https://drive.google.com/drive/u/1/folders/11RY2oMMShOuQ0HDBmkwXllBEHrUlwTRg
           bench_vcf:
-            bed:
+            vcf:
               hap:
                 url: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/analysis/NIST_HG002_DraftBenchmark_defrabbV0.015-20240215/CHM13v2.0_HG2-T2TQ100-V1.0.vcf.gz
                 md5: 61e520ea7b75838275db64cfeac0b0d9
@@ -545,18 +533,18 @@ haploid_stratifications:
 diploid2_stratifications:
   HG002:
     ref:
-      hap1:
+      pat:
         url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.1.pat.fasta.gz
-      hap2:
+      mat:
         url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/hg002v1.0.1.mat.fasta.gz
     strat_inputs:
       low_complexity:
         rmsk:
           bed:
-            hap1:
+            pat:
               url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/annotation/repeatmasker/hg002v1.0.1.paternal.final.bb
               md5: 5947df8866bd9f190615ca072fd9e6d9
-            hap2:
+            mat:
               url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/annotation/repeatmasker/hg002v1.0.1.maternal.final.bb
               md5: ec8b96518a8b8d9c09794192b629d328
           class_col: 3
@@ -587,48 +575,45 @@ diploid2_stratifications:
       functional:
         cds:
           bed:
-            hap1:
+            pat:
               url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/annotation/LiftoffIsoseq/hg002v1.0.1.PAT.liftoff.polished.sqanti3.sorted.addFeatures.addTags.modiAttribute.gff
               md5: f436fe09bfd73aeb44f946a69b3a9a83
-            hap2:
+            mat:
               url: https://s3-us-west-2.amazonaws.com/human-pangenomics/T2T/HG002/assemblies/annotation/LiftoffIsoseq/hg002v1.0.1.MAT.liftoff.polished.sqanti3.sorted.addFeatures.addTags.modiAttribute.gff
               md5: 78358c171a3c4141aaa2552fc413b5eb
           cds_params:
             source_match: null
         vdj:
-          bed:
-            # NOTE: both IGK loci are rearranged and inactivated so this
-            # regions actually starts at IGKDEL
-            hap1:
-              lines:
-                - { chr: 2,  start: 88868025,  end: 90383961  } # IGK
-                - { chr: 7,  start: 38373030,  end: 38494618  } # TRB
-                - { chr: 7,  start: 142831129, end: 143396922 } # TRG
-                - { chr: 14, start: 21320867,  end: 22186894  } # TRA/D
-                - { chr: 14, start: 105296422, end: 105793950 } # IGH
-                - { chr: 22, start: 20560550,  end: 21469622  } # IGL
-            hap2:
-              lines:
-                - { chr: 2,  start: 88855564,  end: 90457523  } # IGK
-                - { chr: 7,  start: 38345242,  end: 38476019  } # TRB
-                - { chr: 7,  start: 143849922, end: 144425196 } # TRG
-                - { chr: 14, start: 23572454,  end: 24503857  } # TRA/D
-                - { chr: 14, start: 107586020, end: 108649327 } # IGH
-                - { chr: 22, start: 24652428,  end: 25418531  } # IGL
+          # NOTE: both IGK loci are rearranged and inactivated so this
+          # regions actually starts at IGKDEL
+          pat:
+            lines:
+              - { chr: 2,  start: 88868025,  end: 90383961  } # IGK
+              - { chr: 7,  start: 38373030,  end: 38494618  } # TRB
+              - { chr: 7,  start: 142831129, end: 143396922 } # TRG
+              - { chr: 14, start: 21320867,  end: 22186894  } # TRA/D
+              - { chr: 14, start: 105296422, end: 105793950 } # IGH
+              - { chr: 22, start: 20560550,  end: 21469622  } # IGL
+          mat:
+            lines:
+              - { chr: 2,  start: 88855564,  end: 90457523  } # IGK
+              - { chr: 7,  start: 38345242,  end: 38476019  } # TRB
+              - { chr: 7,  start: 143849922, end: 144425196 } # TRG
+              - { chr: 14, start: 23572454,  end: 24503857  } # TRA/D
+              - { chr: 14, start: 107586020, end: 108649327 } # IGH
+              - { chr: 22, start: 24652428,  end: 25418531  } # IGL
         # lifted off from hg38 stratification above
         kir:
-          bed:
-            dip:
-              lines:
-                - { chr: 19, hap: 0, start: 57430456, end: 57612879 }
-                - { chr: 19, hap: 1, start: 57338741, end: 57569585 }
+          dip:
+            lines:
+              - { chr: 19, hap: 0, start: 57430456, end: 57612879 }
+              - { chr: 19, hap: 1, start: 57338741, end: 57569585 }
         # lifted off from hg38 stratification above
         mhc:
-          bed:
-            dip:
-              lines:
-                - { chr: 6, hap: 0, start: 28466613, end: 33509399 }
-                - { chr: 6, hap: 1, start: 28463469, end: 33412256 }
+          dip:
+            lines:
+              - { chr: 6, hap: 0, start: 28466613, end: 33509399 }
+              - { chr: 6, hap: 1, start: 28463469, end: 33412256 }
       mappability:
         unplaced_chr_patterns: ["^chr(MT|EBV)$"]
     builds:
