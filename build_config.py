@@ -236,7 +236,7 @@ def to_functional_tech_diff(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
         "MRC1 and part of CNR2" if ref is Ref.GRCH37 else "CBS, CRYAA, KCNE1, and H19"
     )
     es = [
-        to_entry("FunctionalTechnicallyDifficult", *x, ref, md5s)
+        to_entry("FunctionalTechnicallyDifficultRegions", *x, ref, md5s)
         for x in [
             (
                 "BadPromoters",
