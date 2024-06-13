@@ -50,8 +50,14 @@ Hashes = dict[str, str]
 
 
 # dump each of these individually to preserve order
-def to_entry(key: str, desc: str, ref: Ref, md5s: Hashes) -> tuple[str, Entry]:
-    url = f"{BASEURL}/{ref.value}/{ref.value}_{key}.bed.gz"
+def to_entry(
+    subdir: str,
+    key: str,
+    desc: str,
+    ref: Ref,
+    md5s: Hashes,
+) -> tuple[str, Entry]:
+    url = f"{BASEURL}/{ref.value}/{subdir}/{ref.value}_{key}.bed.gz"
     return (
         key,
         {
@@ -86,7 +92,7 @@ def read_md5s(r: Ref) -> Hashes:
 def to_genome_specific(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
 
     def go(key: str, desc: str) -> tuple[str, Entry]:
-        return to_entry(key, desc, ref, md5s)
+        return to_entry("GenomeSpecific", key, desc, ref, md5s)
 
     all_genomes = [
         go(f"{g}_v4.2.1_{t}", d)
@@ -230,7 +236,7 @@ def to_functional_tech_diff(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
         "MRC1 and part of CNR2" if ref is Ref.GRCH37 else "CBS, CRYAA, KCNE1, and H19"
     )
     es = [
-        to_entry(*x, ref, md5s)
+        to_entry("FunctionalTechnicallyDifficult", *x, ref, md5s)
         for x in [
             (
                 "BadPromoters",
@@ -254,8 +260,10 @@ def to_functional_tech_diff(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
 
 
 def to_ancestry(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
+    # NOTE the subdirectory for v3.1 is lower-case
     es = [
         to_entry(
+            "ancestry",
             f"ancestry_{a}",
             f"Regions in {aa} ancestry that closely match GRCh38",
             ref,
