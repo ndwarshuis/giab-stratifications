@@ -303,63 +303,67 @@ def to_otherdifficult(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
         ]
     ]
 
-    only37 = [
-        go(*x)
-        for x in [
-            (
-                "hg38_minimap2_asm20_N10_gt1contig_gt1kb",
-                "GRCh37 regions covered by at least one contig from GRCh38 "
-                "using minimap2.",
-            ),
-            (
-                "hg38_minimap2_asm20_N10_nocovgt1kb",
-                "GRCh37 regions covered by no contigs from GRCh38 using minimap2.",
-            ),
-            (
-                "hs37d5_decoy_alignments",
-                "Alignments of the hs37d5 decoy sequences to GRCh37, "
-                "potentially duplicated regions.",
-            ),
-            (
-                "missing_and_multiple_alignments_of_GRCh38",
-                "GRCh37 regions covered by >1 contig or no contigs from "
-                "GRCh38 as defined by GRC as SP or SPonly.",
-            ),
+    def only37() -> list[tuple[str, Entry]]:
+        return [
+            go(*x)
+            for x in [
+                (
+                    "hg38_minimap2_asm20_N10_gt1contig_gt1kb",
+                    "GRCh37 regions covered by at least one contig from "
+                    "GRCh38 using minimap2.",
+                ),
+                (
+                    "hg38_minimap2_asm20_N10_nocovgt1kb",
+                    "GRCh37 regions covered by no contigs from GRCh38 using "
+                    "minimap2.",
+                ),
+                (
+                    "hs37d5_decoy_alignments",
+                    "Alignments of the hs37d5 decoy sequences to GRCh37, "
+                    "potentially duplicated regions.",
+                ),
+                (
+                    "missing_and_multiple_alignments_of_GRCh38",
+                    "GRCh37 regions covered by >1 contig or no contigs from "
+                    "GRCh38 as defined by GRC as SP or SPonly.",
+                ),
+            ]
         ]
-    ]
 
-    only38 = [
-        go(*x)
-        for x in [
-            (
-                "LD_discordant_haplotypes_slop5bp",
-                "Rare haplotye boundries in GRCh38.",
-            ),
-            (
-                "collapsed_duplication_FP_regions",
-                "Conservative collapsed errors with clusters of CHM13 hets in "
-                "GRCh38.",
-            ),
-            (
-                "false_duplications_correct_copy",
-                "Correct copy of falsely duplicated region.",
-            ),
-            (
-                "false_duplications_incorrect_copy",
-                "Incorrect copy of falsely duplicated region.",
-            ),
-            (
-                "gnomAD_InbreedingCoeff_slop1bp_merge1000bp",
-                "gnomAD inbreedingcoeff variants.",
-            ),
-            (
-                "population_CNV_FP_regions",
-                "Collapses in GRCh38 with clusters of CHM13 hets that are "
-                "variable in the population so many not errors.",
-            ),
+    def only38() -> list[tuple[str, Entry]]:
+        return [
+            go(*x)
+            for x in [
+                (
+                    "LD_discordant_haplotypes_slop5bp",
+                    "Rare haplotye boundries in GRCh38.",
+                ),
+                (
+                    "collapsed_duplication_FP_regions",
+                    "Conservative collapsed errors with clusters of CHM13 "
+                    "hets in GRCh38.",
+                ),
+                (
+                    "false_duplications_correct_copy",
+                    "Correct copy of falsely duplicated region.",
+                ),
+                (
+                    "false_duplications_incorrect_copy",
+                    "Incorrect copy of falsely duplicated region.",
+                ),
+                (
+                    "gnomAD_InbreedingCoeff_slop1bp_merge1000bp",
+                    "gnomAD inbreedingcoeff variants.",
+                ),
+                (
+                    "population_CNV_FP_regions",
+                    "Collapses in GRCh38 with clusters of CHM13 hets that are "
+                    "variable in the population so many not errors.",
+                ),
+            ]
         ]
-    ]
-    return dict(common + only37 if ref is Ref.GRCH37 else only38)
+
+    return dict(common + only37() if ref is Ref.GRCH37 else only38())
 
 
 def to_entries(r: Ref) -> str:
