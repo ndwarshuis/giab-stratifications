@@ -3,6 +3,7 @@ __pycache__
 
 !/workflow
 !/config
+/config/all.yml
 !/test
 
 !README.md
