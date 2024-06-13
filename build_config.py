@@ -4,10 +4,8 @@ import re
 import sys
 from enum import Enum
 import argparse
-from pathlib import Path
 from typing import TypedDict, Callable
 from textwrap import indent
-from urllib import request
 import yaml  # type: ignore
 
 
@@ -49,7 +47,6 @@ class Entry(TypedDict):
 Hashes = dict[str, str]
 
 
-# dump each of these individually to preserve order
 def to_entry(
     subdir: str,
     key: str,
@@ -65,7 +62,7 @@ def to_entry(
                 "bed": {
                     "hap": {
                         "url": str(url),
-                        "md5": md5s[key],
+                        "md5": md5s[f"{subdir}/{key}"],
                     },
                     "chr_pattern": {
                         "template": "%i" if ref is Ref.GRCH37 else "chr%i",
@@ -79,14 +76,8 @@ def to_entry(
 
 
 def read_md5s(r: Ref) -> Hashes:
-    url = f"{BASEURL}/{r.value}/v3.1-genome-stratifications-{r.value}-md5s.txt"
-    res = request.urlopen(url)
-    return {
-        Path((s := i.decode().strip().split(" "))[1])
-        .name.replace(f"{r.value}_", "")
-        .replace(".bed.gz", ""): s[0]
-        for i in res
-    }
+    with open(f"config/{r.value}_genome_specific_md5.tsv", "r") as f:
+        return {(s := i.strip().split("\t"))[0]: s[1] for i in f}
 
 
 def to_genome_specific(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
@@ -363,7 +354,7 @@ def to_otherdifficult(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
             ]
         ]
 
-    return dict(common + only37() if ref is Ref.GRCH37 else only38())
+    return dict(common + (only37() if ref is Ref.GRCH37 else only38()))
 
 
 def to_entries(r: Ref) -> str:
