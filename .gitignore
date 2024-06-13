@@ -4,13 +4,9 @@ __pycache__
 !/workflow
 !/config
 /config/all.yml
-!/test
 
 !README.md
 !CHANGELOG.md
 !env.yml
-!lint.sh
-!.flake8
-!mypy.ini
-!.gitlab-ci.yml
 !setup_dev.sh
+!build_config.py
