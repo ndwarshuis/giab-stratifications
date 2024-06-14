@@ -50,11 +50,13 @@ Hashes = dict[str, str]
 def to_entry(
     subdir: str,
     key: str,
+    oldkey: str | None,
     desc: str,
     ref: Ref,
     md5s: Hashes,
 ) -> tuple[str, Entry]:
-    url = f"{BASEURL}/{ref.value}/{subdir}/{ref.value}_{key}.bed.gz"
+    _oldkey = oldkey if oldkey is not None else key
+    url = f"{BASEURL}/{ref.value}/{subdir}/{ref.value}_{_oldkey}.bed.gz"
     return (
         key,
         {
@@ -62,7 +64,7 @@ def to_entry(
                 "bed": {
                     "hap": {
                         "url": str(url),
-                        "md5": md5s[f"{subdir}/{key}"],
+                        "md5": md5s[f"{subdir}/{_oldkey}"],
                     },
                     "chr_pattern": {
                         "template": "%i" if ref is Ref.GRCH37 else "chr%i",
@@ -81,84 +83,91 @@ def read_md5s(r: Ref) -> Hashes:
 
 
 def to_genome_specific(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
-
-    def go(key: str, desc: str) -> tuple[str, Entry]:
-        return to_entry("GenomeSpecific", key, desc, ref, md5s)
+    def go(key: str, desc: str, oldkey: str | None) -> tuple[str, Entry]:
+        return to_entry("GenomeSpecific", key, oldkey, desc, ref, md5s)
 
     all_genomes = [
-        go(f"{g}_v4.2.1_{t}", d)
+        go(f"{g}_v4.2.1_{t}", d, f"{g}_v4.2.1_{o}" if o is not None else None)
         for g in [f"HG00{i}" for i in range(1, 8)]
-        for (t, d) in [
+        for (t, d, o) in [
             (
                 "CNV_CCSandONT_elliptical_outlier",
-                (
-                    f"Potential duplications in {g} relative to the "
-                    "reference, detected as higher than normal coverage in "
-                    "PacBio CCS and/or ONT."
-                ),
+                f"Potential duplications in {g} relative to the "
+                "reference, detected as higher than normal coverage in "
+                "PacBio CCS and/or ONT.",
+                None,
             ),
             (
                 "CNV_mrcanavarIllumina_CCShighcov_ONThighcov_intersection",
-                (
-                    f"Potential duplications in {g} relative to the "
-                    "reference, detected as higher than normal coverage in "
-                    "PacBio CCS and/or ONT and as segmental duplications by "
-                    "mrcanavar from Illumina."
-                ),
+                f"Potential duplications in {g} relative to the "
+                "reference, detected as higher than normal coverage in "
+                "PacBio CCS and/or ONT and as segmental duplications by "
+                "mrcanavar from Illumina.",
+                None,
             ),
             (
                 "comphetindel10bp_slop50",
-                (
-                    f"Regions in {g} containing at least one variant on each "
-                    "haplotype within 10bp of each other, and at least one of "
-                    "the variants is an INDEL, with 50bp slop added on each "
-                    "side."
-                ),
+                f"Regions in {g} containing at least one variant on each "
+                "haplotype within 10bp of each other, and at least one of "
+                "the variants is an INDEL, with 50bp slop added on each "
+                "side.",
+                None,
             ),
             (
                 "comphetsnp10bp_slop50",
-                (
-                    f"Regions in {g} containing at least one variant on each "
-                    "haplotype within 10bp of each other, and all variants "
-                    "are SNVs, with 50bp slop added on each side."
-                ),
+                f"Regions in {g} containing at least one variant on each "
+                "haplotype within 10bp of each other, and all variants "
+                "are SNPs, with 50bp slop added on each side.",
+                None,
             ),
             (
                 "complexindel10bp_slop50",
                 f"Regions in {g} containing at least two variants on one "
                 "haplotype within 10bp of each other, and at least one of the "
                 "variants is an INDEL, with 50bp slop added on each side.",
+                None,
+            ),
+            (
+                "complexsnp10bp_slop50",
+                f"Regions in {g} containing at least two variants on one "
+                "haplotype within 10bp of each other, and all variants "
+                "are SNPs, with 50bp slop added on each side.",
+                "snpswithin10bp_slop50",
             ),
             (
                 "notin_complexandSVs_alldifficultregions",
                 f"Complement of the above for {g}",
+                None,
             ),
             (
                 "othercomplexwithin10bp_slop50",
                 f"Any other regions in {g} containing at least two variants "
                 "within 10bp of each other, with 50bp slop added on each "
                 "side.",
+                None,
             ),
-            ("snpswithin10bp_slop50", "FIXME"),
             (
                 "CNVsandSVs",
                 f"Union of the CNV and SV bed files above for {g}.",
+                None,
             ),
             (
                 "complexandSVs",
                 "Union of the above SV, CNV, complex, and compound "
                 f"heterozygous variant bed files for {g}.",
+                None,
             ),
             (
                 "complexandSVs_alldifficultregions",
                 f"Union of {ref.value}_alldifficultregions.bed.gz from "
                 f"`OtherDifficult` and complexandSVs above for {g}.",
+                None,
             ),
         ]
     ]
 
     hg002_only = [
-        go(f"HG002_{t}", d)
+        go(f"HG002_{t}", d, None)
         for (t, d) in [
             (
                 "v4.2.1_Tier1plusTier2_v0.6.1",
@@ -186,7 +195,9 @@ def to_genome_specific(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
     parents_only = [
         go(
             f"HG00{g}_v4.2.1_SV_pbsv_slop25percent",
-            "FIXME",
+            "SVs called by pbsv, including overlapping homopolymers and "
+            "tandem repeats, with 25% of the SV size added on each side.",
+            None,
         )
         for g in [3, 4, 6, 7]
     ]
@@ -200,6 +211,7 @@ def to_genome_specific(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
                 "breakpoint homology, expanded by 25% of the region size on "
                 "each side"
             ),
+            None,
         )
         for g in [1, 2, 5]
     ]
@@ -207,7 +219,10 @@ def to_genome_specific(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
     misc = [
         go(
             f"HG00{g}_v4.2.1_SV_pbsv_hifiasm_dipcall_svanalyzer_slop25percent",
-            "FIXME",
+            "Union of SVs called by pbsv or by dipcall or svanalyzer from a "
+            "hifiasm v0.11 assembly, including overlapping homopolymers and "
+            "tandem repeats, with 25% of the SV size added on each side.",
+            None,
         )
         for g in [1, 5]
     ]
@@ -227,7 +242,14 @@ def to_functional_tech_diff(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
         "MRC1 and part of CNR2" if ref is Ref.GRCH37 else "CBS, CRYAA, KCNE1, and H19"
     )
     es = [
-        to_entry("FunctionalTechnicallyDifficultRegions", *x, ref, md5s)
+        to_entry(
+            "FunctionalTechnicallyDifficultRegions",
+            x[0],
+            None,
+            x[1],
+            ref,
+            md5s,
+        )
         for x in [
             (
                 "BadPromoters",
@@ -256,6 +278,7 @@ def to_ancestry(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
         to_entry(
             "ancestry",
             f"ancestry_{a}",
+            None,
             f"Regions in {aa} ancestry that closely match GRCh38",
             ref,
             md5s,
@@ -274,7 +297,7 @@ def to_ancestry(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
 
 def to_otherdifficult(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
     def go(k: str, d: str) -> tuple[str, Entry]:
-        return to_entry("OtherDifficult", k, d, ref, md5s)
+        return to_entry("OtherDifficult", k, None, d, ref, md5s)
 
     common = [
         go(*x)
