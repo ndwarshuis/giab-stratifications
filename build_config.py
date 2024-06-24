@@ -83,120 +83,151 @@ def read_md5s(r: Ref) -> Hashes:
 
 
 def to_genome_specific(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
-    def go(key: str, desc: str, oldkey: str | None) -> tuple[str, Entry]:
-        return to_entry("GenomeSpecific", key, oldkey, desc, ref, md5s)
+    def go(
+        g: int,
+        i: int,
+        key: str,
+        desc: str,
+        oldkey: str | None,
+    ) -> tuple[tuple[int, int], str, Entry]:
+        # funny tuple thing will be used to sort the whole list. Sort primarily
+        # by genome (HG001, 2, etc) and then the specific beds underneath. Need
+        # to do it this way since not all genomes have the same bed, so cannot
+        # just make a few loops and use the results as-is.
+        return (
+            (g, i),
+            *to_entry(
+                "GenomeSpecific",
+                f"HG00{g}_{key}",
+                f"HG00{g}_{oldkey}" if oldkey is not None else None,
+                desc,
+                ref,
+                md5s,
+            ),
+        )
 
     all_genomes = [
-        go(f"{g}_v4.2.1_{t}", d, f"{g}_v4.2.1_{o}" if o is not None else None)
-        for g in [f"HG00{i}" for i in range(1, 8)]
-        for (t, d, o) in [
-            (
-                "CNV_CCSandONT_elliptical_outlier",
-                f"Potential duplications in {g} relative to the "
-                "reference, detected as higher than normal coverage in "
-                "PacBio CCS and/or ONT.",
-                None,
-            ),
-            (
-                "CNV_mrcanavarIllumina_CCShighcov_ONThighcov_intersection",
-                f"Potential duplications in {g} relative to the "
-                "reference, detected as higher than normal coverage in "
-                "PacBio CCS and/or ONT and as segmental duplications by "
-                "mrcanavar from Illumina.",
-                None,
-            ),
-            (
-                "comphetindel10bp_slop50",
-                f"Regions in {g} containing at least one variant on each "
-                "haplotype within 10bp of each other, and at least one of "
-                "the variants is an INDEL, with 50bp slop added on each "
-                "side.",
-                None,
-            ),
-            (
-                "comphetsnp10bp_slop50",
-                f"Regions in {g} containing at least one variant on each "
-                "haplotype within 10bp of each other, and all variants "
-                "are SNPs, with 50bp slop added on each side.",
-                None,
-            ),
-            (
-                "complexindel10bp_slop50",
-                f"Regions in {g} containing at least two variants on one "
-                "haplotype within 10bp of each other, and at least one of the "
-                "variants is an INDEL, with 50bp slop added on each side.",
-                None,
-            ),
-            (
-                "complexsnp10bp_slop50",
-                f"Regions in {g} containing at least two variants on one "
-                "haplotype within 10bp of each other, and all variants "
-                "are SNPs, with 50bp slop added on each side.",
-                "snpswithin10bp_slop50",
-            ),
-            (
-                "notin_complexandSVs_alldifficultregions",
-                f"Complement of the above for {g}",
-                None,
-            ),
-            (
-                "othercomplexwithin10bp_slop50",
-                f"Any other regions in {g} containing at least two variants "
-                "within 10bp of each other, with 50bp slop added on each "
-                "side.",
-                None,
-            ),
-            (
-                "CNVsandSVs",
-                f"Union of the CNV and SV bed files above for {g}.",
-                None,
-            ),
-            (
-                "complexandSVs",
-                "Union of the above SV, CNV, complex, and compound "
-                f"heterozygous variant bed files for {g}.",
-                None,
-            ),
-            (
-                "complexandSVs_alldifficultregions",
-                f"Union of {ref.value}_alldifficultregions.bed.gz from "
-                f"`OtherDifficult` and complexandSVs above for {g}.",
-                None,
-            ),
-        ]
+        go(g, i, f"v4.2.1_{t}", d, f"v4.2.1_{o}" if o is not None else None)
+        for g, gg in [(x, f"HG00{x}") for x in range(1, 8)]
+        for i, (t, d, o) in enumerate(
+            [
+                (
+                    "CNV_CCSandONT_elliptical_outlier",
+                    f"Potential duplications in {gg} relative to the "
+                    "reference, detected as higher than normal coverage in "
+                    "PacBio CCS and/or ONT.",
+                    None,
+                ),
+                (
+                    "CNV_mrcanavarIllumina_CCShighcov_ONThighcov_intersection",
+                    f"Potential duplications in {gg} relative to the "
+                    "reference, detected as higher than normal coverage in "
+                    "PacBio CCS and/or ONT and as segmental duplications by "
+                    "mrcanavar from Illumina.",
+                    None,
+                ),
+                (
+                    "comphetindel10bp_slop50",
+                    f"Regions in {gg} containing at least one variant on each "
+                    "haplotype within 10bp of each other, and at least one of "
+                    "the variants is an INDEL, with 50bp slop added on each "
+                    "side.",
+                    None,
+                ),
+                (
+                    "comphetsnp10bp_slop50",
+                    f"Regions in {gg} containing at least one variant on each "
+                    "haplotype within 10bp of each other, and all variants "
+                    "are SNPs, with 50bp slop added on each side.",
+                    None,
+                ),
+                (
+                    "complexindel10bp_slop50",
+                    f"Regions in {gg} containing at least two variants on one "
+                    "haplotype within 10bp of each other, and at least one of "
+                    "the variants is an INDEL, with 50bp slop added on each "
+                    "side.",
+                    None,
+                ),
+                (
+                    "complexsnp10bp_slop50",
+                    f"Regions in {gg} containing at least two variants on one "
+                    "haplotype within 10bp of each other, and all variants "
+                    "are SNPs, with 50bp slop added on each side.",
+                    "snpswithin10bp_slop50",
+                ),
+                (
+                    "othercomplexwithin10bp_slop50",
+                    f"Any other regions in {gg} containing at least two "
+                    "variants within 10bp of each other, with 50bp slop added "
+                    "on each side.",
+                    None,
+                ),
+                (
+                    "CNVsandSVs",
+                    f"Union of the CNV and SV bed files above for {gg}.",
+                    None,
+                ),
+                (
+                    "complexandSVs",
+                    "Union of the above SV, CNV, complex, and compound "
+                    f"heterozygous variant bed files for {gg}.",
+                    None,
+                ),
+                (
+                    "complexandSVs_alldifficultregions",
+                    f"Union of {ref.value}_alldifficultregions.bed.gz from "
+                    f"`OtherDifficult` and 'complexandSVs' above for {gg}.",
+                    None,
+                ),
+                (
+                    "notin_complexandSVs_alldifficultregions",
+                    "Complement of 'complexandSVs_alldifficultregions' above "
+                    f"for {gg}",
+                    None,
+                ),
+            ]
+        )
     ]
 
     hg002_only = [
-        go(f"HG002_{t}", d, None)
-        for (t, d) in [
-            (
-                "v4.2.1_Tier1plusTier2_v0.6.1",
-                "Regions containing HG002 v0.6 Tier1 or Tier2 insertions or "
-                "deletions >=50bp, expanded to include overlapping tandem "
-                "repeats, with and without expansion by 25% on each side.",
-            ),
-            (
-                "v4.2.1_Tier1plusTier2_v0.6.1_slop25percent",
-                "The above with 25% slop added to each side of each region.",
-            ),
-            (
-                "v4.2.1_CNV_gt2assemblycontigs_ONTCanu_ONTFlye_CCSCanu",
-                "Potential duplications relative to the reference, detected "
-                "as more than 2 contigs aligning in 3 ONT and CCS Trio-binned "
-                "assemblies of HG002",
-            ),
-            (
-                "hifiasmv0.11_ComplexVar_in_TRgt100",
-                "Complex variants in tandem repeats > 100 bp in HG002",
-            ),
-        ]
+        go(2, i + 100, t, d, None)
+        for i, (t, d) in enumerate(
+            [
+                (
+                    "v4.2.1_Tier1plusTier2_v0.6.1",
+                    "Regions containing HG002 v0.6 Tier1 or Tier2 insertions "
+                    "or deletions >=50bp, expanded to include overlapping "
+                    "tandem repeats, with and without expansion by 25% on "
+                    "each side.",
+                ),
+                (
+                    "v4.2.1_Tier1plusTier2_v0.6.1_slop25percent",
+                    "The 'v4.2.1_Tier1plusTier2_v0.6.1' bed above with 25% "
+                    "slop added to each side of each region.",
+                ),
+                (
+                    "v4.2.1_CNV_gt2assemblycontigs_ONTCanu_ONTFlye_CCSCanu",
+                    "Potential duplications relative to the reference, "
+                    "detected as more than 2 contigs aligning in 3 ONT and "
+                    "CCS Trio-binned assemblies of HG002",
+                ),
+                (
+                    "hifiasmv0.11_ComplexVar_in_TRgt100",
+                    "Complex variants in tandem repeats > 100 bp in HG002",
+                ),
+            ]
+        )
     ]
 
     parents_only = [
         go(
-            f"HG00{g}_v4.2.1_SV_pbsv_slop25percent",
-            "SVs called by pbsv, including overlapping homopolymers and "
-            "tandem repeats, with 25% of the SV size added on each side.",
+            g,
+            1000,
+            "v4.2.1_SV_pbsv_slop25percent",
+            f"SVs called by pbsv for HG00{g}, including overlapping "
+            "homopolymers and tandem repeats, with 25% of the SV size added "
+            "on each side.",
             None,
         )
         for g in [3, 4, 6, 7]
@@ -204,12 +235,14 @@ def to_genome_specific(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
 
     children_only = [
         go(
-            f"HG00{g}_v4.2.1_inversions_slop25percent",
+            g,
+            1000,
+            "v4.2.1_inversions_slop25percent",
             (
                 "Putative inversions detected in either haplotype of the "
-                "trio-hifiasm assembly using svanalyzer, including regions of "
-                "breakpoint homology, expanded by 25% of the region size on "
-                "each side"
+                f"HG00{g} trio-hifiasm assembly using svanalyzer, including "
+                "regions of breakpoint homology, expanded by 25% of the "
+                "region size on each side."
             ),
             None,
         )
@@ -218,22 +251,29 @@ def to_genome_specific(ref: Ref, md5s: Hashes) -> dict[str, Entry]:
 
     misc = [
         go(
-            f"HG00{g}_v4.2.1_SV_pbsv_hifiasm_dipcall_svanalyzer_slop25percent",
+            g,
+            10000,
+            "v4.2.1_SV_pbsv_hifiasm_dipcall_svanalyzer_slop25percent",
             "Union of SVs called by pbsv or by dipcall or svanalyzer from a "
-            "hifiasm v0.11 assembly, including overlapping homopolymers and "
-            "tandem repeats, with 25% of the SV size added on each side.",
+            f"hifiasm v0.11 assembly for HG00{g}, including overlapping "
+            "homopolymers and tandem repeats, with 25% of the SV size added "
+            "on each side.",
             None,
         )
         for g in [1, 5]
     ]
     return dict(
-        [
-            *all_genomes,
-            *hg002_only,
-            *parents_only,
-            *children_only,
-            *misc,
-        ]
+        (x, y)
+        for _, x, y in sorted(
+            [
+                *all_genomes,
+                *hg002_only,
+                *parents_only,
+                *children_only,
+                *misc,
+            ],
+            key=lambda x: x[0],
+        )
     )
 
 
