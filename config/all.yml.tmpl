@@ -115,6 +115,7 @@ haploid_stratifications:
     builds:
       all:
         chr_filter: []
+        bigbed: true
         # lifted straight from v3.1
         other_strats:
           $GRCh37_external
@@ -136,7 +137,7 @@ haploid_stratifications:
               chr_pattern: {template: '%i'}
 
         comparison:
-          other: GRCh37_v33
+          other: GRCh37_v34
 
         include:
           telomeres: false
@@ -251,6 +252,7 @@ haploid_stratifications:
     builds:
       all:
         chr_filter: []
+        bigbed: true
         other_strats:
           $GRCh38_external
         bench:
@@ -270,7 +272,7 @@ haploid_stratifications:
                 md5: 0752dc2554edb0163a0065bc75055e80
 
         comparison:
-          other: GRCh38_v33
+          other: GRCh38_v34
 
         include:
           telomeres: false
@@ -409,6 +411,7 @@ haploid_stratifications:
           kir: true
           mhc: true
         chr_filter: []
+        bigbed: true
         other_strats:
           OtherDifficult:
             rDNA:
@@ -436,7 +439,7 @@ haploid_stratifications:
                 md5: 80c5805295fd913fc833ba290a698dfc
 
         comparison:
-          other: CHM13_v33
+          other: CHM13_v34
 
 diploid2_stratifications:
   HG002:
@@ -531,11 +534,33 @@ diploid2_stratifications:
           xy: true
           kir: true
           mhc: true
+        bigbed: true
+        comparison:
+          pat:
+            other: HG002_pat_v34
+            replacements:
+              - [pat, hap1]
+              - [regions_100000, regions_100k]
+              - [regions_50000, regions_50k]
+              - [regions_25000, regions_25k]
+              - [regions_10000, regions_10k]
+              - [regions_5000, regions_5k]
+          mat:
+            other: HG002_mat_v34
+            replacements:
+              - [mat, hap2]
+              - [regions_100000, regions_100k]
+              - [regions_50000, regions_50k]
+              - [regions_25000, regions_25k]
+              - [regions_10000, regions_10k]
+              - [regions_5000, regions_5k]
 
 comparison_strats:
-  GRCh37_v33: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.3/genome-stratifications-GRCh37@all.tar.gz
-  GRCh38_v33: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.3/genome-stratifications-GRCh38@all.tar.gz
-  CHM13_v33: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.3/genome-stratifications-CHM13@all.tar.gz
+  GRCh37_v34: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.4/genome-stratifications-GRCh37@all.tar.gz
+  GRCh38_v34: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.4/genome-stratifications-GRCh38@all.tar.gz
+  CHM13_v34: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.4/genome-stratifications-CHM13@all.tar.gz
+  HG002_pat_v34: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.4/genome-stratifications-HG002.hap1@all.tar.gz
+  HG002_mat_v34: https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v3.4/genome-stratifications-HG002.hap2@all.tar.gz
 
 benchmark_subsets:
   - AllAutosomes
