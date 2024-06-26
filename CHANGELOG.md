@@ -1,6 +1,98 @@
 All updates are summarized here. For exact versions and provenance information,
 see the configuration file at `config/all.yml`.
 
+# 3.5
+
+## NEW - Better READMEs
+
+Versions since 3.1 had relatively little documentation. 
+
+This version adds both top-level readmes for each reference as well as
+stratification level readmes to explain the meaning of each bed file and how
+they were generated. Provenance information for all source files is also
+captured in these readmes (including urls and hashes).
+
+## NEW - BigBeds Now Included
+
+BedBed versions of each stratification are now included. The .bb version can be
+found next to its corresponding .bed.gz file in each stratification directory.
+
+The .bb files are also denoted in `<ref>-all-bb-stratifications.tsv`, and they
+are separately tarballed in `genome-stratifications-bb-<ref>.tar.gz`.
+
+## NEW - Smaller HG002 Diploid Het/Hom distances
+
+In the previous release, each of the diploid het/hom region bed files was
+created with relatively large region sizes on either side (meaning the distance
+from a het was relatively large for these regions). The distances we used were
+5,000-100,000bp.
+
+In this release we added shorter distances, with the intended use case being to
+identify regions for which a short(ish) read would be able to (or not) map to
+the correct haplotype. The distances added to create these were 100, 250, 500,
+and 1000 base pairs which reflect some common short read lengths as well as
+insert sizes.
+
+This created the following new bed files:
+
+`HG002.X_het_regions_100.bed.gz`
+`HG002.X_het_regions_250.bed.gz`
+`HG002.X_het_regions_500.bed.gz`
+`HG002.X_het_regions_1000.bed.gz`
+`HG002.X_het_SNVorSV_regions_100.bed.gz`
+`HG002.X_het_SNVorSV_regions_250.bed.gz`
+`HG002.X_het_SNVorSV_regions_500.bed.gz`
+`HG002.X_het_SNVorSV_regions_1000.bed.gz`
+`HG002.X_hom_regions_100.bed.gz`
+`HG002.X_hom_regions_250.bed.gz`
+`HG002.X_hom_regions_500.bed.gz`
+`HG002.X_hom_regions_1000.bed.gz`
+`HG002.X_hom_SNVorSV_regions_100.bed.gz`
+`HG002.X_hom_SNVorSV_regions_250.bed.gz`
+`HG002.X_hom_SNVorSV_regions_500.bed.gz`
+`HG002.X_hom_SNVorSV_regions_1000.bed.gz`
+
+where `X` denotes `pat` or `mat` (see below for new naming conventions)
+
+## Other Changes
+
+### Diploid Naming Convention
+
+Rather than use "hap1" and "hap2" we now use "pat" and "mat" respectively which
+will be more clear to users.
+
+### Off-by-one errors
+
+Some stratifications (such as those in `Functional`) were created from GFF files
+which are 1-indexed. In previous versions the GFF file was treated as 0-indexed,
+which led to each stratification being shifted to 3' 1 base pair. This has been
+fixed, and the following stratifications were affected (for each ref):
+
+`Functional/GRCh37_notinrefseq_cds.bed.gz`
+`Functional/GRCh37_refseq_cds.bed.gz`
+`OtherDifficult/GRCh37_VDJ.bed.gz`
+`Functional/GRCh38_notinrefseq_cds.bed.gz`
+`Functional/GRCh38_refseq_cds.bed.gz`
+`OtherDifficult/GRCh38_VDJ.bed.gz`
+`Functional/CHM13_notinrefseq_cds.bed.gz`
+`Functional/CHM13_refseq_cds.bed.gz`
+`OtherDifficult/CHM13_VDJ.bed.gz`
+
+### GenomeSpecific Name Correction (GRCh37/38 only)
+
+This:
+
+`GRCh3X_HG00Y_v4.2.1_snpswithin10bp_slop50.bed.gz`
+
+was renamed to:
+
+`GRCh3X_HG00Y_v4.2.1_complexsnp10bp_slop50.bed.gz`
+
+for GRCh37/38 and HG001-HG007
+
+This name change better reflects what this file represents and keeps
+nomenclature consistent.
+
 # 3.4
 
 ## NEW - HG002 Diploid Stratifications
